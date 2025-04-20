@@ -5,7 +5,7 @@ function Storefront() {
 
   useEffect(() => {
     // Auto-login as dist001/account101 for demo
-    fetch('https://api.featherstorefront.com/login"', {
+    fetch('https://api.featherstorefront.com/login', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
