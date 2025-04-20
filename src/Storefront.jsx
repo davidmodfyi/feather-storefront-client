@@ -5,13 +5,13 @@ function Storefront() {
 
   useEffect(() => {
     // Auto-login as dist001/account101 for demo
-    fetch('https://feather-api.onrender.com/login', {
+    fetch('https://api.featherstorefront.com/login"', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ distributorId: 'dist001', accountId: 'acct101' })
     }).then(() => {
-      fetch('https://feather-api.onrender.com/api/items', {
+      fetch('https://api.featherstorefront.com/api/items', {
         credentials: 'include'
       })
         .then(res => res.json())
