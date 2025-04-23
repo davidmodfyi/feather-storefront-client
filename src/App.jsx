@@ -16,12 +16,24 @@ function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     })
-    .then(res => {
-      if (!res.ok) throw new Error('Unauthorized');
-      return res.json();
-    })
-    .then(() => setLoggedIn(true))
-    .catch(() => setError('Invalid username or password'));
+      .then(res => {
+        if (!res.ok) throw new Error('Unauthorized');
+        return res.json();
+      })
+      .then(() => setLoggedIn(true))
+      .catch(() => setError('Invalid username or password'));
+  };
+
+  const logout = () => {
+    fetch('https://api.featherstorefront.com/logout', {
+      method: 'POST',
+      credentials: 'include'
+    }).then(() => {
+      setLoggedIn(false);
+      setUsername('');
+      setPassword('');
+      setMode(null);
+    });
   };
 
   if (!loggedIn) {
@@ -56,6 +68,7 @@ function App() {
           <button onClick={() => setMode('storefront')} className="px-4 py-2 bg-blue-500 text-white rounded">Storefront</button>
           <button onClick={() => setMode('backoffice')} className="px-4 py-2 bg-gray-700 text-white rounded">Backoffice</button>
         </div>
+        <button onClick={logout} className="mt-6 px-4 py-2 bg-red-600 text-white rounded">Logout</button>
       </div>
     );
   }
