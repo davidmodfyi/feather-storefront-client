@@ -4,6 +4,48 @@ import Backoffice from './Backoffice';
 
 function App() {
   const [mode, setMode] = useState(null);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const login = () => {
+    fetch('https://api.featherstorefront.com/login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error('Unauthorized');
+      return res.json();
+    })
+    .then(() => setLoggedIn(true))
+    .catch(() => setError('Invalid username or password'));
+  };
+
+  if (!loggedIn) {
+    return (
+      <div className="p-10 space-y-4 max-w-md mx-auto">
+        <h1 className="text-3xl font-bold text-center">Ocean Wave Admin Login</h1>
+        {error && <p className="text-red-600">{error}</p>}
+        <input
+          className="w-full p-2 border rounded"
+          placeholder="Username"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+        />
+        <input
+          className="w-full p-2 border rounded"
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+        />
+        <button onClick={login} className="w-full bg-blue-600 text-white py-2 rounded">Login</button>
+      </div>
+    );
+  }
 
   if (!mode) {
     return (
