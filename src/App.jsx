@@ -20,14 +20,14 @@ function App() {
       .catch(console.error);
   }, []);
 
-  const handleLogout = () => {
-    fetch('https://api.featherstorefront.com/api/logout', { method: 'POST', credentials: 'include' })
-      .then(() => {
-        setMode(null);
-        setDistributorName('');
-        setDistributorId('');
-      });
-  };
+const handleLogout = () => {
+  fetch('https://api.featherstorefront.com/api/logout', { method: 'POST', credentials: 'include' })
+    .then(() => {
+      setMode(null);
+      setDistributorName('');
+    })
+    .catch(console.error);
+};
 
   if (!mode) {
     return (
