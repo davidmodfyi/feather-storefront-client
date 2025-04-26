@@ -4,31 +4,49 @@ export default function AdminLogin({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  async function handleLogin(e) {
-    e.preventDefault();
+  const handleLogin = async () => {
+    try {
+      const res = await fetch('https://api.featherstorefront.com/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // <-- this is critical
+        body: JSON.stringify({ username, password })
+      });
 
-    const res = await fetch('https://api.featherstorefront.com/api/login', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-
-    if (res.ok) {
-      onLogin();
-    } else {
-      alert('Login failed');
+      if (res.ok) {
+        onLogin();
+      } else {
+        alert('Login failed.');
+      }
+    } catch (err) {
+      console.error('Login error', err);
+      alert('Login error.');
     }
-  }
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <h1 className="text-3xl font-bold mb-6">Admin Login</h1>
-      <form onSubmit={handleLogin} className="flex flex-col gap-4">
-        <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" className="border p-2 rounded" />
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="border p-2 rounded" />
-        <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded">Login</button>
-      </form>
+      <input
+        type="text"
+        placeholder="Username"
+        value={username}
+        onChange={e => setUsername(e.target.value)}
+        className="p-2 border rounded mb-4 w-64"
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+        className="p-2 border rounded mb-4 w-64"
+      />
+      <button
+        onClick={handleLogin}
+        className="px-4 py-2 bg-blue-500 text-white rounded w-64"
+      >
+        Login
+      </button>
     </div>
   );
 }
