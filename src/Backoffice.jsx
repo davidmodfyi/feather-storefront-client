@@ -1,60 +1,61 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export default function Backoffice({ onLogout, onHome }) {
+function Backoffice({ brandName, onLogout }) {
+  const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
 
   useEffect(() => {
-    fetch('https://api.featherstorefront.com/api/accounts', {
-      credentials: 'include'
-    })
-      .then(res => res.json())
-      .then(data => setAccounts(data))
-      .catch(console.error);
-  }, []);
+    // Fetch account or admin data (requires valid session)
+    const fetchAccounts = async () => {
+      try {
+        const res = await fetch('/api/accounts', {
+          credentials: 'include'
+        });
+        if (res.status === 401) {
+          // Session invalid or expired, log out and redirect to login
+          onLogout();
+          return;
+        }
+        const data = await res.json();
+        // If data is not an array or valid data, treat as unauthorized
+        if (!Array.isArray(data)) {
+          onLogout();
+          return;
+        }
+        setAccounts(data);
+      } catch (error) {
+        console.error('Failed to fetch accounts:', error);
+        // (Optional) handle fetch errors, e.g., display a message
+      }
+    };
+    fetchAccounts();
+  }, [onLogout]);
 
   return (
-    <div className="p-8">
-      <div className="flex justify-end space-x-2 mb-4">
-        <button onClick={onHome} className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">
-          Home
-        </button>
-        <button onClick={onLogout} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-          Logout
-        </button>
+    <div className="backoffice-page">
+      {/* Header with brand name and portal name */}
+      <h1>{brandName} - Backoffice</h1>
+      {/* Navigation buttons */}
+      <div className="portal-nav">
+        <button className="home-btn" onClick={() => navigate('/')}>Home</button>
+        <button className="logout-btn" onClick={onLogout}>Logout</button>
       </div>
-      <h1 className="text-2xl font-bold mb-4">Manage Customers</h1>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
-          <thead>
-            <tr>
-              <th className="px-4 py-2">ID</th>
-              <th className="px-4 py-2">Name</th>
-              <th className="px-4 py-2">Street</th>
-              <th className="px-4 py-2">City</th>
-              <th className="px-4 py-2">State</th>
-              <th className="px-4 py-2">ZIP</th>
-              <th className="px-4 py-2">Price Level</th>
-              <th className="px-4 py-2">Payment Terms</th>
-              <th className="px-4 py-2">Email</th>
-            </tr>
-          </thead>
-          <tbody>
-            {accounts.map(account => (
-              <tr key={account.id} className="text-center border-t">
-                <td className="px-4 py-2">{account.id}</td>
-                <td className="px-4 py-2">{account.name}</td>
-                <td className="px-4 py-2">{account.street}</td>
-                <td className="px-4 py-2">{account.city}</td>
-                <td className="px-4 py-2">{account.state}</td>
-                <td className="px-4 py-2">{account.zip}</td>
-                <td className="px-4 py-2">{account.price_level}</td>
-                <td className="px-4 py-2">{account.payment_terms}</td>
-                <td className="px-4 py-2">{account.email}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+      {/* Accounts or admin data list */}
+      <div className="account-list">
+        {accounts.map(account => (
+          <div key={account.id} className="account-card">
+            <h3>{account.name}</h3>
+            <p>ID: {account.id}</p>
+          </div>
+        ))}
+        {accounts.length === 0 && (
+          <p>No account data available.</p>
+        )}
       </div>
     </div>
   );
 }
+
+export default Backoffice;
