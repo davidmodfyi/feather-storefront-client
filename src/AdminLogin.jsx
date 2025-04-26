@@ -1,52 +1,53 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 export default function AdminLogin({ onLogin }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handleLogin = async () => {
+  async function handleLogin() {
     try {
-      const res = await fetch('https://api.featherstorefront.com/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // <-- this is critical
+      const res = await fetch("https://api.featherstorefront.com/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username, password })
       });
-
       if (res.ok) {
         onLogin();
       } else {
-        alert('Login failed.');
+        alert("Login failed.");
       }
     } catch (err) {
-      console.error('Login error', err);
-      alert('Login error.');
+      console.error(err);
+      alert("Login error.");
     }
-  };
+  }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <h1 className="text-3xl font-bold mb-6">Admin Login</h1>
-      <input
-        type="text"
-        placeholder="Username"
-        value={username}
-        onChange={e => setUsername(e.target.value)}
-        className="p-2 border rounded mb-4 w-64"
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        className="p-2 border rounded mb-4 w-64"
-      />
-      <button
-        onClick={handleLogin}
-        className="px-4 py-2 bg-blue-500 text-white rounded w-64"
-      >
-        Login
-      </button>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-80">
+        <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="border rounded px-3 py-2 mb-4 w-full"
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="border rounded px-3 py-2 mb-4 w-full"
+        />
+        <button
+          onClick={handleLogin}
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+        >
+          Login
+        </button>
+      </div>
     </div>
   );
 }
