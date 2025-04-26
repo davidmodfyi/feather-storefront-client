@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function Backoffice({ onLogout }) {
+export default function Backoffice({ onLogout, onHome }) {
   const [view, setView] = useState(null);
   const [customers, setCustomers] = useState([]);
 
@@ -20,7 +20,10 @@ export default function Backoffice({ onLogout }) {
       <div className="p-6">
         <div className="flex justify-between mb-4">
           <h1 className="text-2xl font-bold">Manage Customers</h1>
-          <button onClick={onLogout} className="bg-red-600 text-white px-3 py-1 rounded">Logout</button>
+          <div className="flex gap-2">
+            <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
+            <button onClick={onLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
+          </div>
         </div>
         <table className="w-full table-auto border">
           <thead>
@@ -60,7 +63,8 @@ export default function Backoffice({ onLogout }) {
     <div className="p-10 text-center space-y-4">
       <h1 className="text-3xl font-bold mb-6">Backoffice</h1>
       <button onClick={loadCustomers} className="px-4 py-2 bg-blue-600 text-white rounded">Manage Customers</button>
-      <div className="mt-6">
+      <div className="mt-6 flex justify-center gap-4">
+        <button onClick={onHome} className="px-4 py-2 bg-gray-400 text-white rounded">Home</button>
         <button onClick={onLogout} className="px-4 py-2 bg-red-600 text-white rounded">Logout</button>
       </div>
     </div>

@@ -41,10 +41,7 @@ function App() {
         >
           <input type="text" name="username" placeholder="Username" className="w-full border px-3 py-2 rounded" required />
           <input type="password" name="password" placeholder="Password" className="w-full border px-3 py-2 rounded" required />
-          <div className="flex justify-between">
-            <button type="button" onClick={() => setMode(null)} className="text-sm text-gray-500 underline">Back</button>
-            <button type="submit" className="bg-blue-600 text-white py-2 px-4 rounded">Login</button>
-          </div>
+          <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">Login</button>
         </form>
       </div>
     );
@@ -64,8 +61,8 @@ function App() {
   }
 
   return mode === 'storefront'
-    ? <Storefront onLogout={handleLogout} />
-    : <Backoffice onLogout={handleLogout} />;
+    ? <Storefront onLogout={handleLogout} onHome={() => setMode(null)} />
+    : <Backoffice onLogout={handleLogout} onHome={() => setMode(null)} />;
 }
 
 export default App;

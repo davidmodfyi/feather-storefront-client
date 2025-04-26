@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-function Storefront({ onLogout }) {
+export default function Storefront({ onLogout, onHome }) {
   const [items, setItems] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState(null);
 
@@ -14,7 +14,6 @@ function Storefront({ onLogout }) {
   }, []);
 
   const categories = [...new Set(items.map(item => item.category))];
-
   const filteredItems = categoryFilter
     ? items.filter(item => item.category === categoryFilter)
     : items;
@@ -23,7 +22,10 @@ function Storefront({ onLogout }) {
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Ocean Wave Foods - Storefront</h1>
-        <button onClick={onLogout} className="px-3 py-1 text-sm bg-red-500 text-white rounded">Logout</button>
+        <div className="flex gap-2">
+          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
+          <button onClick={onLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -57,5 +59,3 @@ function Storefront({ onLogout }) {
     </div>
   );
 }
-
-export default Storefront;
