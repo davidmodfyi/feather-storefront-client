@@ -6,7 +6,7 @@ export default function AdminLogin({ onLogin }) {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch('https://api.featherstorefront.com/api/login', {
+      const res = await fetch('https://api.featherstorefront.com/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // <-- this is critical
