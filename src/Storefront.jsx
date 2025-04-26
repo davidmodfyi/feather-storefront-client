@@ -2,9 +2,17 @@ import { useEffect, useState } from 'react';
 
 export default function Storefront({ onLogout, onHome }) {
   const [items, setItems] = useState([]);
+  const [distributor, setDistributor] = useState('Storefront');
   const [categoryFilter, setCategoryFilter] = useState(null);
 
   useEffect(() => {
+    fetch('https://api.featherstorefront.com/api/me', {
+      credentials: 'include'
+    })
+      .then(res => res.json())
+      .then(data => setDistributor(data.distributorName || 'Storefront'))
+      .catch(console.error);
+
     fetch('https://api.featherstorefront.com/api/items', {
       credentials: 'include'
     })
@@ -21,13 +29,14 @@ export default function Storefront({ onLogout, onHome }) {
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Ocean Wave Foods - Storefront</h1>
+        <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
         <div className="flex gap-2">
           <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
           <button onClick={onLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
         </div>
       </div>
 
+      {/* Category buttons */}
       <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={() => setCategoryFilter(null)}
@@ -46,6 +55,7 @@ export default function Storefront({ onLogout, onHome }) {
         ))}
       </div>
 
+      {/* Product grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map(item => (
           <div key={item.id} className="border p-4 rounded shadow">
