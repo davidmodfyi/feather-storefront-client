@@ -17,52 +17,53 @@ export default function Storefront({ onLogout, onHome }) {
       credentials: 'include'
     })
       .then(res => res.json())
-      .then(data => setItems(data))
+      .then(data => {
+        console.log('Fetched products:', data);
+        setItems(data);
+      })
       .catch(console.error);
   }, []);
 
-  const categories = [...new Set(items.map(item => item.category))];
+  const categories = Array.from(new Set(items.map(item => item.category)));
   const filteredItems = categoryFilter
     ? items.filter(item => item.category === categoryFilter)
     : items;
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
-        <div className="flex gap-2">
-          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
-          <button onClick={onLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
+        <div className="space-x-2">
+          <button onClick={onHome} className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded">Home</button>
+          <button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Logout</button>
         </div>
       </div>
 
-      {/* Category buttons */}
       <div className="flex flex-wrap gap-2 mb-4">
         <button
+          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
           onClick={() => setCategoryFilter(null)}
-          className={`px-3 py-1 rounded ${categoryFilter === null ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         >
           All
         </button>
         {categories.map(category => (
           <button
             key={category}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
             onClick={() => setCategoryFilter(category)}
-            className={`px-3 py-1 rounded ${categoryFilter === category ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
           >
             {category}
           </button>
         ))}
       </div>
 
-      {/* Product grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map(item => (
           <div key={item.id} className="border p-4 rounded shadow">
-            <h2 className="text-xl font-semibold">{item.name}</h2>
-            <p className="text-gray-600">SKU: {item.sku}</p>
-            <p className="text-gray-800 font-bold">Price: ${item.unitPrice.toFixed(2)}</p>
-            <button className="mt-2 px-3 py-1 bg-green-500 text-white rounded">Add to Cart</button>
+            <h2 className="text-lg font-semibold">{item.name}</h2>
+            <p>SKU: {item.sku}</p>
+            <p>Price: ${item.unitPrice.toFixed(2)}</p>
+            <button className="mt-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded">Add to Cart</button>
           </div>
         ))}
       </div>
