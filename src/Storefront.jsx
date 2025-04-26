@@ -1,87 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 
-function Storefront({ brandName, onLogout }) {
-  const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState(['All']);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+export default function Storefront({ onLogout, onHome }) {
+  const [items, setItems] = useState([]);
+  const [distributor, setDistributor] = useState('Storefront');
+  const [categoryFilter, setCategoryFilter] = useState(null);
 
   useEffect(() => {
-    // Fetch products for the storefront (requires valid session cookie)
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch('/api/products', {
-          credentials: 'include'
-        });
-        if (res.status === 401) {
-          // Session is not valid or expired, force logout and redirect to login
-          onLogout();
-          return;
-        }
-        const data = await res.json();
-        // If data is not an array (e.g., an error or empty object), treat as unauthorized
-        if (!Array.isArray(data)) {
-          onLogout();
-          return;
-        }
-        // Update product list state
-        setProducts(data);
-        // Derive categories from products
-        const cats = Array.from(new Set(data.map(p => p.category))).sort();
-        setCategories(['All', ...cats]);
-      } catch (error) {
-        console.error('Failed to fetch products:', error);
-        // Optionally handle fetch errors (e.g., network issues)
-      }
-    };
-    fetchProducts();
-  }, [onLogout]);
+    fetch('https://api.featherstorefront.com/api/me', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => setDistributor(data.distributorName || 'Storefront'))
+      .catch(console.error);
 
-  // Filter products based on selected category
-  const displayedProducts = selectedCategory === 'All'
-    ? products
-    : products.filter(p => p.category === selectedCategory);
+    fetch('https://api.featherstorefront.com/api/items', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => setItems(data))
+      .catch(console.error);
+  }, []);
+
+  function handleLogout() {
+    fetch('https://api.featherstorefront.com/api/logout', { method: 'POST', credentials: 'include' })
+      .then(() => onLogout());
+  }
+
+  const categories = [...new Set(items.map(item => item.category))];
+  const filteredItems = categoryFilter ? items.filter(item => item.category === categoryFilter) : items;
 
   return (
-    <div className="storefront-page">
-      {/* Header with brand name and portal name */}
-      <h1>{brandName} - Storefront</h1>
-      {/* Navigation buttons */}
-      <div className="portal-nav">
-        <button className="home-btn" onClick={() => navigate('/')}>Home</button>
-        <button className="logout-btn" onClick={onLogout}>Logout</button>
+    <div className="p-6">
+      <div className="flex justify-between mb-4">
+        <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
+        <div className="flex gap-2">
+          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
+          <button onClick={handleLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
+        </div>
       </div>
-
-      {/* Category filter buttons */}
-      <div className="category-filter">
+      <div className="flex gap-2 mb-6 flex-wrap">
+        <button onClick={() => setCategoryFilter(null)} className="px-4 py-2 bg-blue-500 text-white rounded">All</button>
         {categories.map(cat => (
-          <button
-            key={cat}
-            className={selectedCategory === cat ? 'active' : ''}
-            onClick={() => setSelectedCategory(cat)}
-          >
-            {cat}
-          </button>
+          <button key={cat} onClick={() => setCategoryFilter(cat)} className="px-4 py-2 bg-blue-500 text-white rounded">{cat}</button>
         ))}
       </div>
-
-      {/* Product list */}
-      <div className="product-list">
-        {displayedProducts.map(product => (
-          <div key={product.id} className="product-card">
-            <h3>{product.name}</h3>
-            <p>SKU: {product.sku}</p>
-            <p>Price: ${product.unitPrice}</p>
-            <button>Add to Cart</button>
+      <div className="grid gap-4">
+        {filteredItems.map(item => (
+          <div key={item.id} className="border p-4 rounded">
+            <h2 className="text-xl font-bold mb-2">{item.name}</h2>
+            <p>SKU: {item.sku}</p>
+            <p>Price: ${item.unitPrice}</p>
+            <button className="mt-2 px-4 py-2 bg-green-500 text-white rounded">Add to Cart</button>
           </div>
         ))}
-        {displayedProducts.length === 0 && (
-          <p>No products available.</p>
-        )}
       </div>
     </div>
   );
 }
-
-export default Storefront;
