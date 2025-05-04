@@ -156,3 +156,96 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     const currentQuantity = quantities[itemId] || 1;
     
     if (cartQuantity !== currentQuantity) {
+      return "bg-yellow-500 hover:bg-yellow-600";
+    }
+    
+    return "bg-blue-500 hover:bg-blue-600";
+  }
+
+  const categories = [...new Set(items.map(item => item.category))];
+  const filteredItems = categoryFilter ? items.filter(item => item.category === categoryFilter) : items;
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-between mb-4">
+        <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
+        <div className="flex gap-2 items-center">
+          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
+          <button 
+            onClick={goToCart} 
+            className="px-3 py-1 bg-blue-500 text-white rounded flex items-center gap-1"
+          >
+            🛒 My Cart ({getCartItemCount()})
+          </button>
+          <button onClick={handleLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
+        </div>
+      </div>
+      
+      <div className="flex gap-2 mb-6 flex-wrap">
+        <button 
+          onClick={() => setCategoryFilter(null)} 
+          className={`px-4 py-2 ${!categoryFilter ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded`}
+        >
+          All
+        </button>
+        {categories.map(cat => (
+          <button 
+            key={cat} 
+            onClick={() => setCategoryFilter(cat)} 
+            className={`px-4 py-2 ${categoryFilter === cat ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+      
+      {loading ? (
+        <div className="text-center py-8">
+          <p>Loading products...</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredItems.map(item => (
+            <div key={item.id} className="border p-4 rounded shadow">
+              <h2 className="text-xl font-bold mb-2">{item.name}</h2>
+              <p className="mb-1">SKU: {item.sku}</p>
+              <p className="mb-3">Price: ${item.unitPrice.toFixed(2)}</p>
+              
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm font-medium">Quantity:</span>
+                <button 
+                  onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) - 1)}
+                  className="px-2 py-1 bg-gray-200 rounded"
+                >
+                  -
+                </button>
+                
+                <input
+                  type="number"
+                  min="1"
+                  value={quantities[item.id] || 1}
+                  onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
+                  className="w-12 text-center border rounded"
+                />
+                
+                <button 
+                  onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) + 1)}
+                  className="px-2 py-1 bg-gray-200 rounded"
+                >
+                  +
+                </button>
+              </div>
+              
+              <button 
+                onClick={() => handleAddToCart(item)}
+                className={`w-full mt-2 px-4 py-2 ${getButtonClass(item.id)} text-white rounded`}
+              >
+                {getButtonText(item.id)}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
