@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AdminLogin from './AdminLogin';
 import Storefront from './Storefront';
 import Backoffice from './Backoffice';
 import { useNavigate } from 'react-router-dom';
 
-// Portal selection page component (shown after login)
-function PortalPage({ brandName }) {
+// Portal selection page component
+function PortalPage({ brandName, onLogout }) {
   const navigate = useNavigate();
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
@@ -25,6 +25,12 @@ function PortalPage({ brandName }) {
         >
           Backoffice
         </button>
+        <button 
+          onClick={onLogout}
+          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded"
+        >
+          Logout
+        </button>
       </div>
     </div>
   );
@@ -33,19 +39,57 @@ function PortalPage({ brandName }) {
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [brandName, setBrandName] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  // Callback for successful login (to be passed to AdminLogin component)
-  const handleLoginSuccess = (name) => {
-    // Set logged-in state and store brand name (if provided) after login
-    console.log("Login successful, brand name:", name);
-    setLoggedIn(true);
-    setBrandName(name || '');
+  // Check if user is already logged in on component mount
+  useEffect(() => {
+    async function checkLoginStatus() {
+      try {
+        const res = await fetch('https://api.featherstorefront.com/api/me', {
+          credentials: 'include'
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setLoggedIn(true);
+          setBrandName(data.distributorName || '');
+        }
+      } catch (err) {
+        console.error('Error checking login status:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    checkLoginStatus();
+  }, []);
+
+  // Login handler
+  const handleLogin = async (username, password) => {
+    try {
+      const res = await fetch('https://api.featherstorefront.com/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username, password })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setLoggedIn(true);
+        setBrandName(data.distributorName || '');
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Login error:', err);
+      return false;
+    }
   };
 
-  // Logout handler to destroy session and reset state
+  // Logout handler
   const handleLogout = async () => {
     try {
-      // Request the backend to destroy session and clear cookie
       await fetch('https://api.featherstorefront.com/api/logout', {
         method: 'POST',
         credentials: 'include'
@@ -53,7 +97,6 @@ function App() {
     } catch (error) {
       console.error('Logout request failed:', error);
     } finally {
-      // Regardless of request success, reset app state
       setLoggedIn(false);
       setBrandName('');
     }
@@ -61,48 +104,34 @@ function App() {
 
   // Function for home button
   const handleHome = () => {
-    // Navigate to home portal selection page
     window.location.href = '/';
   };
 
+  // Show loading spinner while checking login status
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  // If not logged in, show login screen
+  if (!loggedIn) {
+    return <AdminLogin onLogin={handleLogin} />;
+  }
+
+  // If logged in, show the app with routes
   return (
     <BrowserRouter>
       <Routes>
-        {/* Admin Login route */}
-        <Route
-          path="/login"
-          element={
-            loggedIn
-              ? <Navigate to="/" replace />
-              : <AdminLogin onLoginSuccess={handleLoginSuccess} />
-          }
-        />
-        {/* Portal selection (home) route, accessible only if logged in */}
         <Route
           path="/"
-          element={
-            loggedIn
-              ? <PortalPage brandName={brandName} />
-              : <Navigate to="/login" replace />
-          }
+          element={<PortalPage brandName={brandName} onLogout={handleLogout} />}
         />
-        {/* Storefront route, protected */}
         <Route
           path="/storefront"
-          element={
-            loggedIn
-              ? <Storefront brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
-              : <Navigate to="/login" replace />
-          }
+          element={<Storefront brandName={brandName} onLogout={handleLogout} onHome={handleHome} />}
         />
-        {/* Backoffice route, protected */}
         <Route
           path="/backoffice"
-          element={
-            loggedIn
-              ? <Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
-              : <Navigate to="/login" replace />
-          }
+          element={<Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />}
         />
       </Routes>
     </BrowserRouter>
