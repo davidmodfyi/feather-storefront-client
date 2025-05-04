@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './AdminLogin';
 import Storefront from './Storefront';
 import Backoffice from './Backoffice';
@@ -64,27 +64,10 @@ function App() {
     checkLoginStatus();
   }, []);
 
-  // Login handler
-  const handleLogin = async (username, password) => {
-    try {
-      const res = await fetch('https://api.featherstorefront.com/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ username, password })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        setLoggedIn(true);
-        setBrandName(data.distributorName || '');
-        return true;
-      }
-      return false;
-    } catch (err) {
-      console.error('Login error:', err);
-      return false;
-    }
+  // Callback for successful login
+  const handleLoginSuccess = () => {
+    setLoggedIn(true);
+    window.location.href = '/'; // Refresh the page to trigger the useEffect
   };
 
   // Logout handler
@@ -99,6 +82,7 @@ function App() {
     } finally {
       setLoggedIn(false);
       setBrandName('');
+      window.location.href = '/';
     }
   };
 
@@ -114,7 +98,7 @@ function App() {
 
   // If not logged in, show login screen
   if (!loggedIn) {
-    return <AdminLogin onLogin={handleLogin} />;
+    return <AdminLogin onLogin={handleLoginSuccess} />;
   }
 
   // If logged in, show the app with routes

@@ -5,20 +5,64 @@ export default function AdminLogin({ onLogin }) {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [debugInfo, setDebugInfo] = useState(null);
 
-  async function handleLoginSubmit() {
+  async function handleLogin() {
     setIsLoading(true);
     setError("");
+    setDebugInfo(null);
+    
+    console.log(`Attempting to log in as: ${username}`);
     
     try {
-      const success = await onLogin(username, password);
+      // Make the login request directly here
+      const res = await fetch("https://api.featherstorefront.com/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, password })
+      });
       
-      if (!success) {
-        setError("Invalid username or password");
+      console.log('Login response status:', res.status);
+      
+      // Convert response to text for debugging
+      const responseText = await res.text();
+      console.log('Response text:', responseText);
+      
+      // Parse if it's JSON
+      let responseData = null;
+      try {
+        responseData = JSON.parse(responseText);
+        console.log('Parsed response:', responseData);
+      } catch (e) {
+        console.log('Response is not valid JSON');
+      }
+      
+      if (res.ok) {
+        console.log('Login successful');
+        
+        // Call the parent's onLogin handler
+        if (onLogin) {
+          onLogin();
+        } else {
+          // If no onLogin handler, redirect to home
+          window.location.href = "/";
+        }
+      } else {
+        console.log('Login failed');
+        setError(responseData?.error || "Login failed. Please check your credentials.");
+        setDebugInfo({
+          status: res.status,
+          statusText: res.statusText,
+          responseData
+        });
       }
     } catch (err) {
-      console.error(err);
-      setError("An error occurred during login. Please try again.");
+      console.error('Login request error:', err);
+      setError("Network error. Please try again.");
+      setDebugInfo({
+        error: err.message
+      });
     } finally {
       setIsLoading(false);
     }
@@ -49,11 +93,11 @@ export default function AdminLogin({ onLogin }) {
           onChange={(e) => setPassword(e.target.value)}
           className="border rounded px-3 py-2 mb-4 w-full"
           onKeyPress={(e) => {
-            if (e.key === 'Enter') handleLoginSubmit();
+            if (e.key === 'Enter') handleLogin();
           }}
         />
         <button
-          onClick={handleLoginSubmit}
+          onClick={handleLogin}
           disabled={isLoading}
           className={`w-full ${
             isLoading ? 'bg-blue-300' : 'bg-blue-500 hover:bg-blue-600'
@@ -61,6 +105,18 @@ export default function AdminLogin({ onLogin }) {
         >
           {isLoading ? 'Logging in...' : 'Login'}
         </button>
+        
+        {/* Debug information - only shown in development */}
+        {debugInfo && (
+          <div className="mt-4 p-2 bg-gray-100 text-xs">
+            <details>
+              <summary>Debug Info</summary>
+              <pre className="whitespace-pre-wrap">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </details>
+          </div>
+        )}
       </div>
     </div>
   );
