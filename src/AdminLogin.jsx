@@ -41,9 +41,9 @@ export default function AdminLogin({ onLogin }) {
       if (res.ok) {
         console.log('Login successful');
         
-        // Call the parent's onLogin handler
+        // Call the parent's onLogin handler with the response data
         if (onLogin) {
-          onLogin();
+          onLogin(responseData);
         } else {
           // If no onLogin handler, redirect to home
           window.location.href = "/";

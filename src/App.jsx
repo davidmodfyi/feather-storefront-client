@@ -7,8 +7,34 @@ import BackofficeOptions from './BackofficeOptions';
 import { useNavigate } from 'react-router-dom';
 
 // Portal selection page component
-function PortalPage({ brandName, onLogout }) {
+function PortalPage({ brandName, onLogout, userType }) {
   const navigate = useNavigate();
+  
+  // Different view based on user type
+  if (userType === 'Customer') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6">
+        <h1 className="text-2xl font-bold mb-4">{brandName || 'Feather Storefront'}</h1>
+        <p className="mb-6">Welcome! What would you like to do?</p>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => navigate('/storefront')}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded"
+          >
+            Storefront
+          </button>
+          <button 
+            onClick={onLogout}
+            className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Default Admin view
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <h1 className="text-2xl font-bold mb-4">{brandName || 'Feather Storefront'}</h1>
@@ -40,6 +66,7 @@ function PortalPage({ brandName, onLogout }) {
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [brandName, setBrandName] = useState('');
+  const [userType, setUserType] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Check if user is already logged in on component mount
@@ -54,6 +81,7 @@ function App() {
           const data = await res.json();
           setLoggedIn(true);
           setBrandName(data.distributorName || '');
+          setUserType(data.userType || 'Admin'); // Default to Admin if not specified
         }
       } catch (err) {
         console.error('Error checking login status:', err);
@@ -66,8 +94,10 @@ function App() {
   }, []);
 
   // Callback for successful login
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (data) => {
     setLoggedIn(true);
+    setBrandName(data.distributorName || '');
+    setUserType(data.userType || 'Admin');
     window.location.href = '/'; // Refresh the page to trigger the useEffect
   };
 
@@ -83,6 +113,7 @@ function App() {
     } finally {
       setLoggedIn(false);
       setBrandName('');
+      setUserType('');
       window.location.href = '/';
     }
   };
@@ -108,21 +139,28 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={<PortalPage brandName={brandName} onLogout={handleLogout} />}
+          element={<PortalPage brandName={brandName} onLogout={handleLogout} userType={userType} />}
         />
         <Route
           path="/storefront"
-          element={<Storefront brandName={brandName} onLogout={handleLogout} onHome={handleHome} />}
+          element={<Storefront brandName={brandName} onLogout={handleLogout} onHome={handleHome} userType={userType} />}
         />
-        {/* Main backoffice route - shows options */}
+        {/* Protect backoffice routes from Customer users */}
         <Route
           path="/backoffice"
-          element={<BackofficeOptions brandName={brandName} onLogout={handleLogout} onHome={handleHome} />}
+          element={
+            userType === 'Customer' 
+              ? <Navigate to="/" replace /> 
+              : <BackofficeOptions brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+          }
         />
-        {/* Manage customers route - this is the original backoffice page */}
         <Route
           path="/backoffice/customers"
-          element={<Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />}
+          element={
+            userType === 'Customer' 
+              ? <Navigate to="/" replace /> 
+              : <Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+          }
         />
         {/* Redirect any unknown routes to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
