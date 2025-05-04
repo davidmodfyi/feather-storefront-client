@@ -6,9 +6,10 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://api.featherstorefront.com', // your API server
+        target: 'https://api.featherstorefront.com',
         changeOrigin: true,
         secure: true,
+        rewrite: (path) => path.replace(/^\/api/, '') // Remove /api prefix
       },
     },
   },
