@@ -4,6 +4,7 @@ import AdminLogin from './AdminLogin';
 import Storefront from './Storefront';
 import Backoffice from './Backoffice';
 import BackofficeOptions from './BackofficeOptions';
+import Cart from './Cart';
 import { useNavigate } from 'react-router-dom';
 
 // Portal selection page component
@@ -144,6 +145,10 @@ function App() {
         <Route
           path="/storefront"
           element={<Storefront brandName={brandName} onLogout={handleLogout} onHome={handleHome} userType={userType} />}
+        />
+        <Route
+          path="/cart"
+          element={<Cart brandName={brandName} onLogout={handleLogout} onHome={handleHome} userType={userType} />}
         />
         {/* Protect backoffice routes from Customer users */}
         <Route
