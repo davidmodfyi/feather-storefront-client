@@ -9,11 +9,23 @@ import { useNavigate } from 'react-router-dom';
 function PortalPage({ brandName }) {
   const navigate = useNavigate();
   return (
-    <div className="portal-selection">
-      <h1>{brandName || 'Feather Storefront'}</h1>
-      <p>Select a portal to continue</p>
-      <button onClick={() => navigate('/storefront')}>Storefront</button>
-      <button onClick={() => navigate('/backoffice')}>Backoffice</button>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+      <h1 className="text-2xl font-bold mb-4">{brandName || 'Feather Storefront'}</h1>
+      <p className="mb-6">Select a portal to continue</p>
+      <div className="flex gap-4">
+        <button 
+          onClick={() => navigate('/storefront')}
+          className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded"
+        >
+          Storefront
+        </button>
+        <button 
+          onClick={() => navigate('/backoffice')}
+          className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded"
+        >
+          Backoffice
+        </button>
+      </div>
     </div>
   );
 }
@@ -25,6 +37,7 @@ function App() {
   // Callback for successful login (to be passed to AdminLogin component)
   const handleLoginSuccess = (name) => {
     // Set logged-in state and store brand name (if provided) after login
+    console.log("Login successful, brand name:", name);
     setLoggedIn(true);
     setBrandName(name || '');
   };
@@ -33,7 +46,7 @@ function App() {
   const handleLogout = async () => {
     try {
       // Request the backend to destroy session and clear cookie
-      await fetch('/api/logout', {
+      await fetch('https://api.featherstorefront.com/api/logout', {
         method: 'POST',
         credentials: 'include'
       });
@@ -44,6 +57,12 @@ function App() {
       setLoggedIn(false);
       setBrandName('');
     }
+  };
+
+  // Function for home button
+  const handleHome = () => {
+    // Navigate to home portal selection page
+    window.location.href = '/';
   };
 
   return (
@@ -72,7 +91,7 @@ function App() {
           path="/storefront"
           element={
             loggedIn
-              ? <Storefront brandName={brandName} onLogout={handleLogout} />
+              ? <Storefront brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
               : <Navigate to="/login" replace />
           }
         />
@@ -81,7 +100,7 @@ function App() {
           path="/backoffice"
           element={
             loggedIn
-              ? <Backoffice brandName={brandName} onLogout={handleLogout} />
+              ? <Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
               : <Navigate to="/login" replace />
           }
         />

@@ -1,19 +1,21 @@
 import { useState } from "react";
 
-export default function AdminLogin({ onLogin }) {
+export default function AdminLogin({ onLoginSuccess }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   async function handleLogin() {
     try {
-      const res = await fetch("https://api.featherstorefront.com/api/login", {
+      const res = await fetch("https://api.featherstorefront.com/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ username, password })
       });
+      
       if (res.ok) {
-        onLogin();
+        const data = await res.json();
+        onLoginSuccess(data.distributorName || '');
       } else {
         alert("Login failed.");
       }
