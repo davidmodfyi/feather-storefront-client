@@ -2,41 +2,48 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Cart({ onLogout, onHome, brandName }) {
-  const [cart, setCart] = useState({});
+  const [cartItems, setCartItems] = useState([]);
   const [distributor, setDistributor] = useState('Storefront');
   const [quantities, setQuantities] = useState({});
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load cart from localStorage
-    const savedCart = localStorage.getItem('featherStorefrontCart');
-    if (savedCart) {
-      try {
-        const parsedCart = JSON.parse(savedCart);
-        setCart(parsedCart);
-        
-        // Initialize quantities based on cart
-        const initialQuantities = {};
-        Object.keys(parsedCart).forEach(itemId => {
-          initialQuantities[itemId] = parsedCart[itemId].quantity;
-        });
-        setQuantities(initialQuantities);
-      } catch (err) {
-        console.error('Error parsing saved cart:', err);
-      }
-    }
-    
     // Fetch user info
     fetch('https://api.featherstorefront.com/api/me', { credentials: 'include' })
       .then(res => res.json())
       .then(data => setDistributor(data.distributorName || 'Storefront'))
       .catch(console.error);
+    
+    // Fetch cart items
+    fetchCart();
   }, []);
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('featherStorefrontCart', JSON.stringify(cart));
-  }, [cart]);
+  // Fetch cart items from the server
+  const fetchCart = () => {
+    setLoading(true);
+    fetch('https://api.featherstorefront.com/api/cart', { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch cart');
+        return res.json();
+      })
+      .then(data => {
+        setCartItems(data);
+        
+        // Initialize quantities state based on cart items
+        const initialQuantities = {};
+        data.forEach(item => {
+          initialQuantities[item.cart_item_id] = item.quantity;
+        });
+        setQuantities(initialQuantities);
+        
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching cart:', error);
+        setLoading(false);
+      });
+  };
 
   function handleLogout() {
     fetch('https://api.featherstorefront.com/api/logout', { method: 'POST', credentials: 'include' })
@@ -60,43 +67,80 @@ export default function Cart({ onLogout, onHome, brandName }) {
   function handleUpdateCart(itemId) {
     const quantity = quantities[itemId] || 1;
     
-    setCart(prevCart => {
-      const updatedCart = { ...prevCart };
-      
-      if (quantity < 1) {
-        // Remove item if quantity is zero or negative
-        delete updatedCart[itemId];
-      } else {
-        // Update quantity
-        updatedCart[itemId] = {
-          ...updatedCart[itemId],
-          quantity
-        };
-      }
-      
-      return updatedCart;
-    });
+    fetch(`https://api.featherstorefront.com/api/cart/${itemId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ quantity })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to update cart');
+        return res.json();
+      })
+      .then(() => {
+        // Update local state
+        setCartItems(prevItems => {
+          return prevItems.map(item => {
+            if (item.cart_item_id === itemId) {
+              return { ...item, quantity };
+            }
+            return item;
+          });
+        });
+      })
+      .catch(error => {
+        console.error('Error updating cart:', error);
+        alert('There was an error updating your cart. Please try again.');
+      });
   }
 
   function handleRemoveFromCart(itemId) {
-    setCart(prevCart => {
-      const updatedCart = { ...prevCart };
-      delete updatedCart[itemId];
-      return updatedCart;
-    });
+    fetch(`https://api.featherstorefront.com/api/cart/${itemId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to remove item from cart');
+        return res.json();
+      })
+      .then(() => {
+        // Update local state
+        setCartItems(prevItems => prevItems.filter(item => item.cart_item_id !== itemId));
+      })
+      .catch(error => {
+        console.error('Error removing item from cart:', error);
+        alert('There was an error removing the item from your cart. Please try again.');
+      });
+  }
+
+  function handleClearCart() {
+    if (!window.confirm('Are you sure you want to clear your cart?')) {
+      return;
+    }
+    
+    fetch('https://api.featherstorefront.com/api/cart', {
+      method: 'DELETE',
+      credentials: 'include'
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to clear cart');
+        return res.json();
+      })
+      .then(() => {
+        setCartItems([]);
+      })
+      .catch(error => {
+        console.error('Error clearing cart:', error);
+        alert('There was an error clearing your cart. Please try again.');
+      });
   }
 
   function calculateSubtotal() {
-    return Object.values(cart).reduce((total, item) => {
+    return cartItems.reduce((total, item) => {
       return total + (item.unitPrice * item.quantity);
     }, 0);
   }
 
-  function getCartItemCount() {
-    return Object.keys(cart).length;
-  }
-
-  const cartItems = Object.values(cart).filter(item => item.quantity > 0);
   const subtotal = calculateSubtotal();
 
   return (
@@ -110,7 +154,11 @@ export default function Cart({ onLogout, onHome, brandName }) {
         </div>
       </div>
       
-      {cartItems.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-8">
+          <p>Loading your cart...</p>
+        </div>
+      ) : cartItems.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-xl mb-4">Your cart is empty</p>
           <button 
@@ -122,14 +170,22 @@ export default function Cart({ onLogout, onHome, brandName }) {
         </div>
       ) : (
         <>
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold mb-2">Cart Summary</h2>
-            <p className="text-gray-700">{getCartItemCount()} item(s) in your cart</p>
+          <div className="mb-4 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Cart Summary</h2>
+              <p className="text-gray-700">{cartItems.length} item(s) in your cart</p>
+            </div>
+            <button 
+              onClick={handleClearCart}
+              className="px-3 py-1 bg-red-500 text-white rounded"
+            >
+              Clear Cart
+            </button>
           </div>
           
           <div className="mb-6">
             {cartItems.map(item => (
-              <div key={item.id} className="border p-4 rounded shadow mb-4 flex flex-col md:flex-row md:items-center md:justify-between">
+              <div key={item.cart_item_id} className="border p-4 rounded shadow mb-4 flex flex-col md:flex-row md:items-center md:justify-between">
                 <div className="mb-3 md:mb-0">
                   <h3 className="text-lg font-bold">{item.name}</h3>
                   <p className="text-sm">SKU: {item.sku}</p>
@@ -140,7 +196,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">Quantity:</span>
                     <button 
-                      onClick={() => handleQuantityChange(item.id, quantities[item.id] - 1)}
+                      onClick={() => handleQuantityChange(item.cart_item_id, (quantities[item.cart_item_id] || item.quantity) - 1)}
                       className="px-2 py-1 bg-gray-200 rounded"
                     >
                       -
@@ -149,13 +205,13 @@ export default function Cart({ onLogout, onHome, brandName }) {
                     <input
                       type="number"
                       min="1"
-                      value={quantities[item.id] || item.quantity}
-                      onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
+                      value={quantities[item.cart_item_id] || item.quantity}
+                      onChange={(e) => handleQuantityChange(item.cart_item_id, parseInt(e.target.value) || 1)}
                       className="w-12 text-center border rounded"
                     />
                     
                     <button 
-                      onClick={() => handleQuantityChange(item.id, quantities[item.id] + 1)}
+                      onClick={() => handleQuantityChange(item.cart_item_id, (quantities[item.cart_item_id] || item.quantity) + 1)}
                       className="px-2 py-1 bg-gray-200 rounded"
                     >
                       +
@@ -163,9 +219,9 @@ export default function Cart({ onLogout, onHome, brandName }) {
                   </div>
                   
                   <div className="flex gap-2">
-                    {quantities[item.id] !== item.quantity && (
+                    {quantities[item.cart_item_id] !== item.quantity && (
                       <button 
-                        onClick={() => handleUpdateCart(item.id)}
+                        onClick={() => handleUpdateCart(item.cart_item_id)}
                         className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
                       >
                         Update
@@ -173,7 +229,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
                     )}
                     
                     <button 
-                      onClick={() => handleRemoveFromCart(item.id)}
+                      onClick={() => handleRemoveFromCart(item.cart_item_id)}
                       className="px-3 py-1 bg-red-500 text-white rounded text-sm"
                     >
                       Remove
