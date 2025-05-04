@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './AdminLogin';
 import Storefront from './Storefront';
 import Backoffice from './Backoffice';
+import BackofficeOptions from './BackofficeOptions';
 import { useNavigate } from 'react-router-dom';
 
 // Portal selection page component
@@ -113,10 +114,18 @@ function App() {
           path="/storefront"
           element={<Storefront brandName={brandName} onLogout={handleLogout} onHome={handleHome} />}
         />
+        {/* Main backoffice route - shows options */}
         <Route
           path="/backoffice"
+          element={<BackofficeOptions brandName={brandName} onLogout={handleLogout} onHome={handleHome} />}
+        />
+        {/* Manage customers route - this is the original backoffice page */}
+        <Route
+          path="/backoffice/customers"
           element={<Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />}
         />
+        {/* Redirect any unknown routes to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
