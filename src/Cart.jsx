@@ -186,10 +186,23 @@ export default function Cart({ onLogout, onHome, brandName }) {
           <div className="mb-6">
             {cartItems.map(item => (
               <div key={item.cart_item_id} className="border p-4 rounded shadow mb-4 flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="mb-3 md:mb-0">
-                  <h3 className="text-lg font-bold">{item.name}</h3>
-                  <p className="text-sm">SKU: {item.sku}</p>
-                  <p className="text-sm">Price: ${item.unitPrice.toFixed(2)}</p>
+                <div className="mb-3 md:mb-0 flex">
+                  {/* Display product image if available */}
+                  {item.image_url && (
+                    <div className="mr-4">
+                      <img 
+                        src={item.image_url} 
+                        alt={item.name} 
+                        className="w-20 h-20 object-cover rounded"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-lg font-bold">{item.name}</h3>
+                    <p className="text-sm">SKU: {item.sku}</p>
+                    <p className="text-sm">Price: ${item.unitPrice.toFixed(2)}</p>
+                    {item.description && <p className="text-sm text-gray-600 mt-1">{item.description}</p>}
+                  </div>
                 </div>
                 
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
