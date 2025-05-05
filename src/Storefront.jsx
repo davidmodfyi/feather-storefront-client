@@ -92,38 +92,49 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   }
 
   // Add or update cart item
-  function handleAddToCart(item) {
-    const quantity = quantities[item.id] || 1;
-    
-    fetch('https://api.featherstorefront.com/api/cart', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ 
-        product_id: item.id, 
-        quantity 
-      })
+function handleAddToCart(item) {
+  const quantity = quantities[item.id] || 1;
+  
+  // Log the item being added to cart for debugging
+  console.log('Adding to cart:', item);
+  
+  fetch('https://api.featherstorefront.com/api/cart', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ 
+      product_id: item.id,
+      quantity,
+      // Include additional item data in case the API needs it
+      image_url: item.image_url,
+      description: item.description
     })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to update cart');
-        return res.json();
-      })
-      .then(() => {
-        // Update local cart state
-        setCart(prevCart => {
-          const updatedCart = { ...prevCart };
-          updatedCart[item.id] = {
-            ...item,
-            quantity
-          };
-          return updatedCart;
-        });
-      })
-      .catch(error => {
-        console.error('Error updating cart:', error);
-        alert('There was an error updating your cart. Please try again.');
+  })
+    .then(res => {
+      if (!res.ok) {
+        console.error('Server response error:', res.status);
+        throw new Error('Failed to update cart');
+      }
+      return res.json();
+    })
+    .then(data => {
+      console.log('Cart update successful:', data);
+      
+      // Update local cart state
+      setCart(prevCart => {
+        const updatedCart = { ...prevCart };
+        updatedCart[item.id] = {
+          ...item,
+          quantity
+        };
+        return updatedCart;
       });
-  }
+    })
+    .catch(error => {
+      console.error('Error updating cart:', error);
+      alert('There was an error updating your cart. Please try again.');
+    });
+}
 
   function getCartItemCount() {
     return Object.keys(cart).length;
