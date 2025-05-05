@@ -94,16 +94,17 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   // Add or update cart item
 // Add or update cart item - absolute minimal approach
 // Fixed Add to Cart function
+// Debug-focused Add to Cart function
 function handleAddToCart(item) {
   const quantity = quantities[item.id] || 1;
   
-  // Create payload with exact field names matching backend API
+  // Exactly match the backend API fields
   const payload = {
-    product_id: item.id,
-    quantity: quantity
+    product_id: parseInt(item.id), // Convert to number to ensure proper type
+    quantity: parseInt(quantity)   // Convert to number to ensure proper type
   };
   
-  console.log('Cart payload:', payload);
+  console.log('Debug payload:', payload);
   
   fetch('https://api.featherstorefront.com/api/cart', {
     method: 'POST',
@@ -112,18 +113,44 @@ function handleAddToCart(item) {
     body: JSON.stringify(payload)
   })
     .then(res => {
-      if (!res.ok) {
-        throw new Error('Failed to update cart');
-      }
-      return res.json();
+      console.log('Response status:', res.status);
+      return res.text().then(text => {
+        // Get the raw response text for debugging
+        console.log('Raw response:', text);
+        
+        try {
+          // Try to parse as JSON if possible
+          const data = JSON.parse(text);
+          console.log('Parsed response:', data);
+          return data;
+        } catch (e) {
+          console.log('Response is not JSON:', text);
+          if (!res.ok) {
+            throw new Error(`Server error: ${res.status}`);
+          }
+          return { success: true };
+        }
+      });
     })
-    .then(() => {
-      // Refresh cart data
+    .then(data => {
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      // On success, refresh cart data
+      console.log('Successfully added to cart, refreshing data');
       fetchCart();
     })
     .catch(error => {
-      console.error('Cart error:', error);
-      alert('Could not update cart. Please try again.');
+      console.error('Detailed cart error:', error);
+      
+      // Check if we're logged in
+      fetch('https://api.featherstorefront.com/api/me', { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          console.log('User session data:', data);
+          alert('Debug info in console. Please try again.');
+        });
     });
 }
 
