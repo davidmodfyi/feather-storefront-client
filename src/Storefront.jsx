@@ -93,20 +93,17 @@ export default function Storefront({ onLogout, onHome, brandName }) {
 
   // Add or update cart item
 // Add or update cart item - absolute minimal approach
+// Fixed Add to Cart function
 function handleAddToCart(item) {
   const quantity = quantities[item.id] || 1;
   
-  // Create the most minimal payload possible
+  // Create payload with exact field names matching backend API
   const payload = {
-    product_id: item.id
+    product_id: item.id,
+    quantity: quantity
   };
   
-  // Only add quantity if it's not 1 (assuming 1 is default on server)
-  if (quantity !== 1) {
-    payload.quantity = quantity;
-  }
-  
-  console.log('Sending minimal payload:', payload);
+  console.log('Cart payload:', payload);
   
   fetch('https://api.featherstorefront.com/api/cart', {
     method: 'POST',
@@ -115,24 +112,18 @@ function handleAddToCart(item) {
     body: JSON.stringify(payload)
   })
     .then(res => {
-      console.log('Response status:', res.status);
       if (!res.ok) {
-        return res.text().then(text => {
-          console.error('Error response text:', text);
-          throw new Error('Failed to update cart');
-        });
+        throw new Error('Failed to update cart');
       }
       return res.json();
     })
-    .then(data => {
-      console.log('Success response:', data);
-      
-      // Refresh the entire cart data from the server
+    .then(() => {
+      // Refresh cart data
       fetchCart();
     })
     .catch(error => {
-      console.error('Error in cart operation:', error);
-      alert('Could not update cart. Please try again later.');
+      console.error('Cart error:', error);
+      alert('Could not update cart. Please try again.');
     });
 }
 
