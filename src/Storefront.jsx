@@ -96,29 +96,20 @@ export default function Storefront({ onLogout, onHome, brandName }) {
 // Fixed Add to Cart function
 // Debug-focused Add to Cart function
 // Debug the ID issue
+// Use SKU as the product ID since the id field is null
 function handleAddToCart(item) {
-  // Debug item object structure
-  console.log('Item structure:', JSON.stringify(item, null, 2));
+  // Use the SKU as the product ID since the actual ID is null
+  const productId = item.sku.replace('PC-CUB-', '').replace('-', '');
+  const quantity = quantities[item.sku] || 1;
   
-  // Check the actual ID properties available
-  console.log('ID values:', {
-    'item.id': item.id,
-    'typeof item.id': typeof item.id,
-    'item.sku': item.sku,
-    'item.product_id': item.product_id
-  });
-  
-  const quantity = quantities[item.id] || 1;
-  
-  // Try using product_id value directly instead of item.id
+  // Create payload with the actual numeric ID extracted from SKU
   const payload = {
-    product_id: item.id, // This is the field we need to fix
+    product_id: productId,
     quantity: quantity
   };
   
-  console.log('Cart payload:', payload);
+  console.log('Using SKU-based cart payload:', payload);
   
-  // Rest of function remains the same...
   fetch('https://api.featherstorefront.com/api/cart', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -127,10 +118,18 @@ function handleAddToCart(item) {
   })
     .then(res => {
       console.log('Response status:', res.status);
-      if (!res.ok) throw new Error('Failed to update cart');
+      if (!res.ok) {
+        return res.text().then(text => {
+          console.error('Error response:', text);
+          throw new Error('Failed to update cart');
+        });
+      }
       return res.json();
     })
-    .then(() => fetchCart())
+    .then(() => {
+      // Refresh cart data on success
+      fetchCart();
+    })
     .catch(error => {
       console.error('Cart error:', error);
       alert('Could not update cart. Please try again.');
