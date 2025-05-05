@@ -91,24 +91,24 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     }));
   }
 
-  // Add or update cart item
-// Add or update cart item - absolute minimal approach
-// Fixed Add to Cart function
-// Debug-focused Add to Cart function
-// Debug the ID issue
-// Use SKU as the product ID since the id field is null
+ 
 function handleAddToCart(item) {
-  // Use the SKU as the product ID since the actual ID is null
-  const productId = item.sku.replace('PC-CUB-', '').replace('-', '');
-  const quantity = quantities[item.sku] || 1;
+  // Check if item has a numeric ID
+  if (!item.id || typeof item.id !== 'number') {
+    console.error('Invalid product ID:', item.id);
+    alert('Product has an invalid ID. Please try another product.');
+    return;
+  }
+
+  const quantity = quantities[item.id] || 1;
   
-  // Create payload with the actual numeric ID extracted from SKU
+  // Use the numeric ID directly now
   const payload = {
-    product_id: productId,
+    product_id: item.id,
     quantity: quantity
   };
   
-  console.log('Using SKU-based cart payload:', payload);
+  console.log('Cart payload:', payload);
   
   fetch('https://api.featherstorefront.com/api/cart', {
     method: 'POST',
@@ -126,8 +126,20 @@ function handleAddToCart(item) {
       }
       return res.json();
     })
-    .then(() => {
-      // Refresh cart data on success
+    .then(data => {
+      console.log('Success:', data);
+      
+      // Update local cart state
+      setCart(prevCart => {
+        const updatedCart = { ...prevCart };
+        updatedCart[item.id] = {
+          ...item,
+          quantity
+        };
+        return updatedCart;
+      });
+      
+      // Refresh cart data
       fetchCart();
     })
     .catch(error => {
