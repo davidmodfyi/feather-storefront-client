@@ -92,20 +92,21 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   }
 
   // Add or update cart item
+// Add or update cart item - absolute minimal approach
 function handleAddToCart(item) {
   const quantity = quantities[item.id] || 1;
   
-  // Only send the minimal required data that the API expects
+  // Create the most minimal payload possible
   const payload = {
-    product_id: item.id,
-    quantity: quantity
+    product_id: item.id
   };
   
-  console.log('Attempting to add to cart:', {
-    product_id: item.id,
-    quantity,
-    item_name: item.name
-  });
+  // Only add quantity if it's not 1 (assuming 1 is default on server)
+  if (quantity !== 1) {
+    payload.quantity = quantity;
+  }
+  
+  console.log('Sending minimal payload:', payload);
   
   fetch('https://api.featherstorefront.com/api/cart', {
     method: 'POST',
@@ -114,27 +115,24 @@ function handleAddToCart(item) {
     body: JSON.stringify(payload)
   })
     .then(res => {
+      console.log('Response status:', res.status);
       if (!res.ok) {
-        console.error('Server error response:', res.status);
         return res.text().then(text => {
-          try {
-            return JSON.parse(text);
-          } catch (e) {
-            throw new Error(`Server error: ${text}`);
-          }
+          console.error('Error response text:', text);
+          throw new Error('Failed to update cart');
         });
       }
       return res.json();
     })
     .then(data => {
-      console.log('Cart update response:', data);
+      console.log('Success response:', data);
       
-      // Refresh the cart data from server to ensure we have the latest including images
+      // Refresh the entire cart data from the server
       fetchCart();
     })
     .catch(error => {
-      console.error('Error updating cart:', error);
-      alert('There was an error updating your cart. Please try again.');
+      console.error('Error in cart operation:', error);
+      alert('Could not update cart. Please try again later.');
     });
 }
 
