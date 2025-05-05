@@ -95,20 +95,19 @@ export default function Storefront({ onLogout, onHome, brandName }) {
 function handleAddToCart(item) {
   const quantity = quantities[item.id] || 1;
   
-  // Log the item being added to cart for debugging
-  console.log('Adding to cart:', item);
+  // Only send the minimal required data that the API expects
+  const payload = {
+    product_id: item.id,
+    quantity: quantity
+  };
+  
+  console.log('Sending to API:', payload);
   
   fetch('https://api.featherstorefront.com/api/cart', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ 
-      product_id: item.id,
-      quantity,
-      // Include additional item data in case the API needs it
-      image_url: item.image_url,
-      description: item.description
-    })
+    body: JSON.stringify(payload)
   })
     .then(res => {
       if (!res.ok) {
@@ -120,7 +119,7 @@ function handleAddToCart(item) {
     .then(data => {
       console.log('Cart update successful:', data);
       
-      // Update local cart state
+      // Update local cart state with the FULL item data including image_url
       setCart(prevCart => {
         const updatedCart = { ...prevCart };
         updatedCart[item.id] = {
@@ -129,6 +128,9 @@ function handleAddToCart(item) {
         };
         return updatedCart;
       });
+      
+      // After successful API call, refresh the cart data
+      fetchCart();
     })
     .catch(error => {
       console.error('Error updating cart:', error);
