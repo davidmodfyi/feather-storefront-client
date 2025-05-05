@@ -8,6 +8,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   const [cart, setCart] = useState({});
   const [quantities, setQuantities] = useState({});
   const [loading, setLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState(null);
   const navigate = useNavigate();
 
   // Fetch user info, items, and cart
@@ -162,6 +163,16 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     return "bg-blue-500 hover:bg-blue-600";
   }
 
+  // Open product detail modal
+  function openProductDetails(item) {
+    setSelectedItem(item);
+  }
+
+  // Close product detail modal
+  function closeProductDetails() {
+    setSelectedItem(null);
+  }
+
   const categories = [...new Set(items.map(item => item.category))];
   const filteredItems = categoryFilter ? items.filter(item => item.category === categoryFilter) : items;
 
@@ -204,12 +215,26 @@ export default function Storefront({ onLogout, onHome, brandName }) {
           <p>Loading products...</p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredItems.map(item => (
-            <div key={item.id} className="border p-4 rounded shadow">
-              <h2 className="text-xl font-bold mb-2">{item.name}</h2>
-              <p className="mb-1">SKU: {item.sku}</p>
-              <p className="mb-3">Price: ${item.unitPrice.toFixed(2)}</p>
+            <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow">
+              <div className="cursor-pointer" onClick={() => openProductDetails(item)}>
+                {item.image_url && (
+                  <div className="mb-3 h-48 overflow-hidden">
+                    <img 
+                      src={item.image_url} 
+                      alt={item.name} 
+                      className="w-full h-full object-cover rounded"
+                    />
+                  </div>
+                )}
+                <h2 className="text-xl font-bold mb-2 hover:text-blue-600">{item.name}</h2>
+                <p className="mb-1 text-gray-600">SKU: {item.sku}</p>
+                <p className="mb-3 text-lg font-semibold">${item.unitPrice.toFixed(2)}</p>
+                {item.description && (
+                  <p className="mb-3 text-sm text-gray-700 line-clamp-2">{item.description}</p>
+                )}
+              </div>
               
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-sm font-medium">Quantity:</span>
@@ -244,6 +269,89 @@ export default function Storefront({ onLogout, onHome, brandName }) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+      
+      {/* Product Detail Modal */}
+      {selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold">{selectedItem.name}</h2>
+                <button 
+                  onClick={closeProductDetails}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  &times;
+                </button>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  {selectedItem.image_url ? (
+                    <img 
+                      src={selectedItem.image_url} 
+                      alt={selectedItem.name} 
+                      className="w-full h-auto rounded"
+                    />
+                  ) : (
+                    <div className="bg-gray-200 h-64 flex items-center justify-center rounded">
+                      <p className="text-gray-500">No image available</p>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <p className="text-gray-600 mb-2">SKU: {selectedItem.sku}</p>
+                  <p className="text-gray-600 mb-2">Category: {selectedItem.category}</p>
+                  <p className="text-2xl font-bold mb-4">${selectedItem.unitPrice.toFixed(2)}</p>
+                  
+                  {selectedItem.description && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold mb-2">Description</h3>
+                      <p className="text-gray-700">{selectedItem.description}</p>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-sm font-medium">Quantity:</span>
+                    <button 
+                      onClick={() => handleQuantityChange(selectedItem.id, (quantities[selectedItem.id] || 1) - 1)}
+                      className="px-3 py-1 bg-gray-200 rounded"
+                    >
+                      -
+                    </button>
+                    
+                    <input
+                      type="number"
+                      min="1"
+                      value={quantities[selectedItem.id] || 1}
+                      onChange={(e) => handleQuantityChange(selectedItem.id, parseInt(e.target.value) || 1)}
+                      className="w-16 text-center border rounded px-2 py-1"
+                    />
+                    
+                    <button 
+                      onClick={() => handleQuantityChange(selectedItem.id, (quantities[selectedItem.id] || 1) + 1)}
+                      className="px-3 py-1 bg-gray-200 rounded"
+                    >
+                      +
+                    </button>
+                  </div>
+                  
+                  <button 
+                    onClick={() => {
+                      handleAddToCart(selectedItem);
+                      closeProductDetails();
+                    }}
+                    className={`w-full mt-2 px-4 py-2 ${getButtonClass(selectedItem.id)} text-white rounded`}
+                  >
+                    {getButtonText(selectedItem.id)}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
