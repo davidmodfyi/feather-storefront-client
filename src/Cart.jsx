@@ -28,6 +28,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
         return res.json();
       })
       .then(data => {
+        console.log('Cart data received:', data);
         setCartItems(data);
         
         // Initialize quantities state based on cart items
@@ -187,13 +188,17 @@ export default function Cart({ onLogout, onHome, brandName }) {
             {cartItems.map(item => (
               <div key={item.cart_item_id} className="border p-4 rounded shadow mb-4 flex flex-col md:flex-row md:items-center md:justify-between">
                 <div className="mb-3 md:mb-0 flex">
-                  {/* Display product image if available */}
+                  {/* Safely display image only if it exists */}
                   {item.image_url && (
                     <div className="mr-4">
                       <img 
                         src={item.image_url} 
-                        alt={item.name} 
+                        alt={item.name || 'Product'} 
                         className="w-20 h-20 object-cover rounded"
+                        onError={(e) => {
+                          console.log('Image failed to load:', item.image_url);
+                          e.target.style.display = 'none';
+                        }}
                       />
                     </div>
                   )}

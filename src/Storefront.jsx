@@ -101,7 +101,11 @@ function handleAddToCart(item) {
     quantity: quantity
   };
   
-  console.log('Sending to API:', payload);
+  console.log('Attempting to add to cart:', {
+    product_id: item.id,
+    quantity,
+    item_name: item.name
+  });
   
   fetch('https://api.featherstorefront.com/api/cart', {
     method: 'POST',
@@ -111,25 +115,21 @@ function handleAddToCart(item) {
   })
     .then(res => {
       if (!res.ok) {
-        console.error('Server response error:', res.status);
-        throw new Error('Failed to update cart');
+        console.error('Server error response:', res.status);
+        return res.text().then(text => {
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            throw new Error(`Server error: ${text}`);
+          }
+        });
       }
       return res.json();
     })
     .then(data => {
-      console.log('Cart update successful:', data);
+      console.log('Cart update response:', data);
       
-      // Update local cart state with the FULL item data including image_url
-      setCart(prevCart => {
-        const updatedCart = { ...prevCart };
-        updatedCart[item.id] = {
-          ...item,
-          quantity
-        };
-        return updatedCart;
-      });
-      
-      // After successful API call, refresh the cart data
+      // Refresh the cart data from server to ensure we have the latest including images
       fetchCart();
     })
     .catch(error => {
