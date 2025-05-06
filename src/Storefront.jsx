@@ -10,6 +10,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch user info, items, and cart
   useEffect(() => {
@@ -197,8 +198,22 @@ function handleAddToCart(item) {
   }
 
   const categories = [...new Set(items.map(item => item.category))];
-  const filteredItems = categoryFilter ? items.filter(item => item.category === categoryFilter) : items;
-
+const filteredItems = items.filter(item => {
+  // First apply category filter
+  if (categoryFilter && item.category !== categoryFilter) return false;
+  
+  // Then apply search filter if there's a query
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    return (
+      item.name.toLowerCase().includes(query) ||
+      item.sku.toLowerCase().includes(query) ||
+      (item.description && item.description.toLowerCase().includes(query))
+    );
+  }
+  
+  return true;
+});
   return (
     <div className="p-6">
       <div className="flex justify-between mb-4">
@@ -232,6 +247,15 @@ function handleAddToCart(item) {
           </button>
         ))}
       </div>
+<div className="mb-6">
+  <input
+    type="text"
+    placeholder="Search by name, SKU or description"
+    value={searchQuery}
+    onChange={(e) => setSearchQuery(e.target.value)}
+    className="w-full px-4 py-2 border rounded"
+  />
+</div>
       
       {loading ? (
         <div className="text-center py-8">
