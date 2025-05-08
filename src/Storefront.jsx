@@ -267,13 +267,13 @@ const filteredItems = items.filter(item => {
             <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow">
               <div className="cursor-pointer" onClick={() => openProductDetails(item)}>
                 {item.image_url && (
-                  <div className="mb-3 h-48 overflow-hidden">
-                    <img 
-                      src={item.image_url} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover rounded"
-                    />
-                  </div>
+				<div className="mb-3">
+				  <img 
+					src={item.image_url} 
+					alt={item.name} 
+					className="w-full h-auto object-contain rounded max-h-48"
+				  />
+				</div>
                 )}
                 <h2 className="text-xl font-bold mb-2 hover:text-blue-600">{item.name}</h2>
                 <p className="mb-1 text-gray-600">SKU: {item.sku}</p>
