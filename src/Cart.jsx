@@ -267,12 +267,54 @@ export default function Cart({ onLogout, onHome, brandName }) {
               <p className="text-xl font-bold">Subtotal: ${subtotal.toFixed(2)}</p>
             </div>
             
-            <button 
-              className="px-4 py-2 bg-green-600 text-white rounded"
-              onClick={() => alert('Checkout functionality coming soon!')}
-            >
-              Proceed to Checkout
-            </button>
+		const handleSubmitOrder = async () => {
+		  if (cartItems.length === 0) {
+			alert('Your cart is empty. Please add items before submitting an order.');
+			return;
+		  }
+
+		  try {
+			// Prepare order data
+			const orderData = {
+			  items: cartItems,
+			  subtotal: subtotal,
+			  email: "david@mod.fyi" // Hard-coded recipient email as requested
+			};
+
+			// Submit order to backend
+			const response = await fetch('https://api.featherstorefront.com/api/submit-order', {
+			  method: 'POST',
+			  headers: { 'Content-Type': 'application/json' },
+			  credentials: 'include',
+			  body: JSON.stringify(orderData)
+			});
+
+			if (!response.ok) {
+			  throw new Error('Failed to submit order');
+			}
+
+			const result = await response.json();
+			
+			if (result.success) {
+			  alert('Your order has been submitted successfully! A confirmation email has been sent.');
+			  // Clear cart after successful order
+			  handleClearCart();
+			} else {
+			  alert(`Error: ${result.error}`);
+			}
+		  } catch (error) {
+			console.error('Error submitting order:', error);
+			alert('There was an error submitting your order. Please try again.');
+		  }
+		};
+
+		// Then in the JSX, replace the checkout button with:
+		<button 
+		  className="px-4 py-2 bg-green-600 text-white rounded"
+		  onClick={handleSubmitOrder}
+		>
+		  Submit Order
+		</button>
           </div>
         </>
       )}
