@@ -313,7 +313,6 @@ export default function Cart({ onLogout, onHome, brandName }) {
             </div>
             
 	
-		// Then in the JSX, replace the checkout button with:
 		<button 
 		  className="px-4 py-2 bg-green-600 text-white rounded"
 		  onClick={handleSubmitOrder}
