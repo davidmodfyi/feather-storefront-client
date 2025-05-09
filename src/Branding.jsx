@@ -1,170 +1,204 @@
-import React, { useEffect, useRef, useState } from "react";
-import { fetchWithAuth } from "./auth";
-import { toast } from "react-hot-toast";
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export default function Branding() {
-  // For main branding logo
+export default function Branding({ onLogout, onHome }) {
   const [logo, setLogo] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null);
-
-  // For header logo
-  const [headerLogo, setHeaderLogo] = useState(null);
-  const [uploadingHeader, setUploadingHeader] = useState(false);
-  const headerFileInputRef = useRef(null);
+  const [fileInput, setFileInput] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    getLogo();
-    getHeaderLogo();
+    // Fetch logo information
+    fetchLogo();
   }, []);
 
-  async function getLogo() {
-    const res = await fetchWithAuth("/api/branding/logo");
-    const data = await res.json();
-    setLogo(data.logo);
-  }
-
-  async function getHeaderLogo() {
-    const res = await fetchWithAuth("/api/branding/header-logo");
-    const data = await res.json();
-    setHeaderLogo(data.logo);
-  }
-
-  async function handleLogoUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
+  const fetchLogo = async () => {
     try {
-      const formData = new FormData();
-      formData.append("logo", file);
-
-      const res = await fetchWithAuth("/api/branding/logo", {
-        method: "POST",
-        body: formData,
+      setLoading(true);
+      const response = await fetch('https://api.featherstorefront.com/api/branding/logo', {
+        credentials: 'include'
       });
-
-      if (res.ok) {
-        toast.success("Logo uploaded!");
-        getLogo();
-      } else {
-        toast.error("Logo upload failed");
+      
+      if (response.ok) {
+        const data = await response.json();
+        setLogo(data.logo);
       }
+    } catch (error) {
+      console.error('Error fetching logo:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    setFileInput(e.target.files[0]);
+  };
+  
+  const handleUpload = async () => {
+    if (!fileInput) {
+      alert('Please select a file first');
+      return;
+    }
+    
+    // Check file type
+    if (!fileInput.type.match('image.*')) {
+      alert('Please select an image file');
+      return;
+    }
+    
+    // Check file size (max 1MB)
+    if (fileInput.size > 1000000) {
+      alert('File size must be less than 1MB');
+      return;
+    }
+    
+    try {
+      setUploading(true);
+      
+      const formData = new FormData();
+      formData.append('logo', fileInput);
+      
+      const response = await fetch('https://api.featherstorefront.com/api/branding/logo', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload logo');
+      }
+      
+      const data = await response.json();
+      setLogo(data.logo);
+      setFileInput(null);
+      
+      // Reset file input
+      document.getElementById('logoInput').value = '';
+      
+      alert('Logo uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      alert('Error uploading logo: ' + error.message);
     } finally {
       setUploading(false);
-      fileInputRef.current.value = "";
     }
-  }
-
-  async function handleHeaderLogoUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploadingHeader(true);
+  };
+  
+  const handleDelete = async () => {
+    if (!logo) return;
+    
+    if (!window.confirm('Are you sure you want to delete the current logo?')) {
+      return;
+    }
+    
     try {
-      const formData = new FormData();
-      formData.append("logo", file);
-
-      const res = await fetchWithAuth("/api/branding/header-logo", {
-        method: "POST",
-        body: formData,
+      setUploading(true);
+      
+      const response = await fetch('https://api.featherstorefront.com/api/branding/logo', {
+        method: 'DELETE',
+        credentials: 'include'
       });
-
-      if (res.ok) {
-        toast.success("Header logo uploaded!");
-        getHeaderLogo();
-      } else {
-        toast.error("Header logo upload failed");
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete logo');
       }
+      
+      setLogo(null);
+      alert('Logo deleted successfully');
+    } catch (error) {
+      console.error('Error deleting logo:', error);
+      alert('Error deleting logo: ' + error.message);
     } finally {
-      setUploadingHeader(false);
-      headerFileInputRef.current.value = "";
+      setUploading(false);
     }
-  }
-
-  async function handleLogoDelete() {
-    if (!window.confirm("Delete logo?")) return;
-    await fetchWithAuth("/api/branding/logo", { method: "DELETE" });
-    setLogo(null);
-  }
-
-  async function handleHeaderLogoDelete() {
-    if (!window.confirm("Delete header logo?")) return;
-    await fetchWithAuth("/api/branding/header-logo", { method: "DELETE" });
-    setHeaderLogo(null);
+  };
+  
+  function goToBackoffice() {
+    navigate('/backoffice');
   }
 
   return (
-    <div className="space-y-10 max-w-2xl mx-auto mt-10">
-      <section className="p-6 rounded border bg-white">
-        <h2 className="font-bold mb-2 text-lg">Portal Branding Logo</h2>
-        <p className="mb-4 text-sm text-gray-600">
-          This logo is shown on the login screen and in the portal selection menu.
-        </p>
-        <div className="flex items-center space-x-6">
-          {logo ? (
-            <img src={logo} alt="Current Logo" className="h-16 rounded shadow" />
-          ) : (
-            <span className="text-gray-400">No logo uploaded</span>
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            className="hidden"
-            onChange={handleLogoUpload}
-          />
-          <button
-            className="btn"
-            disabled={uploading}
-            onClick={() => fileInputRef.current.click()}
-          >
-            {uploading ? "Uploading..." : "Upload Logo"}
-          </button>
-          {logo && (
-            <button
-              className="btn btn-danger"
-              onClick={handleLogoDelete}
-            >
-              Delete
-            </button>
-          )}
+    <div className="p-6">
+      <div className="flex justify-between mb-4">
+        <h1 className="text-2xl font-bold">Brand Configuration</h1>
+        <div className="flex gap-2">
+          <button onClick={goToBackoffice} className="px-3 py-1 bg-blue-500 text-white rounded">Back</button>
+          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
+          <button onClick={onLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
         </div>
-      </section>
+      </div>
 
-      <section className="p-6 rounded border bg-white">
-        <h2 className="font-bold mb-2 text-lg">Header Logo</h2>
-        <p className="mb-4 text-sm text-gray-600">
-          This logo appears on the header of all screens after login.
+      <div className="border rounded-lg p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Configure Logo</h2>
+        <p className="text-sm text-gray-600 mb-6">
+          Upload a logo for your storefront. Recommended size: 300x100px, Max file size: 1MB.
+          Supported formats: PNG, JPG, SVG
         </p>
-        <div className="flex items-center space-x-6">
-          {headerLogo ? (
-            <img src={headerLogo} alt="Header Logo" className="h-16 rounded shadow" />
-          ) : (
-            <span className="text-gray-400">No header logo uploaded</span>
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            ref={headerFileInputRef}
-            className="hidden"
-            onChange={handleHeaderLogoUpload}
-          />
-          <button
-            className="btn"
-            disabled={uploadingHeader}
-            onClick={() => headerFileInputRef.current.click()}
-          >
-            {uploadingHeader ? "Uploading..." : "Upload Header Logo"}
-          </button>
-          {headerLogo && (
-            <button
-              className="btn btn-danger"
-              onClick={handleHeaderLogoDelete}
-            >
-              Delete
-            </button>
-          )}
-        </div>
-      </section>
+        
+        {loading ? (
+          <div className="text-center py-8">
+            <p>Loading...</p>
+          </div>
+        ) : (
+          <div>
+            <div className="mb-6 p-4 border rounded bg-gray-50 flex justify-center">
+              {logo ? (
+                <img 
+                  src={logo} 
+                  alt="Company Logo" 
+                  className="max-h-32 object-contain"
+                />
+              ) : (
+                <div className="text-gray-500 text-center py-8">
+                  <p>No logo uploaded</p>
+                  <p className="text-sm">Upload a logo to replace the text header</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+              <div className="flex-grow">
+                <input
+                  type="file"
+                  id="logoInput"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="border p-2 w-full rounded"
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={handleUpload}
+                  disabled={!fileInput || uploading}
+                  className={`px-4 py-2 rounded ${
+                    !fileInput || uploading
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-green-500 hover:bg-green-600 text-white'
+                  }`}
+                >
+                  {uploading ? 'Uploading...' : 'Upload Logo'}
+                </button>
+                
+                {logo && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={uploading}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded"
+                  >
+                    Delete Logo
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div className="text-sm text-gray-500">
+              <p>The logo will replace the text header on your storefront home page.</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
