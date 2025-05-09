@@ -5,6 +5,7 @@ import Storefront from './Storefront';
 import Backoffice from './Backoffice';
 import BackofficeOptions from './BackofficeOptions';
 import Cart from './Cart';
+import OrderHistory from './OrderHistory';
 import { useNavigate } from 'react-router-dom';
 
 // Portal selection page component
