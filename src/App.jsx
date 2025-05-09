@@ -24,6 +24,12 @@ function PortalPage({ brandName, onLogout, userType }) {
           >
             Storefront
           </button>
+		  <button 
+			onClick={() => navigate('/orders')}
+			className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded"
+		  >
+			Order History
+		  </button>
           <button 
             onClick={onLogout}
             className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded"
@@ -53,6 +59,12 @@ function PortalPage({ brandName, onLogout, userType }) {
         >
           Backoffice
         </button>
+		 <button 
+			onClick={() => navigate('/orders')}
+			className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded"
+		  >
+			Order History
+		  </button>
         <button 
           onClick={onLogout}
           className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded"
@@ -159,6 +171,17 @@ function App() {
               : <BackofficeOptions brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
           }
         />
+		<Route
+		  path="/orders"
+		  element={
+			<OrderHistory 
+			  brandName={brandName} 
+			  onLogout={handleLogout} 
+			  onHome={handleHome} 
+			  userType={userType} 
+			/>
+		  }
+		/>
         <Route
           path="/backoffice/customers"
           element={
