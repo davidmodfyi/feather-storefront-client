@@ -6,17 +6,37 @@ import Backoffice from './Backoffice';
 import BackofficeOptions from './BackofficeOptions';
 import Cart from './Cart';
 import OrderHistory from './OrderHistory';
+import Branding from './Branding';
 import { useNavigate } from 'react-router-dom';
 
 // Portal selection page component
 function PortalPage({ brandName, onLogout, userType }) {
   const navigate = useNavigate();
+  const [logo, setLogo] = useState(null);
+  
+  useEffect(() => {
+    // Fetch logo if available
+    fetch('https://api.featherstorefront.com/api/branding/logo', {
+      credentials: 'include'
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo) {
+          setLogo(data.logo);
+        }
+      })
+      .catch(console.error);
+  }, []);
   
   // Different view based on user type
   if (userType === 'Customer') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6">
-        <h1 className="text-2xl font-bold mb-4">{brandName || 'Feather Storefront'}</h1>
+        {logo ? (
+          <img src={logo} alt={brandName} className="mb-4 max-h-32 object-contain" />
+        ) : (
+          <h1 className="text-2xl font-bold mb-4">{brandName || 'Feather Storefront'}</h1>
+        )}
         <p className="mb-6">Welcome! What would you like to do?</p>
         <div className="flex gap-4">
           <button 
@@ -25,12 +45,12 @@ function PortalPage({ brandName, onLogout, userType }) {
           >
             Storefront
           </button>
-		  <button 
-			onClick={() => navigate('/orders')}
-			className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded"
-		  >
-			Order History
-		  </button>
+          <button 
+            onClick={() => navigate('/orders')}
+            className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded"
+          >
+            Order History
+          </button>
           <button 
             onClick={onLogout}
             className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded"
@@ -45,7 +65,11 @@ function PortalPage({ brandName, onLogout, userType }) {
   // Default Admin view
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <h1 className="text-2xl font-bold mb-4">{brandName || 'Feather Storefront'}</h1>
+      {logo ? (
+        <img src={logo} alt={brandName} className="mb-4 max-h-32 object-contain" />
+      ) : (
+        <h1 className="text-2xl font-bold mb-4">{brandName || 'Feather Storefront'}</h1>
+      )}
       <p className="mb-6">Select a portal to continue</p>
       <div className="flex gap-4">
         <button 
@@ -60,12 +84,12 @@ function PortalPage({ brandName, onLogout, userType }) {
         >
           Backoffice
         </button>
-		 <button 
-			onClick={() => navigate('/orders')}
-			className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded"
-		  >
-			Order History
-		  </button>
+        <button 
+          onClick={() => navigate('/orders')}
+          className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded"
+        >
+          Order History
+        </button>
         <button 
           onClick={onLogout}
           className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded"
@@ -172,23 +196,31 @@ function App() {
               : <BackofficeOptions brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
           }
         />
-		<Route
-		  path="/orders"
-		  element={
-			<OrderHistory 
-			  brandName={brandName} 
-			  onLogout={handleLogout} 
-			  onHome={handleHome} 
-			  userType={userType} 
-			/>
-		  }
-		/>
+        <Route
+          path="/orders"
+          element={
+            <OrderHistory 
+              brandName={brandName} 
+              onLogout={handleLogout} 
+              onHome={handleHome} 
+              userType={userType} 
+            />
+          }
+        />
         <Route
           path="/backoffice/customers"
           element={
             userType === 'Customer' 
               ? <Navigate to="/" replace /> 
               : <Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+          }
+        />
+        <Route
+          path="/backoffice/branding"
+          element={
+            userType === 'Customer' 
+              ? <Navigate to="/" replace /> 
+              : <Branding brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
           }
         />
         {/* Redirect any unknown routes to home */}

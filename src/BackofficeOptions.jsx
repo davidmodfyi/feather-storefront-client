@@ -1,11 +1,10 @@
-import { useNavigate } from 'react-router-dom';
-
 export default function BackofficeOptions({ onLogout, onHome }) {
   const navigate = useNavigate();
 
   // Options for the backoffice
   const options = [
     { name: "Manage Customers", path: "/backoffice/customers" },
+    { name: "Branding", path: "/backoffice/branding" },
     { name: "Manage Business Logic", path: "/backoffice/logic" },
     { name: "Manual File Upload", path: "/backoffice/upload" },
     { name: "Configure with AI", path: "/backoffice/ai" },
@@ -27,10 +26,15 @@ export default function BackofficeOptions({ onLogout, onHome }) {
         {options.map((option) => (
           <div 
             key={option.name} 
-            className={`border p-6 rounded shadow hover:shadow-md transition-shadow cursor-pointer ${option.name === "Manage Customers" ? 'bg-blue-50' : ''}`}
+            className={`border p-6 rounded shadow hover:shadow-md transition-shadow cursor-pointer ${
+              option.name === "Manage Customers" ? 'bg-blue-50' : 
+              option.name === "Branding" ? 'bg-green-50' : ''
+            }`}
             onClick={() => {
               if (option.name === "Manage Customers") {
                 navigate("/backoffice/customers");
+              } else if (option.name === "Branding") {
+                navigate("/backoffice/branding");
               } else {
                 alert(`${option.name} functionality is not implemented yet.`);
               }
@@ -39,6 +43,9 @@ export default function BackofficeOptions({ onLogout, onHome }) {
             <h2 className="text-xl font-semibold mb-2">{option.name}</h2>
             {option.name === "Manage Customers" && (
               <p className="text-sm text-gray-600">View and manage your customer accounts</p>
+            )}
+            {option.name === "Branding" && (
+              <p className="text-sm text-gray-600">Customize your storefront logo and appearance</p>
             )}
           </div>
         ))}
