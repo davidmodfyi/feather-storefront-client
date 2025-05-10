@@ -6,10 +6,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://api.featherstorefront.com',
+        target: process.env.NODE_ENV === 'production' 
+          ? 'https://api.featherstorefront.com'
+          : 'http://localhost:4000',
         changeOrigin: true,
         secure: true,
-        // Don't rewrite paths - this is important
         rewrite: (path) => path
       },
     },
