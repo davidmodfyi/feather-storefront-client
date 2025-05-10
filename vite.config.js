@@ -11,7 +11,7 @@ export default defineConfig({
           : 'http://localhost:4000',
         changeOrigin: true,
         secure: true,
-        rewrite: (path) => path
+        rewrite: (path) => path // Keep the /api prefix
       },
     },
   },
