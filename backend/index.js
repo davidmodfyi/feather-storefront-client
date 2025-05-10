@@ -472,85 +472,63 @@ app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 
 // Login route with detailed debugging
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  console.log('Login attempt:', { username, passwordLength: password ? password.length : 0 });
-  
+app.post('/api/login', async (req, res) => {
   try {
-    // Try to get user from database
+    const { username, password } = req.body;
+    console.log('Login attempt:', { username, passwordLength: password ? password.length : 0 });
+
+    // Validate input
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required.' });
+    }
+
+    // Get user from database
     const dbUser = database.getUserByUsername(username);
-    
-    // Debug output for user lookup
-    if (dbUser) {
-      console.log('User found:', {
-        id: dbUser.id,
-        username: dbUser.username,
-        distributor_id: dbUser.distributor_id,
-        distributor_name: dbUser.distributor_name,
-        type: dbUser.type || 'Admin', // Default to Admin if not set
-        account_id: dbUser.account_id,
-        hasPassword: !!dbUser.password,
-        passwordLength: dbUser.password ? dbUser.password.length : 0
-      });
-    } else {
+
+    if (!dbUser) {
       console.log('No user found with username:', username);
       return res.status(401).json({ error: 'Invalid username or password' });
     }
-    
-    // Password comparison with detailed logging
-    console.log('Password comparison:', {
-      providedPassword: password,
-      storedPassword: dbUser.password,
-      match: password === dbUser.password,
-      providedLength: password ? password.length : 0,
-      storedLength: dbUser.password ? dbUser.password.length : 0
-    });
-    
+
+    // Password check
     if (password !== dbUser.password) {
-      console.log('Password mismatch');
+      console.log('Password mismatch for user:', username);
       return res.status(401).json({ error: 'Invalid username or password' });
     }
-    
-    // Authentication successful
-    console.log('Authentication successful for user:', username);
-    
-    // Set session data - now including user_id
+
+    // Set session data
     req.session.user_id = dbUser.id;
     req.session.distributor_id = dbUser.distributor_id;
     req.session.distributorName = dbUser.distributor_name;
-    req.session.userType = dbUser.type || 'Admin'; // Default to Admin if not set
-    req.session.accountId = dbUser.account_id; // Include account ID if available
-    
-    console.log('Setting session data:', {
+    req.session.userType = dbUser.type || 'Admin';
+    req.session.accountId = dbUser.account_id;
+
+    console.log('Session data set:', {
       user_id: dbUser.id,
       distributor_id: dbUser.distributor_id,
       distributorName: dbUser.distributor_name,
       userType: dbUser.type || 'Admin',
       accountId: dbUser.account_id
     });
-    
+
     // Save session and respond
     req.session.save((err) => {
       if (err) {
         console.error('Session save error:', err);
         return res.status(500).json({ error: 'Error saving session' });
       }
-      
-      console.log('Session saved successfully:', {
-        id: req.session.id,
-        cookie: req.session.cookie ? 'present' : 'missing'
-      });
-      
-      res.json({ 
+
+      return res.json({
         status: 'logged_in',
         user_id: dbUser.id,
         distributorName: dbUser.distributor_name,
-        userType: dbUser.type || 'Admin'
+        userType: dbUser.type || 'Admin',
+        accountId: dbUser.account_id
       });
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Server error during login' });
+    return res.status(500).json({ error: 'Server error during login' });
   }
 });
 
