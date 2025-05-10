@@ -781,35 +781,17 @@ app.post('/api/connect-account', (req, res) => {
 // User info endpoint
 app.get('/api/me', (req, res) => {
   console.log('User info request');
-  console.log('Session data:', req.session);
-  
-  const distributorId = req.session.distributor_id;
-  if (!distributorId) {
-    console.log('No distributor_id in session, returning 401');
+  if (!req.session || !req.session.distributor_id) {
+    // Not logged in, but always return JSON!
     return res.status(401).json({ error: 'Not authenticated' });
   }
-  
-  console.log('Found distributor_id in session:', distributorId);
-  
-  const distributorName = req.session.distributorName || 'Storefront';
-  const userType = req.session.userType || 'Admin';
-  const accountId = req.session.accountId || null;
-  const userId = req.session.user_id || null;
-  
-  console.log('Responding with user info:', { 
-    distributorId,
-    distributorName,
-    userType,
-    accountId,
-    userId
-  });
-  
-  res.json({ 
-    distributorId, 
-    distributorName,
-    userType,
-    accountId,
-    userId
+
+  res.json({
+    distributorId: req.session.distributor_id,
+    distributorName: req.session.distributorName || 'Storefront',
+    userType: req.session.userType || 'Admin',
+    accountId: req.session.accountId || null,
+    userId: req.session.user_id || null
   });
 });
 
