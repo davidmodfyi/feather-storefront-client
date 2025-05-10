@@ -17,13 +17,13 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     setLoading(true);
     
     // Fetch distributor name
-    fetch('https://api.featherstorefront.com/api/me', { credentials: 'include' })
+    fetch('/apime', { credentials: 'include' })
       .then(res => res.json())
       .then(data => setDistributor(data.distributorName || 'Storefront'))
       .catch(console.error);
 
     // Fetch all items
-    fetch('https://api.featherstorefront.com/api/items', { credentials: 'include' })
+    fetch('/apiitems', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         setItems(data);
@@ -43,7 +43,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
 
   // Fetch cart items from the server
   const fetchCart = () => {
-    fetch('https://api.featherstorefront.com/api/cart', { credentials: 'include' })
+    fetch('/apicart', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch cart');
         return res.json();
@@ -74,7 +74,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   };
 
   function handleLogout() {
-    fetch('https://api.featherstorefront.com/api/logout', { method: 'POST', credentials: 'include' })
+    fetch('/apilogout', { method: 'POST', credentials: 'include' })
       .then(() => onLogout());
   }
 
@@ -111,7 +111,7 @@ function handleAddToCart(item) {
   
   console.log('Cart payload:', payload);
   
-  fetch('https://api.featherstorefront.com/api/cart', {
+  fetch('/apicart', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',

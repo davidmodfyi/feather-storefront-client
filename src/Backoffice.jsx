@@ -9,13 +9,13 @@ export default function Backoffice({ onLogout, onHome }) {
 
   useEffect(() => {
     // Fetch accounts
-    fetch('https://api.featherstorefront.com/api/accounts', { credentials: 'include' })
+    fetch('/apiaccounts', { credentials: 'include' })
       .then(res => res.json())
       .then(data => setAccounts(data))
       .catch(console.error);
 
     // Fetch connected accounts info
-    fetch('https://api.featherstorefront.com/api/connected-accounts', { credentials: 'include' })
+    fetch('/apiconnected-accounts', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         // Convert array to object with account_id as key for easy lookup
@@ -29,7 +29,7 @@ export default function Backoffice({ onLogout, onHome }) {
   }, []);
 
   function handleLogout() {
-    fetch('https://api.featherstorefront.com/api/logout', { method: 'POST', credentials: 'include' })
+    fetch('/apilogout', { method: 'POST', credentials: 'include' })
       .then(() => onLogout());
   }
 
@@ -39,7 +39,7 @@ export default function Backoffice({ onLogout, onHome }) {
 
   // Connect account for ordering
   function connectAccount(account) {
-    fetch('https://api.featherstorefront.com/api/connect-account', {
+    fetch('/apiconnect-account', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

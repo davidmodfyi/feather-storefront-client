@@ -16,7 +16,7 @@ export default function AdminLogin({ onLogin }) {
     
     try {
       // Make the login request directly here
-      const res = await fetch("https://api.featherstorefront.com/api/login", {
+      const res = await fetch("/apilogin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

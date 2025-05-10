@@ -16,7 +16,7 @@ function PortalPage({ brandName, onLogout, userType }) {
   
   useEffect(() => {
     // Fetch logo if available
-    fetch('https://api.featherstorefront.com/api/branding/logo', {
+    fetch('/apibranding/logo', {
       credentials: 'include'
     })
       .then(res => res.json())
@@ -111,7 +111,7 @@ function App() {
   useEffect(() => {
     async function checkLoginStatus() {
       try {
-        const res = await fetch('https://api.featherstorefront.com/api/me', {
+        const res = await fetch('/apime', {
           credentials: 'include'
         });
         
@@ -142,7 +142,7 @@ function App() {
   // Logout handler
   const handleLogout = async () => {
     try {
-      await fetch('https://api.featherstorefront.com/api/logout', {
+      await fetch('/apilogout', {
         method: 'POST',
         credentials: 'include'
       });

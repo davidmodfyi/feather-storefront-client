@@ -16,7 +16,7 @@ export default function OrderHistory({ onLogout, onHome, brandName, userType }) 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://api.featherstorefront.com/api/orders', {
+      const response = await fetch('/apiorders', {
         credentials: 'include'
       });
       
@@ -36,7 +36,7 @@ export default function OrderHistory({ onLogout, onHome, brandName, userType }) 
   const viewOrderDetails = async (orderId) => {
     try {
       setLoading(true);
-      const response = await fetch(`https://api.featherstorefront.com/api/orders/${orderId}/items`, {
+      const response = await fetch(`/apiorders/${orderId}/items`, {
         credentials: 'include'
       });
       

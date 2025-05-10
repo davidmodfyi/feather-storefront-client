@@ -10,7 +10,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
 
   useEffect(() => {
     // Fetch user info
-    fetch('https://api.featherstorefront.com/api/me', { credentials: 'include' })
+    fetch('/apime', { credentials: 'include' })
       .then(res => res.json())
       .then(data => setDistributor(data.distributorName || 'Storefront'))
       .catch(console.error);
@@ -22,7 +22,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   // Fetch cart items from the server
   const fetchCart = () => {
     setLoading(true);
-    fetch('https://api.featherstorefront.com/api/cart', { credentials: 'include' })
+    fetch('/apicart', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch cart');
         return res.json();
@@ -47,7 +47,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   };
 
   function handleLogout() {
-    fetch('https://api.featherstorefront.com/api/logout', { method: 'POST', credentials: 'include' })
+    fetch('/apilogout', { method: 'POST', credentials: 'include' })
       .then(() => onLogout());
   }
 
@@ -68,7 +68,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   function handleUpdateCart(itemId) {
     const quantity = quantities[itemId] || 1;
     
-    fetch(`https://api.featherstorefront.com/api/cart/${itemId}`, {
+    fetch(`/apicart/${itemId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -96,7 +96,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   }
 
   function handleRemoveFromCart(itemId) {
-    fetch(`https://api.featherstorefront.com/api/cart/${itemId}`, {
+    fetch(`/apicart/${itemId}`, {
       method: 'DELETE',
       credentials: 'include'
     })
@@ -121,7 +121,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
       return;
     }
     
-    fetch('https://api.featherstorefront.com/api/cart', {
+    fetch('/apicart', {
       method: 'DELETE',
       credentials: 'include'
     })
@@ -153,7 +153,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
 			};
 
 			// Submit order to backend
-			const response = await fetch('https://api.featherstorefront.com/api/submit-order', {
+			const response = await fetch('/apisubmit-order', {
 			  method: 'POST',
 			  headers: { 'Content-Type': 'application/json' },
 			  credentials: 'include',
