@@ -16,7 +16,7 @@ export default function OrderHistory({ onLogout, onHome, brandName, userType }) 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/apiorders', {
+      const response = await fetch('/api/orders', {
         credentials: 'include'
       });
       
@@ -36,7 +36,7 @@ export default function OrderHistory({ onLogout, onHome, brandName, userType }) 
   const viewOrderDetails = async (orderId) => {
     try {
       setLoading(true);
-      const response = await fetch(`/apiorders/${orderId}/items`, {
+      const response = await fetch(`/api/orders/${orderId}/items`, {
         credentials: 'include'
       });
       

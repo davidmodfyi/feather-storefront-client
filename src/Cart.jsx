@@ -10,7 +10,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
 
   useEffect(() => {
     // Fetch user info
-    fetch('/apime', { credentials: 'include' })
+    fetch('/api/me', { credentials: 'include' })
       .then(res => res.json())
       .then(data => setDistributor(data.distributorName || 'Storefront'))
       .catch(console.error);
@@ -22,7 +22,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   // Fetch cart items from the server
   const fetchCart = () => {
     setLoading(true);
-    fetch('/apicart', { credentials: 'include' })
+    fetch('/api/cart', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch cart');
         return res.json();
@@ -47,7 +47,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   };
 
   function handleLogout() {
-    fetch('/apilogout', { method: 'POST', credentials: 'include' })
+    fetch('/api/logout', { method: 'POST', credentials: 'include' })
       .then(() => onLogout());
   }
 
@@ -68,7 +68,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   function handleUpdateCart(itemId) {
     const quantity = quantities[itemId] || 1;
     
-    fetch(`/apicart/${itemId}`, {
+    fetch(`/api/cart/${itemId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -96,7 +96,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   }
 
   function handleRemoveFromCart(itemId) {
-    fetch(`/apicart/${itemId}`, {
+    fetch(`/api/cart/${itemId}`, {
       method: 'DELETE',
       credentials: 'include'
     })
@@ -114,14 +114,12 @@ export default function Cart({ onLogout, onHome, brandName }) {
       });
   }
 
-
-
   function handleClearCart() {
     if (!window.confirm('Are you sure you want to clear your cart?')) {
       return;
     }
     
-    fetch('/apicart', {
+    fetch('/api/cart', {
       method: 'DELETE',
       credentials: 'include'
     })
@@ -153,7 +151,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
 			};
 
 			// Submit order to backend
-			const response = await fetch('/apisubmit-order', {
+			const response = await fetch('/api/submit-order', {
 			  method: 'POST',
 			  headers: { 'Content-Type': 'application/json' },
 			  credentials: 'include',
@@ -178,8 +176,6 @@ export default function Cart({ onLogout, onHome, brandName }) {
 			alert('There was an error submitting your order. Please try again.');
 		  }
 		};
-
-
 
   function calculateSubtotal() {
     return cartItems.reduce((total, item) => {

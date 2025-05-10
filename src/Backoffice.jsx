@@ -9,13 +9,13 @@ export default function Backoffice({ onLogout, onHome }) {
 
   useEffect(() => {
     // Fetch accounts
-    fetch('/apiaccounts', { credentials: 'include' })
+    fetch('/api/accounts', { credentials: 'include' })
       .then(res => res.json())
       .then(data => setAccounts(data))
       .catch(console.error);
 
     // Fetch connected accounts info
-    fetch('/apiconnected-accounts', { credentials: 'include' })
+    fetch('/api/connected-accounts', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         // Convert array to object with account_id as key for easy lookup
@@ -29,7 +29,7 @@ export default function Backoffice({ onLogout, onHome }) {
   }, []);
 
   function handleLogout() {
-    fetch('/apilogout', { method: 'POST', credentials: 'include' })
+    fetch('/api/logout', { method: 'POST', credentials: 'include' })
       .then(() => onLogout());
   }
 
@@ -39,7 +39,7 @@ export default function Backoffice({ onLogout, onHome }) {
 
   // Connect account for ordering
   function connectAccount(account) {
-    fetch('/apiconnect-account', {
+    fetch('/api/connect-account', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

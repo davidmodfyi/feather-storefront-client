@@ -16,7 +16,7 @@ export default function Branding({ onLogout, onHome }) {
   const fetchLogo = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/apibranding/logo', {
+      const response = await fetch('/api/branding/logo', {
         credentials: 'include'
       });
       
@@ -59,7 +59,7 @@ export default function Branding({ onLogout, onHome }) {
       const formData = new FormData();
       formData.append('logo', fileInput);
       
-      const response = await fetch('/apibranding/logo', {
+      const response = await fetch('/api/branding/logo', {
         method: 'POST',
         credentials: 'include',
         body: formData
@@ -95,7 +95,7 @@ export default function Branding({ onLogout, onHome }) {
     try {
       setUploading(true);
       
-      const response = await fetch('/apibranding/logo', {
+      const response = await fetch('/api/branding/logo', {
         method: 'DELETE',
         credentials: 'include'
       });

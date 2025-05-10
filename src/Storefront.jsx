@@ -17,13 +17,13 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     setLoading(true);
     
     // Fetch distributor name
-    fetch('/apime', { credentials: 'include' })
+    fetch('/api/me', { credentials: 'include' })
       .then(res => res.json())
       .then(data => setDistributor(data.distributorName || 'Storefront'))
       .catch(console.error);
 
     // Fetch all items
-    fetch('/apiitems', { credentials: 'include' })
+    fetch('/api/items', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         setItems(data);
@@ -43,7 +43,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
 
   // Fetch cart items from the server
   const fetchCart = () => {
-    fetch('/apicart', { credentials: 'include' })
+    fetch('/api/cart', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch cart');
         return res.json();
@@ -74,7 +74,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   };
 
   function handleLogout() {
-    fetch('/apilogout', { method: 'POST', credentials: 'include' })
+    fetch('/api/logout', { method: 'POST', credentials: 'include' })
       .then(() => onLogout());
   }
 
@@ -111,7 +111,7 @@ function handleAddToCart(item) {
   
   console.log('Cart payload:', payload);
   
-  fetch('/apicart', {
+  fetch('/api/cart', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
