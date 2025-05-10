@@ -16,7 +16,7 @@ export default function AdminLogin({ onLogin }) {
     
     try {
       // Make the login request directly here
-      const res = await fetch("/apilogin", {
+      const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
