@@ -9,7 +9,7 @@
     "start:backend": "cd backend && node index.js",
     "dev:backend": "cd backend && nodemon index.js",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
-    "install:backend": "cd backend && npm install"
+    "install:backend": "cd backend && npm install",
 	"start": "cd backend && node index.js"
   },
   "dependencies": {
