@@ -25,7 +25,7 @@ console.log('Starting Feather API server...');
 console.log('Environment:', process.env.NODE_ENV || 'development');
 
 const corsOptions = {
-  origin: ['https://www.featherstorefront.com', 'https://featherstorefront.com', 'http://localhost:5173'],
+  origin: ['https://www.featherstorefront.com', 'https://featherstorefront.com'],
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type']
@@ -93,11 +93,12 @@ const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'feathersecret',
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    secure: true,
-    httpOnly: true,
-    sameSite: 'none'
-  }
+cookie: {
+  secure: true,
+  httpOnly: true,
+  sameSite: 'none',
+  domain: process.env.NODE_ENV === 'production' ? '.featherstorefront.com' : undefined
+   }
 };
 console.log('Session configuration:', {
   secret: sessionConfig.secret ? '[present]' : '[missing]',
