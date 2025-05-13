@@ -12,9 +12,7 @@ require('dotenv').config();
 // Get the db object from the database module
 const db = database.db;
 const isProduction = process.env.NODE_ENV === 'production';
-const uploadsDir = isProduction 
-  ? '/opt/render/project/src/public/uploads'
-  : path.join(__dirname, 'public', 'uploads');
+
 
 const app = express();
 app.use(express.json());
@@ -31,9 +29,12 @@ const corsOptions = {
   allowedHeaders: ['Content-Type']
 };
 
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+console.log('Using uploads directory:', uploadsDir);
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('Created uploads directory');
 }
 const publicDir = isProduction
   ? '/opt/render/project/src/public'
@@ -179,23 +180,68 @@ app.get('/api/branding/logo', (req, res) => {
       return res.json({ logo: null });
     }
     
-    // Check if file exists
-    const absolutePath = path.join(__dirname, 'public', distributor.logo_path);
+    // Check if file exists - add more debugging
+    const relativePath = distributor.logo_path.startsWith('/') 
+      ? distributor.logo_path.substring(1) 
+      : distributor.logo_path;
+      
+    const absolutePath = path.join(__dirname, 'public', relativePath);
     console.log('Checking logo at absolute path:', absolutePath);
     
     if (!fs.existsSync(absolutePath)) {
-      console.log('Logo file not found');
+      console.log('Logo file not found at:', absolutePath);
       return res.json({ logo: null });
     }
     
-    // IMPORTANT: Return the full URL to the logo, including the host
-    // This is the key change - construct a full URL to the API server
-    const logoUrl = `https://api.featherstorefront.com/${distributor.logo_path}`;
+    // IMPORTANT: Return the URL to the logo that will work in the unified setup
+    // Use a relative URL that will work regardless of domain
+    const logoUrl = `/${relativePath}`;
     console.log('Returning logo URL:', logoUrl);
     res.json({ logo: logoUrl });
   } catch (error) {
     console.error('Error getting logo:', error);
     res.status(500).json({ error: 'Error getting logo' });
+  }
+});
+
+app.get('/api/debug/logo-paths', (req, res) => {
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributor = db.prepare(`
+      SELECT logo_path FROM distributors WHERE id = ?
+    `).get(req.session.distributor_id);
+    
+    const diagnostics = {
+      logo_path_in_db: distributor?.logo_path,
+      public_dir: path.join(__dirname, 'public'),
+      public_dir_exists: fs.existsSync(path.join(__dirname, 'public')),
+      uploads_dir: path.join(__dirname, 'public', 'uploads'),
+      uploads_dir_exists: fs.existsSync(path.join(__dirname, 'public', 'uploads')),
+      working_directory: process.cwd(),
+      __dirname: __dirname
+    };
+    
+    if (distributor?.logo_path) {
+      const relativePath = distributor.logo_path.startsWith('/') 
+        ? distributor.logo_path.substring(1) 
+        : distributor.logo_path;
+      
+      const absolutePath = path.join(__dirname, 'public', relativePath);
+      diagnostics.absolute_logo_path = absolutePath;
+      diagnostics.logo_file_exists = fs.existsSync(absolutePath);
+      
+      if (diagnostics.logo_file_exists) {
+        diagnostics.logo_file_stats = fs.statSync(absolutePath);
+      }
+    }
+    
+    res.json(diagnostics);
+  } catch (error) {
+    console.error('Error in logo diagnostics:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -220,7 +266,11 @@ app.post('/api/branding/logo', upload.single('logo'), (req, res) => {
     
     if (distributor && distributor.logo_path) {
       try {
-        const oldLogoPath = path.join(__dirname, 'public', distributor.logo_path);
+        const relativePath = distributor.logo_path.startsWith('/') 
+          ? distributor.logo_path.substring(1) 
+          : distributor.logo_path;
+          
+        const oldLogoPath = path.join(__dirname, 'public', relativePath);
         console.log('Checking for old logo at:', oldLogoPath);
         if (fs.existsSync(oldLogoPath)) {
           fs.unlinkSync(oldLogoPath);
@@ -242,7 +292,7 @@ app.post('/api/branding/logo', upload.single('logo'), (req, res) => {
       WHERE id = ?
     `).run(relativeFilePath, req.session.distributor_id);
     
-    // Return the URL to access the logo
+    // Return the URL to access the logo - ensure it works with unified setup
     const logoUrl = '/' + relativeFilePath;
     console.log('Logo URL:', logoUrl);
     res.json({ success: true, logo: logoUrl });
