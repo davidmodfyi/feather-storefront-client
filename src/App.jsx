@@ -9,6 +9,37 @@ import OrderHistory from './OrderHistory';
 import Branding from './Branding';
 import { useNavigate } from 'react-router-dom';
 
+// Header Component with Logo
+function Header({ brandName }) {
+  const [headerLogo, setHeaderLogo] = useState(null);
+  
+  useEffect(() => {
+    // Fetch header logo if available
+    fetch('/api/branding/header-logo', {
+      credentials: 'include'
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo) {
+          setHeaderLogo(data.logo);
+        }
+      })
+      .catch(console.error);
+  }, []);
+  
+  if (!headerLogo) return null; // Don't render anything if no header logo
+  
+  return (
+    <div className="absolute top-4 left-4 z-10">
+      <img 
+        src={headerLogo} 
+        alt={brandName || 'Company Logo'} 
+        className="h-10 w-auto object-contain"
+      />
+    </div>
+  );
+}
+
 // Portal selection page component
 function PortalPage({ brandName, onLogout, userType }) {
   const navigate = useNavigate();
@@ -31,7 +62,9 @@ function PortalPage({ brandName, onLogout, userType }) {
   // Different view based on user type
   if (userType === 'Customer') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
+        <Header brandName={brandName} />
+        
         {logo ? (
           <img src={logo} alt={brandName} className="mb-4 max-h-32 object-contain" />
         ) : (
@@ -64,7 +97,9 @@ function PortalPage({ brandName, onLogout, userType }) {
   
   // Default Admin view
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
+      <Header brandName={brandName} />
+      
       {logo ? (
         <img src={logo} alt={brandName} className="mb-4 max-h-32 object-contain" />
       ) : (
@@ -181,11 +216,21 @@ function App() {
         />
         <Route
           path="/storefront"
-          element={<Storefront brandName={brandName} onLogout={handleLogout} onHome={handleHome} userType={userType} />}
+          element={
+            <>
+              <Header brandName={brandName} />
+              <Storefront brandName={brandName} onLogout={handleLogout} onHome={handleHome} userType={userType} />
+            </>
+          }
         />
         <Route
           path="/cart"
-          element={<Cart brandName={brandName} onLogout={handleLogout} onHome={handleHome} userType={userType} />}
+          element={
+            <>
+              <Header brandName={brandName} />
+              <Cart brandName={brandName} onLogout={handleLogout} onHome={handleHome} userType={userType} />
+            </>
+          }
         />
         {/* Protect backoffice routes from Customer users */}
         <Route
@@ -193,18 +238,26 @@ function App() {
           element={
             userType === 'Customer' 
               ? <Navigate to="/" replace /> 
-              : <BackofficeOptions brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+              : (
+                <>
+                  <Header brandName={brandName} />
+                  <BackofficeOptions brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+                </>
+              )
           }
         />
         <Route
           path="/orders"
           element={
-            <OrderHistory 
-              brandName={brandName} 
-              onLogout={handleLogout} 
-              onHome={handleHome} 
-              userType={userType} 
-            />
+            <>
+              <Header brandName={brandName} />
+              <OrderHistory 
+                brandName={brandName} 
+                onLogout={handleLogout} 
+                onHome={handleHome} 
+                userType={userType} 
+              />
+            </>
           }
         />
         <Route
@@ -212,7 +265,12 @@ function App() {
           element={
             userType === 'Customer' 
               ? <Navigate to="/" replace /> 
-              : <Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+              : (
+                <>
+                  <Header brandName={brandName} />
+                  <Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+                </>
+              )
           }
         />
         <Route
@@ -220,7 +278,12 @@ function App() {
           element={
             userType === 'Customer' 
               ? <Navigate to="/" replace /> 
-              : <Branding brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+              : (
+                <>
+                  <Header brandName={brandName} />
+                  <Branding brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+                </>
+              )
           }
         />
         {/* Redirect any unknown routes to home */}
