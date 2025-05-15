@@ -309,22 +309,33 @@ app.get('/api/branding/header-logo', (req, res) => {
 // Upload header logo endpoint
 app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
   console.log('Header logo upload request');
+  console.log('Session:', req.session);
+  console.log('File:', req.file);
   
   if (!req.session.distributor_id) {
+    console.error('No distributor_id in session');
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
   if (!req.file) {
+    console.error('No file uploaded');
     return res.status(400).json({ error: 'No file uploaded' });
   }
   
   try {
-    console.log('File uploaded:', req.file);
+    console.log('File details:', {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      path: req.file.path,
+      size: req.file.size
+    });
     
     // Delete old header logo if exists
     const distributor = db.prepare(`
       SELECT header_logo_path FROM distributors WHERE id = ?
     `).get(req.session.distributor_id);
+    
+    console.log('Current distributor header_logo_path:', distributor?.header_logo_path);
     
     if (distributor && distributor.header_logo_path) {
       try {
@@ -348,11 +359,18 @@ app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
     const relativeFilePath = 'uploads/header-' + path.basename(req.file.path);
     console.log('Storing relative file path for header logo:', relativeFilePath);
     
-    db.prepare(`
+    // Check if the directory exists
+    const uploadDir = path.join(__dirname, 'public', 'uploads');
+    console.log('Upload directory:', uploadDir, 'exists:', fs.existsSync(uploadDir));
+    
+    // Update the database
+    const updateResult = db.prepare(`
       UPDATE distributors 
       SET header_logo_path = ? 
       WHERE id = ?
     `).run(relativeFilePath, req.session.distributor_id);
+    
+    console.log('Database update result:', updateResult);
     
     // Return the URL to access the logo
     const logoUrl = '/' + relativeFilePath;
@@ -360,7 +378,7 @@ app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
     res.json({ success: true, logo: logoUrl });
   } catch (error) {
     console.error('Error uploading header logo:', error);
-    res.status(500).json({ error: 'Error uploading header logo' });
+    res.status(500).json({ error: 'Error uploading header logo: ' + error.message });
   }
 });
 
