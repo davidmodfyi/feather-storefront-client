@@ -107,55 +107,74 @@ export default function Branding({ onLogout, onHome }) {
     }
   };
   
-  const handleHeaderLogoUpload = async () => {
-    if (!headerFileInput) {
-      alert('Please select a file first');
-      return;
-    }
+ const handleHeaderLogoUpload = async () => {
+  const fileInput = document.getElementById('headerLogoInput');
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert('Please select a file first');
+    return;
+  }
+  
+  // Check file type and size
+  if (!file.type.match('image.*')) {
+    alert('Please select an image file');
+    return;
+  }
+  
+  if (file.size > 1000000) {
+    alert('File size must be less than 1MB');
+    return;
+  }
+  
+  try {
+    setUploading(true);
     
-    // Check file type
-    if (!headerFileInput.type.match('image.*')) {
-      alert('Please select an image file');
-      return;
-    }
+    const formData = new FormData();
+    formData.append('logo', file);
     
-    // Check file size (max 1MB)
-    if (headerFileInput.size > 1000000) {
-      alert('File size must be less than 1MB');
-      return;
-    }
+    // Log the FormData (for debugging)
+    console.log('FormData contents:', {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size
+    });
     
+    const response = await fetch('/api/branding/header-logo', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    });
+    
+    const responseText = await response.text();
+    console.log('Raw response:', responseText);
+    
+    let data;
     try {
-      setUploading(true);
-      
-      const formData = new FormData();
-      formData.append('logo', headerFileInput);
-      
-      const response = await fetch('/api/branding/header-logo', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to upload header logo');
-      }
-      
-      const data = await response.json();
-      setHeaderLogo(data.logo);
-      setHeaderFileInput(null);
-      
-      // Reset file input
-      document.getElementById('headerLogoInput').value = '';
-      
-      alert('Header logo uploaded successfully');
-    } catch (error) {
-      console.error('Error uploading header logo:', error);
-      alert('Error uploading header logo: ' + error.message);
-    } finally {
-      setUploading(false);
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Error parsing response:', e);
+      throw new Error('Invalid response format');
     }
-  };
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to upload header logo');
+    }
+    
+    setHeaderLogo(data.logo);
+    console.log('Logo uploaded successfully:', data.logo);
+    
+    // Reset file input
+    fileInput.value = '';
+    
+    alert('Header logo uploaded successfully');
+  } catch (error) {
+    console.error('Error uploading header logo:', error);
+    alert('Error uploading header logo: ' + error.message);
+  } finally {
+    setUploading(false);
+  }
+};
   
   const handleDelete = async () => {
     if (!logo) return;
