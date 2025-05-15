@@ -60,7 +60,16 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
-    cb(null, 'logo-' + req.session.distributor_id + '-' + uniqueSuffix + ext);
+    
+    // Use different prefixes based on the endpoint
+    let prefix = 'logo-';
+    
+    // Check if this is a header logo upload
+    if (req.originalUrl.includes('header-logo')) {
+      prefix = 'headerlogo-'; // Change from 'header-logo-' to 'headerlogo-'
+    }
+    
+    cb(null, prefix + req.session.distributor_id + '-' + uniqueSuffix + ext);
   }
 });
 
@@ -309,68 +318,27 @@ app.get('/api/branding/header-logo', (req, res) => {
 // Upload header logo endpoint
 app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
   console.log('Header logo upload request');
-  console.log('Session:', req.session);
-  console.log('File:', req.file);
   
   if (!req.session.distributor_id) {
-    console.error('No distributor_id in session');
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
   if (!req.file) {
-    console.error('No file uploaded');
     return res.status(400).json({ error: 'No file uploaded' });
   }
   
   try {
-    console.log('File details:', {
-      filename: req.file.filename,
-      originalname: req.file.originalname,
-      path: req.file.path,
-      size: req.file.size
-    });
+    console.log('File uploaded:', req.file);
     
-    // Delete old header logo if exists
-    const distributor = db.prepare(`
-      SELECT header_logo_path FROM distributors WHERE id = ?
-    `).get(req.session.distributor_id);
-    
-    console.log('Current distributor header_logo_path:', distributor?.header_logo_path);
-    
-    if (distributor && distributor.header_logo_path) {
-      try {
-        const relativePath = distributor.header_logo_path.startsWith('/') 
-          ? distributor.header_logo_path.substring(1) 
-          : distributor.header_logo_path;
-          
-        const oldLogoPath = path.join(__dirname, 'public', relativePath);
-        console.log('Checking for old header logo at:', oldLogoPath);
-        if (fs.existsSync(oldLogoPath)) {
-          fs.unlinkSync(oldLogoPath);
-          console.log('Deleted old header logo');
-        }
-      } catch (err) {
-        console.error('Error deleting old header logo:', err);
-        // Continue even if delete fails
-      }
-    }
-    
-    // Store relative path from public directory - use a different prefix for header logos
-    const relativeFilePath = 'uploads/header-' + path.basename(req.file.path);
+    // Store relative path from public directory - use the path that multer created
+    const relativeFilePath = 'uploads/' + path.basename(req.file.path);
     console.log('Storing relative file path for header logo:', relativeFilePath);
     
-    // Check if the directory exists
-    const uploadDir = path.join(__dirname, 'public', 'uploads');
-    console.log('Upload directory:', uploadDir, 'exists:', fs.existsSync(uploadDir));
-    
-    // Update the database
-    const updateResult = db.prepare(`
+    db.prepare(`
       UPDATE distributors 
       SET header_logo_path = ? 
       WHERE id = ?
     `).run(relativeFilePath, req.session.distributor_id);
-    
-    console.log('Database update result:', updateResult);
     
     // Return the URL to access the logo
     const logoUrl = '/' + relativeFilePath;
@@ -378,10 +346,9 @@ app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
     res.json({ success: true, logo: logoUrl });
   } catch (error) {
     console.error('Error uploading header logo:', error);
-    res.status(500).json({ error: 'Error uploading header logo: ' + error.message });
+    res.status(500).json({ error: 'Error uploading header logo' });
   }
 });
-
 // Delete header logo endpoint
 app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
   console.log('Header logo upload request');
