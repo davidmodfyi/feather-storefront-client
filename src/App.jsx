@@ -12,30 +12,46 @@ import { useNavigate } from 'react-router-dom';
 // Header Component with Logo
 function Header({ brandName }) {
   const [headerLogo, setHeaderLogo] = useState(null);
+  const [debugInfo, setDebugInfo] = useState({loading: true});
   
   useEffect(() => {
+    console.log("Header component mounted, fetching logo...");
     // Fetch header logo if available
     fetch('/api/branding/header-logo', {
       credentials: 'include'
     })
-      .then(res => res.json())
+      .then(res => {
+        setDebugInfo(prev => ({...prev, status: res.status}));
+        return res.json();
+      })
       .then(data => {
+        console.log("Header logo response:", data);
+        setDebugInfo(prev => ({...prev, data, loading: false}));
         if (data.logo) {
           setHeaderLogo(data.logo);
         }
       })
-      .catch(console.error);
+      .catch(error => {
+        console.error('Error fetching header logo:', error);
+        setDebugInfo(prev => ({...prev, error: error.message, loading: false}));
+      });
   }, []);
   
-  if (!headerLogo) return null; // Don't render anything if no header logo
-  
+  // Always render something for debugging
   return (
-    <div className="absolute top-4 left-4 z-10">
-      <img 
-        src={headerLogo} 
-        alt={brandName || 'Company Logo'} 
-        className="h-10 w-auto object-contain"
-      />
+    <div className="absolute top-4 left-4 z-10 flex items-center">
+      {headerLogo ? (
+        <img 
+          src={headerLogo} 
+          alt={brandName || 'Company Logo'} 
+          className="h-10 w-auto object-contain"
+          style={{border: '1px solid red'}} // Add border to make it visible
+        />
+      ) : (
+        <div className="text-xs text-gray-400">
+          {debugInfo.loading ? 'Loading logo...' : 'No header logo'}
+        </div>
+      )}
     </div>
   );
 }
