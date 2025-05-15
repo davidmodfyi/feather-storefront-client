@@ -383,44 +383,60 @@ app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
 });
 
 // Delete header logo endpoint
-app.delete('/api/branding/header-logo', (req, res) => {
-  console.log('Header logo delete request');
+app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
+  console.log('Header logo upload request');
   
   if (!req.session.distributor_id) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  
   try {
-    // Get current header logo path
+    console.log('File uploaded:', req.file);
+    
+    // Delete old header logo if exists
     const distributor = db.prepare(`
       SELECT header_logo_path FROM distributors WHERE id = ?
     `).get(req.session.distributor_id);
     
-    if (!distributor || !distributor.header_logo_path) {
-      return res.json({ success: true });
+    if (distributor && distributor.header_logo_path) {
+      try {
+        const relativePath = distributor.header_logo_path.startsWith('/') 
+          ? distributor.header_logo_path.substring(1) 
+          : distributor.header_logo_path;
+          
+        const oldLogoPath = path.join(__dirname, 'public', relativePath);
+        console.log('Checking for old header logo at:', oldLogoPath);
+        if (fs.existsSync(oldLogoPath)) {
+          fs.unlinkSync(oldLogoPath);
+          console.log('Deleted old header logo');
+        }
+      } catch (err) {
+        console.error('Error deleting old header logo:', err);
+        // Continue even if delete fails
+      }
     }
     
-    // Delete the file
-    const relativePath = distributor.header_logo_path.startsWith('/') 
-      ? distributor.header_logo_path.substring(1) 
-      : distributor.header_logo_path;
+    // Store relative path from public directory - EXACTLY like the working version
+    const relativeFilePath = 'uploads/' + path.basename(req.file.path);
+    console.log('Storing relative file path for header logo:', relativeFilePath);
     
-    const logoPath = path.join(__dirname, 'public', relativePath);
-    if (fs.existsSync(logoPath)) {
-      fs.unlinkSync(logoPath);
-    }
-    
-    // Update distributor to clear header logo path
     db.prepare(`
       UPDATE distributors 
-      SET header_logo_path = NULL 
+      SET header_logo_path = ? 
       WHERE id = ?
-    `).run(req.session.distributor_id);
+    `).run(relativeFilePath, req.session.distributor_id);
     
-    res.json({ success: true });
+    // Return the URL to access the logo
+    const logoUrl = '/' + relativeFilePath;
+    console.log('Header logo URL:', logoUrl);
+    res.json({ success: true, logo: logoUrl });
   } catch (error) {
-    console.error('Error deleting header logo:', error);
-    res.status(500).json({ error: 'Error deleting header logo' });
+    console.error('Error uploading header logo:', error);
+    res.status(500).json({ error: 'Error uploading header logo' });
   }
 });
 
