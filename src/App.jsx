@@ -14,37 +14,29 @@ function Header({ brandName }) {
   const [headerLogo, setHeaderLogo] = useState(null);
   
   useEffect(() => {
-    fetch('/api/branding/header-logo', { credentials: 'include' })
+    // Fetch header logo if available
+    fetch('/api/branding/header-logo', {
+      credentials: 'include'
+    })
       .then(res => res.json())
       .then(data => {
-        console.log("Header logo full response:", JSON.stringify(data));
         if (data && data.logo) {
           setHeaderLogo(data.logo);
         }
       })
-      .catch(err => console.error("Header logo error:", err));
+      .catch(console.error);
   }, []);
   
-  // Always render for testing
+  // Don't render anything if no logo
+  if (!headerLogo) return null;
+  
   return (
-    <div style={{
-      position: 'fixed',
-      top: '10px',
-      left: '10px',
-      zIndex: 9999,
-      border: '2px solid red',
-      background: '#fff',
-      padding: '5px'
-    }}>
-      {headerLogo ? (
-        <img 
-          src={headerLogo} 
-          alt="Header Logo" 
-          style={{ height: '40px', width: 'auto' }}
-        />
-      ) : (
-        <span>No Logo Found</span>
-      )}
+    <div className="absolute top-2 left-2 z-10" style={{ maxWidth: '40px', maxHeight: '40px' }}>
+      <img 
+        src={headerLogo} 
+        alt={brandName || 'Company Logo'} 
+        className="h-auto w-full object-contain"
+      />
     </div>
   );
 }

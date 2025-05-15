@@ -11,15 +11,26 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [headerLogo, setHeaderLogo] = useState(null);
 
   // Fetch user info, items, and cart
-  useEffect(() => {
+ useEffect(() => {
     setLoading(true);
     
     // Fetch distributor name
     fetch('/api/me', { credentials: 'include' })
       .then(res => res.json())
       .then(data => setDistributor(data.distributorName || 'Storefront'))
+      .catch(console.error);
+
+    // Fetch header logo
+    fetch('/api/branding/header-logo', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.logo) {
+          setHeaderLogo(data.logo);
+        }
+      })
       .catch(console.error);
 
     // Fetch all items
@@ -40,7 +51,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     // Fetch cart items
     fetchCart();
   }, []);
-
+  
   // Fetch cart items from the server
   const fetchCart = () => {
     fetch('/api/cart', { credentials: 'include' })
@@ -215,8 +226,19 @@ const filteredItems = items.filter(item => {
   return true;
 });
   return (
-    <div className="p-6">
-      <div className="flex justify-between mb-4">
+   <div className="p-6">
+      {/* Header with logo */}
+      {headerLogo && (
+        <div className="absolute top-2 left-2" style={{ maxWidth: '40px', maxHeight: '40px' }}>
+          <img 
+            src={headerLogo} 
+            alt={distributor} 
+            className="h-auto w-full object-contain"
+          />
+        </div>
+      )}
+      
+      <div className="flex justify-between mb-4 ml-14"> {/* Added ml-14 to make room for the logo */}
         <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
         <div className="flex gap-2 items-center">
           <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>

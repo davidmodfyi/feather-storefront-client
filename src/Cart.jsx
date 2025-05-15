@@ -187,8 +187,8 @@ export default function Cart({ onLogout, onHome, brandName }) {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between mb-4">
-        <h1 className="text-2xl font-bold">{distributor} - My Cart</h1>
+		<div className="flex justify-between mb-4 ml-14">
+		  <h1 className="text-2xl font-bold">{distributor} - My Cart</h1>
         <div className="flex gap-2">
           <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
           <button onClick={goToStorefront} className="px-3 py-1 bg-blue-500 text-white rounded">Continue Shopping</button>
