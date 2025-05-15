@@ -12,45 +12,38 @@ import { useNavigate } from 'react-router-dom';
 // Header Component with Logo
 function Header({ brandName }) {
   const [headerLogo, setHeaderLogo] = useState(null);
-  const [debugInfo, setDebugInfo] = useState({loading: true});
   
   useEffect(() => {
-    console.log("Header component mounted, fetching logo...");
-    // Fetch header logo if available
-    fetch('/api/branding/header-logo', {
-      credentials: 'include'
-    })
-      .then(res => {
-        setDebugInfo(prev => ({...prev, status: res.status}));
-        return res.json();
-      })
+    fetch('/api/branding/header-logo', { credentials: 'include' })
+      .then(res => res.json())
       .then(data => {
-        console.log("Header logo response:", data);
-        setDebugInfo(prev => ({...prev, data, loading: false}));
-        if (data.logo) {
+        console.log("Header logo full response:", JSON.stringify(data));
+        if (data && data.logo) {
           setHeaderLogo(data.logo);
         }
       })
-      .catch(error => {
-        console.error('Error fetching header logo:', error);
-        setDebugInfo(prev => ({...prev, error: error.message, loading: false}));
-      });
+      .catch(err => console.error("Header logo error:", err));
   }, []);
   
-  // Always render something for debugging
+  // Always render for testing
   return (
-    <div className="absolute top-4 left-4 z-10 flex items-center">
+    <div style={{
+      position: 'fixed',
+      top: '10px',
+      left: '10px',
+      zIndex: 9999,
+      border: '2px solid red',
+      background: '#fff',
+      padding: '5px'
+    }}>
       {headerLogo ? (
         <img 
           src={headerLogo} 
-          alt={brandName || 'Company Logo'} 
-          className="h-10 w-auto object-contain"
-          style={{border: '1px solid red'}} // Add border to make it visible
+          alt="Header Logo" 
+          style={{ height: '40px', width: 'auto' }}
         />
       ) : (
-        <div className="text-xs text-gray-400">
-          {debugInfo.loading ? 'Loading logo...' : 'No header logo'}
-        </div>
+        <span>No Logo Found</span>
       )}
     </div>
   );
