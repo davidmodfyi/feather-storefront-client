@@ -161,6 +161,25 @@ app.get('/api/diagnostic', (req, res) => {
   }
 });
 
+app.get('/api/add-header-logo-column', (req, res) => {
+  try {
+    // Check if column exists
+    const columns = db.prepare(`PRAGMA table_info(distributors)`).all();
+    const hasColumn = columns.some(col => col.name === 'header_logo_path');
+    
+    if (!hasColumn) {
+      // Add the column
+      db.prepare(`ALTER TABLE distributors ADD COLUMN header_logo_path TEXT`).run();
+      res.json({ success: true, message: 'Header logo column added' });
+    } else {
+      res.json({ success: true, message: 'Header logo column already exists' });
+    }
+  } catch (error) {
+    console.error('Error adding column:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/branding/logo', (req, res) => {
   console.log('Logo request');
   
