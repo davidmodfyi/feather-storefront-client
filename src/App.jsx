@@ -31,11 +31,12 @@ function Header({ brandName }) {
   if (!headerLogo) return null;
   
   return (
-    <div className="absolute top-2 left-2 z-10" style={{ maxWidth: '40px', maxHeight: '40px' }}>
+    <div className="absolute top-2 left-2 z-10" style={{ maxWidth: '80px' }}>
       <img 
         src={headerLogo} 
         alt={brandName || 'Company Logo'} 
         className="h-auto w-full object-contain"
+        style={{ maxHeight: '70px' }}
       />
     </div>
   );

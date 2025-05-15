@@ -238,19 +238,19 @@ const filteredItems = items.filter(item => {
         </div>
       )}
       
-      <div className="flex justify-between mb-4 ml-14"> {/* Added ml-14 to make room for the logo */}
-        <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
-        <div className="flex gap-2 items-center">
-          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
-          <button 
-            onClick={goToCart} 
-            className="px-3 py-1 bg-blue-500 text-white rounded flex items-center gap-1"
-          >
-            🛒 My Cart ({getCartItemCount()})
-          </button>
-          <button onClick={handleLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
-        </div>
+    <div className="flex justify-between mb-4 ml-20"> {/* Increased ml-14 to ml-20 */}
+      <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
+      <div className="flex gap-2 items-center">
+        <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
+        <button 
+          onClick={goToCart} 
+          className="px-3 py-1 bg-blue-500 text-white rounded flex items-center gap-1"
+        >
+          🛒 My Cart ({getCartItemCount()})
+        </button>
+        <button onClick={handleLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
       </div>
+    </div>
       
       <div className="flex gap-2 mb-6 flex-wrap">
         <button 
