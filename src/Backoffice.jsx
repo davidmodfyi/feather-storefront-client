@@ -7,6 +7,10 @@ export default function Backoffice({ onLogout, onHome }) {
   const [connectedAccounts, setConnectedAccounts] = useState({});
   const navigate = useNavigate();
 
+useEffect(() => {
+  document.title = `${distributor} - Customers`;
+}, [distributor]);
+
   useEffect(() => {
     // Fetch accounts
     fetch('/api/accounts', { credentials: 'include' })

@@ -1,4 +1,6 @@
-import { useState } from "react";
+// Update your AdminLogin.jsx component to set the title
+
+import { useState, useEffect } from "react";
 
 export default function AdminLogin({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -6,6 +8,11 @@ export default function AdminLogin({ onLogin }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [debugInfo, setDebugInfo] = useState(null);
+
+  // Set the document title to "Feather" for the login screen
+  useEffect(() => {
+    document.title = "Feather";
+  }, []);
 
   async function handleLogin() {
     setIsLoading(true);

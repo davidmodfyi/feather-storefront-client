@@ -15,6 +15,10 @@ export default function Branding({ onLogout, onHome }) {
     fetchLogo();
     fetchHeaderLogo();
   }, []);
+  
+  useEffect(() => {
+  document.title = `${distributor} - Branding`;
+}, [distributor]);
 
   const fetchLogo = async () => {
     try {

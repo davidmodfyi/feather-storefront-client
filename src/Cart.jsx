@@ -19,6 +19,10 @@ export default function Cart({ onLogout, onHome, brandName }) {
     fetchCart();
   }, []);
 
+useEffect(() => {
+  document.title = `${distributor} - Cart`;
+}, [distributor]);
+
   // Fetch cart items from the server
   const fetchCart = () => {
     setLoading(true);

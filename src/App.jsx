@@ -1,3 +1,5 @@
+// Update your App.jsx component to include title management
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './AdminLogin';
@@ -8,6 +10,7 @@ import Cart from './Cart';
 import OrderHistory from './OrderHistory';
 import Branding from './Branding';
 import { useNavigate } from 'react-router-dom';
+import useTitleEffect from './useTitleEffect';
 
 // Header Component with Logo
 function Header({ brandName }) {
@@ -46,6 +49,9 @@ function Header({ brandName }) {
 function PortalPage({ brandName, onLogout, userType }) {
   const navigate = useNavigate();
   const [logo, setLogo] = useState(null);
+  
+  // Set the page title to the distributor name
+  useTitleEffect(brandName || 'Storefront');
   
   useEffect(() => {
     // Fetch logo if available
@@ -144,6 +150,13 @@ function App() {
   const [userType, setUserType] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // If not logged in, set default title
+  useEffect(() => {
+    if (!loggedIn) {
+      document.title = 'Feather';
+    }
+  }, [loggedIn]);
+
   // Check if user is already logged in on component mount
   useEffect(() => {
     async function checkLoginStatus() {
@@ -157,6 +170,11 @@ function App() {
           setLoggedIn(true);
           setBrandName(data.distributorName || '');
           setUserType(data.userType || 'Admin'); // Default to Admin if not specified
+          
+          // Set page title to distributor name
+          if (data.distributorName) {
+            document.title = data.distributorName;
+          }
         }
       } catch (err) {
         console.error('Error checking login status:', err);
@@ -173,6 +191,12 @@ function App() {
     setLoggedIn(true);
     setBrandName(data.distributorName || '');
     setUserType(data.userType || 'Admin');
+    
+    // Set page title to distributor name
+    if (data.distributorName) {
+      document.title = data.distributorName;
+    }
+    
     window.location.href = '/'; // Refresh the page to trigger the useEffect
   };
 
@@ -189,6 +213,7 @@ function App() {
       setLoggedIn(false);
       setBrandName('');
       setUserType('');
+      document.title = 'Feather'; // Reset title on logout
       window.location.href = '/';
     }
   };

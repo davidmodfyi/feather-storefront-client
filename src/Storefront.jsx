@@ -52,6 +52,10 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     fetchCart();
   }, []);
   
+  useEffect(() => {
+  document.title = `${distributor} - Storefront`;
+}, [distributor]);
+  
   // Fetch cart items from the server
   const fetchCart = () => {
     fetch('/api/cart', { credentials: 'include' })

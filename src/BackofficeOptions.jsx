@@ -15,6 +15,11 @@ export default function BackofficeOptions({ onLogout, onHome }) {
     { name: "Logs", path: "/backoffice/logs" }
   ];
 
+useEffect(() => {
+  document.title = `${distributor} - Backoffice`;
+}, [distributor]);
+
+
   return (
     <div className="p-6">
       <div className="flex justify-between mb-4">

@@ -9,6 +9,10 @@ export default function OrderHistory({ onLogout, onHome, brandName, userType }) 
   const [viewingDetails, setViewingDetails] = useState(false);
   const navigate = useNavigate();
 
+useEffect(() => {
+  document.title = `${distributor} - Order History`;
+}, [distributor]);
+
   useEffect(() => {
     fetchOrders();
   }, []);
