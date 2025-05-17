@@ -8,14 +8,21 @@ export default function OrderHistory({ onLogout, onHome, brandName, userType }) 
   const [orderItems, setOrderItems] = useState([]);
   const [viewingDetails, setViewingDetails] = useState(false);
   const navigate = useNavigate();
+  const distributor = brandName || 'Storefront';
 
-useEffect(() => {
-  document.title = `${distributor} - Order History`;
-}, [distributor]);
+  // ⚠️ Move the title setting to a named function to avoid scope issues
+  function updateTitle() {
+    document.title = `${distributor} - Order History`;
+  }
+
+  // Call the function directly after component declaration
+  updateTitle();
 
   useEffect(() => {
+    // Set title again in useEffect to ensure it's updated when distributor changes
+    updateTitle();
     fetchOrders();
-  }, []);
+  }, [distributor]);
 
   const fetchOrders = async () => {
     try {
