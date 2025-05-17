@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function BackofficeOptions({ onLogout, onHome }) {
+export default function BackofficeOptions({ onLogout, onHome, brandName }) {
+  // Set title directly at component level
+  document.title = brandName ? `${brandName} - Backoffice` : 'Backoffice - Feather';
+  
   const navigate = useNavigate();
 
   // Options for the backoffice
@@ -15,14 +18,9 @@ export default function BackofficeOptions({ onLogout, onHome }) {
     { name: "Logs", path: "/backoffice/logs" }
   ];
 
-useEffect(() => {
-  document.title = `${distributor} - Backoffice`;
-}, [distributor]);
-
-
   return (
     <div className="p-6">
-      <div className="flex justify-between mb-4">
+      <div className="flex justify-between mb-4 ml-20">
         <h1 className="text-2xl font-bold">Backoffice</h1>
         <div className="flex gap-2">
           <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>

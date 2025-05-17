@@ -1,7 +1,12 @@
+// Fix for Branding.jsx
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function Branding({ onLogout, onHome }) {
+export default function Branding({ onLogout, onHome, brandName }) {
+  // Set title directly at component level
+  document.title = brandName ? `${brandName} - Branding` : 'Branding - Feather';
+  
   const [logo, setLogo] = useState(null);
   const [headerLogo, setHeaderLogo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,10 +20,6 @@ export default function Branding({ onLogout, onHome }) {
     fetchLogo();
     fetchHeaderLogo();
   }, []);
-  
-  useEffect(() => {
-  document.title = `${distributor} - Branding`;
-}, [distributor]);
 
   const fetchLogo = async () => {
     try {

@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function Backoffice({ onLogout, onHome }) {
+export default function Backoffice({ onLogout, onHome, brandName }) {
+  // Set title directly at component level
+  document.title = brandName ? `${brandName} - Customers` : 'Customers - Feather';
+  
   const [accounts, setAccounts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [connectedAccounts, setConnectedAccounts] = useState({});
   const navigate = useNavigate();
 
-useEffect(() => {
-  document.title = `${distributor} - Customers`;
-}, [distributor]);
+  // Remove the useEffect that was setting the title and keep the rest
 
+  // The remaining useEffect for data fetching
   useEffect(() => {
     // Fetch accounts
     fetch('/api/accounts', { credentials: 'include' })
