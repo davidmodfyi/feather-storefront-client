@@ -287,19 +287,23 @@ function App() {
             </>
           }
         />
-        <Route
-          path="/backoffice/customers"
-          element={
-            userType === 'Customer' 
-              ? <Navigate to="/" replace /> 
-              : (
-                <>
-                  <Header brandName={brandName} />
-                  <Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
-                </>
-              )
-          }
-        />
+		<Route
+		  path="/backoffice/customers"
+		  element={
+			userType === 'Customer' 
+			  ? <Navigate to="/" replace /> 
+			  : (
+				<>
+				  <Header brandName={brandName} />
+				  <Backoffice 
+					brandName={brandName} 
+					onLogout={handleLogout} 
+					onHome={handleHome} 
+				  />
+				</>
+			  )
+		  }
+		/>
         <Route
           path="/backoffice/branding"
           element={
