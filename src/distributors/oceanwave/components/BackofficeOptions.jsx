@@ -50,7 +50,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
               <p className="text-sm text-gray-600">View and manage your customer accounts</p>
             )}
             {option.name === "Branding" && (
-              <p className="text-sm text-gray-600">Customize your logo and appearance - OCEAN WAVE</p>
+              <p className="text-sm text-gray-600">Customize your logo and appearance OCEAN WAVE</p>
             )}
           </div>
         ))}
