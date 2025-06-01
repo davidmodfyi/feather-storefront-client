@@ -9,39 +9,14 @@
   <body>
     <div id="root"></div>
     <script type="module">
-      // Determine which distributor to load based on hostname or URL parameter
-      const hostname = window.location.hostname;
-      const urlParams = new URLSearchParams(window.location.search);
+      // Always start with default - distributor switching happens after login
+      window.FEATHER_DISTRIBUTOR = 'default';
       
-      let distributorSlug = 'oceanwave'; // Default for now
+      console.log('Loading default Feather Storefront - distributor will be determined after login');
       
-      // Check URL parameter first (for development)
-      if (urlParams.has('distributor')) {
-        distributorSlug = urlParams.get('distributor');
-      }
-      // Then check hostname patterns
-      else if (hostname.includes('palma')) {
-        distributorSlug = 'palma';
-      } 
-      else if (hostname === 'www.featherstorefront.com' || hostname === 'featherstorefront.com') {
-        distributorSlug = 'oceanwave';
-      }
-      // Development fallback
-      else if (hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('github.dev')) {
-        distributorSlug = 'oceanwave';
-      }
-      
-      // Set distributor in global scope for main.jsx to pick up
-      window.FEATHER_DISTRIBUTOR = distributorSlug;
-      
-      console.log(`Loading Feather Storefront for distributor: ${distributorSlug}`);
-      
-      // Dynamically import the correct main.jsx file
-      import(`./src/distributors/${distributorSlug}/main.jsx`).catch(error => {
-        console.error(`Failed to load distributor ${distributorSlug}, falling back to default:`, error);
-        // Fallback to default if specific distributor fails
-        window.FEATHER_DISTRIBUTOR = 'default';
-        import(`./src/distributors/default/main.jsx`);
+      // Always load default main.jsx first
+      import(`./src/distributors/default/main.jsx`).catch(error => {
+        console.error('Failed to load default distributor:', error);
       });
     </script>
   </body>
