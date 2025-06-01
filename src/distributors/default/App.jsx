@@ -1,16 +1,16 @@
-// Update your App.jsx component to include title management
+// Template for src/distributors/[DISTRIBUTOR]/App.jsx
+// Copy this to each distributor's App.jsx, replacing the existing one
 
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import AdminLogin from './AdminLogin';
-import Storefront from './Storefront';
-import Backoffice from './Backoffice';
-import BackofficeOptions from './BackofficeOptions';
-import Cart from './Cart';
-import OrderHistory from './OrderHistory';
-import Branding from './Branding';
+import AdminLogin from './components/AdminLogin';
+import Storefront from './components/Storefront';
+import Backoffice from './components/Backoffice';
+import BackofficeOptions from './components/BackofficeOptions';
+import Cart from './components/Cart';
+import OrderHistory from './components/OrderHistory';
+import Branding from './components/Branding';
 import { useNavigate } from 'react-router-dom';
-import useTitleEffect from './useTitleEffect';
 
 // Header Component with Logo
 function Header({ brandName }) {
@@ -51,7 +51,7 @@ function PortalPage({ brandName, onLogout, userType }) {
   const [logo, setLogo] = useState(null);
   
   // Set the page title to the distributor name
-  useTitleEffect(brandName || 'Storefront');
+  document.title = brandName || 'Storefront';
   
   useEffect(() => {
     // Fetch logo if available
@@ -144,7 +144,7 @@ function PortalPage({ brandName, onLogout, userType }) {
   );
 }
 
-function App() {
+function App({ distributorSlug }) {
   const [loggedIn, setLoggedIn] = useState(false);
   const [brandName, setBrandName] = useState('');
   const [userType, setUserType] = useState('');
@@ -287,23 +287,19 @@ function App() {
             </>
           }
         />
-		<Route
-		  path="/backoffice/customers"
-		  element={
-			userType === 'Customer' 
-			  ? <Navigate to="/" replace /> 
-			  : (
-				<>
-				  <Header brandName={brandName} />
-				  <Backoffice 
-					brandName={brandName} 
-					onLogout={handleLogout} 
-					onHome={handleHome} 
-				  />
-				</>
-			  )
-		  }
-		/>
+        <Route
+          path="/backoffice/customers"
+          element={
+            userType === 'Customer' 
+              ? <Navigate to="/" replace /> 
+              : (
+                <>
+                  <Header brandName={brandName} />
+                  <Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+                </>
+              )
+          }
+        />
         <Route
           path="/backoffice/branding"
           element={
