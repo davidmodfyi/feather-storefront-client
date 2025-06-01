@@ -4,10 +4,45 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ocean Wave Foods</title>
+    <title>Feather Storefront</title>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module">
+      // Determine which distributor to load based on hostname or URL parameter
+      const hostname = window.location.hostname;
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      let distributorSlug = 'oceanwave'; // Default for now
+      
+      // Check URL parameter first (for development)
+      if (urlParams.has('distributor')) {
+        distributorSlug = urlParams.get('distributor');
+      }
+      // Then check hostname patterns
+      else if (hostname.includes('palma')) {
+        distributorSlug = 'palma';
+      } 
+      else if (hostname === 'www.featherstorefront.com' || hostname === 'featherstorefront.com') {
+        distributorSlug = 'oceanwave';
+      }
+      // Development fallback
+      else if (hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('github.dev')) {
+        distributorSlug = 'oceanwave';
+      }
+      
+      // Set distributor in global scope for main.jsx to pick up
+      window.FEATHER_DISTRIBUTOR = distributorSlug;
+      
+      console.log(`Loading Feather Storefront for distributor: ${distributorSlug}`);
+      
+      // Dynamically import the correct main.jsx file
+      import(`./src/distributors/${distributorSlug}/main.jsx`).catch(error => {
+        console.error(`Failed to load distributor ${distributorSlug}, falling back to default:`, error);
+        // Fallback to default if specific distributor fails
+        window.FEATHER_DISTRIBUTOR = 'default';
+        import(`./src/distributors/default/main.jsx`);
+      });
+    </script>
   </body>
 </html>
