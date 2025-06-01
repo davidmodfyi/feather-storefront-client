@@ -17,7 +17,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
     { name: "Custom Table", path: "/backoffice/table" },
     { name: "Logs", path: "/backoffice/logs" }
   ];
-
+echo "ocean waveeeeeeeeee";
   return (
     <div className="p-6">
       <div className="flex justify-between mb-4 ml-20">
@@ -51,7 +51,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
               <p className="text-sm text-gray-600">View and manage your customer accounts</p>
             )}
             {option.name === "Branding" && (
-              <p className="text-sm text-gray-600">Customize your storefront logo and appearance</p>
+              <p className="text-sm text-gray-600">Customize your storefront logo & appearance</p>
             )}
           </div>
         ))}
