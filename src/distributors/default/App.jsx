@@ -1,6 +1,3 @@
-// Template for src/distributors/[DISTRIBUTOR]/App.jsx
-// Copy this to each distributor's App.jsx, replacing the existing one
-
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './components/AdminLogin';
