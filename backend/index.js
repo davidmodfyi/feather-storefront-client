@@ -9,6 +9,16 @@ const fs = require('fs');
 
 require('dotenv').config();
 
+const DISTRIBUTOR_MAPPING = {
+  1: 'oceanwave',    // Ocean Wave Foods
+  2: 'palma',        // Palma Cigars
+  // Add more as needed
+};
+
+function getDistributorSlug(distributorId) {
+  return DISTRIBUTOR_MAPPING[distributorId] || 'default';
+}
+
 // Get the db object from the database module
 const db = database.db;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -717,12 +727,16 @@ app.post('/api/login', async (req, res) => {
     req.session.userType = dbUser.type || 'Admin';
     req.session.accountId = dbUser.account_id;
 
+    // Get distributor slug
+    const distributorSlug = getDistributorSlug(dbUser.distributor_id);
+
     console.log('Session data set:', {
       user_id: dbUser.id,
       distributor_id: dbUser.distributor_id,
       distributorName: dbUser.distributor_name,
       userType: dbUser.type || 'Admin',
-      accountId: dbUser.account_id
+      accountId: dbUser.account_id,
+      distributorSlug: distributorSlug
     });
 
     // Save session and respond
@@ -737,7 +751,8 @@ app.post('/api/login', async (req, res) => {
         user_id: dbUser.id,
         distributorName: dbUser.distributor_name,
         userType: dbUser.type || 'Admin',
-        accountId: dbUser.account_id
+        accountId: dbUser.account_id,
+        distributorSlug: distributorSlug  // NEW: Include distributor slug
       });
     });
   } catch (error) {
@@ -745,6 +760,71 @@ app.post('/api/login', async (req, res) => {
     return res.status(500).json({ error: 'Server error during login' });
   }
 });
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    console.log('Login attempt:', { username, passwordLength: password ? password.length : 0 });
+
+    // Validate input
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required.' });
+    }
+
+    // Get user from database
+    const dbUser = database.getUserByUsername(username);
+
+    if (!dbUser) {
+      console.log('No user found with username:', username);
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    // Password check
+    if (password !== dbUser.password) {
+      console.log('Password mismatch for user:', username);
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    // Set session data
+    req.session.user_id = dbUser.id;
+    req.session.distributor_id = dbUser.distributor_id;
+    req.session.distributorName = dbUser.distributor_name;
+    req.session.userType = dbUser.type || 'Admin';
+    req.session.accountId = dbUser.account_id;
+
+    // Get distributor slug
+    const distributorSlug = getDistributorSlug(dbUser.distributor_id);
+
+    console.log('Session data set:', {
+      user_id: dbUser.id,
+      distributor_id: dbUser.distributor_id,
+      distributorName: dbUser.distributor_name,
+      userType: dbUser.type || 'Admin',
+      accountId: dbUser.account_id,
+      distributorSlug: distributorSlug
+    });
+
+    // Save session and respond
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.status(500).json({ error: 'Error saving session' });
+      }
+
+      return res.json({
+        status: 'logged_in',
+        user_id: dbUser.id,
+        distributorName: dbUser.distributor_name,
+        userType: dbUser.type || 'Admin',
+        accountId: dbUser.account_id,
+        distributorSlug: distributorSlug  // NEW: Include distributor slug
+      });
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ error: 'Server error during login' });
+  }
+});
+
 
 // Logout route
 app.post('/api/logout', (req, res) => {
@@ -996,16 +1076,18 @@ app.post('/api/connect-account', (req, res) => {
 app.get('/api/me', (req, res) => {
   console.log('User info request');
   if (!req.session || !req.session.distributor_id) {
-    // Not logged in, but always return JSON!
     return res.status(401).json({ error: 'Not authenticated' });
   }
+
+  const distributorSlug = getDistributorSlug(req.session.distributor_id);
 
   res.json({
     distributorId: req.session.distributor_id,
     distributorName: req.session.distributorName || 'Storefront',
     userType: req.session.userType || 'Admin',
     accountId: req.session.accountId || null,
-    userId: req.session.user_id || null
+    userId: req.session.user_id || null,
+    distributorSlug: distributorSlug  // NEW: Include distributor slug
   });
 });
 
@@ -1359,6 +1441,10 @@ if (process.env.NODE_ENV === 'production') {
     }
   });
 }
+
+
+
+
 
 // Start the server
 app.listen(PORT, () => {
