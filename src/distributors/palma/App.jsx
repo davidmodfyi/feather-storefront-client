@@ -1,6 +1,3 @@
-// Simple App.jsx - Copy to ALL distributor folders
-// This version uses hard redirects to force correct file loading
-
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './components/AdminLogin';
@@ -11,6 +8,7 @@ import Cart from './components/Cart';
 import OrderHistory from './components/OrderHistory';
 import Branding from './components/Branding';
 import { useNavigate } from 'react-router-dom';
+import AIChat from './components/AIChat';
 
 // Header Component with Logo
 function Header({ brandName }) {
@@ -300,6 +298,19 @@ function App({ distributorSlug }) {
               )
           }
         />
+        <Route
+            path="/backoffice/ai-chat"
+            element={
+              userType === 'Customer' 
+                ? <Navigate to="/" replace /> 
+                : (
+                  <>
+                    <Header brandName={brandName} />
+                    <AIChat brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+                  </>
+                )
+            }
+          />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
