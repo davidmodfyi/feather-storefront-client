@@ -1,5 +1,5 @@
-// Simplified App.jsx - Copy this to ALL distributor App.jsx files
-// This approach redirects to the correct distributor after login
+// Simple App.jsx - Copy to ALL distributor folders
+// This version uses hard redirects to force correct file loading
 
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -142,12 +142,6 @@ function App({ distributorSlug }) {
   const [userType, setUserType] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Get current distributor from URL or default
-  const getCurrentDistributor = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('dist') || distributorSlug || 'default';
-  };
-
   useEffect(() => {
     if (!loggedIn) {
       document.title = 'Feather';
@@ -164,15 +158,6 @@ function App({ distributorSlug }) {
         
         if (res.ok) {
           const data = await res.json();
-          
-          // Check if we're on the wrong distributor
-          const currentDist = getCurrentDistributor();
-          if (data.distributorSlug && data.distributorSlug !== currentDist) {
-            console.log(`Redirecting from ${currentDist} to ${data.distributorSlug}`);
-            window.location.href = `/?dist=${data.distributorSlug}`;
-            return;
-          }
-          
           setLoggedIn(true);
           setBrandName(data.distributorName || '');
           setUserType(data.userType || 'Admin');
@@ -193,22 +178,14 @@ function App({ distributorSlug }) {
 
   // Callback for successful login
   const handleLoginSuccess = (data) => {
-    if (data.distributorSlug && data.distributorSlug !== 'default') {
-      console.log(`Login successful - redirecting to distributor: ${data.distributorSlug}`);
-      // Redirect to the correct distributor
-      window.location.href = `/?dist=${data.distributorSlug}`;
+    // HARD REDIRECT: Force browser to reload with correct URL
+    if (data.redirectUrl) {
+      console.log(`Redirecting to: ${data.redirectUrl}`);
+      window.location.href = data.redirectUrl;
       return;
     }
     
-    // If default or no specific distributor, just reload
-    setLoggedIn(true);
-    setBrandName(data.distributorName || '');
-    setUserType(data.userType || 'Admin');
-    
-    if (data.distributorName) {
-      document.title = data.distributorName;
-    }
-    
+    // Fallback
     window.location.href = '/';
   };
 
