@@ -1,3 +1,6 @@
+// Simplified App.jsx - Copy this to ALL distributor App.jsx files
+// This approach redirects to the correct distributor after login
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './components/AdminLogin';
@@ -14,7 +17,6 @@ function Header({ brandName }) {
   const [headerLogo, setHeaderLogo] = useState(null);
   
   useEffect(() => {
-    // Fetch header logo if available
     fetch('/api/branding/header-logo', {
       credentials: 'include'
     })
@@ -27,7 +29,6 @@ function Header({ brandName }) {
       .catch(console.error);
   }, []);
   
-  // Don't render anything if no logo
   if (!headerLogo) return null;
   
   return (
@@ -47,11 +48,9 @@ function PortalPage({ brandName, onLogout, userType }) {
   const navigate = useNavigate();
   const [logo, setLogo] = useState(null);
   
-  // Set the page title to the distributor name
   document.title = brandName || 'Storefront';
   
   useEffect(() => {
-    // Fetch logo if available
     fetch('/api/branding/logo', {
       credentials: 'include'
     })
@@ -64,12 +63,10 @@ function PortalPage({ brandName, onLogout, userType }) {
       .catch(console.error);
   }, []);
   
-  // Different view based on user type
   if (userType === 'Customer') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
         <Header brandName={brandName} />
-        
         {logo ? (
           <img src={logo} alt={brandName} className="mb-4 max-h-32 object-contain" />
         ) : (
@@ -100,11 +97,9 @@ function PortalPage({ brandName, onLogout, userType }) {
     );
   }
   
-  // Default Admin view
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
       <Header brandName={brandName} />
-      
       {logo ? (
         <img src={logo} alt={brandName} className="mb-4 max-h-32 object-contain" />
       ) : (
@@ -147,7 +142,12 @@ function App({ distributorSlug }) {
   const [userType, setUserType] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // If not logged in, set default title
+  // Get current distributor from URL or default
+  const getCurrentDistributor = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('dist') || distributorSlug || 'default';
+  };
+
   useEffect(() => {
     if (!loggedIn) {
       document.title = 'Feather';
@@ -164,11 +164,19 @@ function App({ distributorSlug }) {
         
         if (res.ok) {
           const data = await res.json();
+          
+          // Check if we're on the wrong distributor
+          const currentDist = getCurrentDistributor();
+          if (data.distributorSlug && data.distributorSlug !== currentDist) {
+            console.log(`Redirecting from ${currentDist} to ${data.distributorSlug}`);
+            window.location.href = `/?dist=${data.distributorSlug}`;
+            return;
+          }
+          
           setLoggedIn(true);
           setBrandName(data.distributorName || '');
-          setUserType(data.userType || 'Admin'); // Default to Admin if not specified
+          setUserType(data.userType || 'Admin');
           
-          // Set page title to distributor name
           if (data.distributorName) {
             document.title = data.distributorName;
           }
@@ -185,16 +193,23 @@ function App({ distributorSlug }) {
 
   // Callback for successful login
   const handleLoginSuccess = (data) => {
+    if (data.distributorSlug && data.distributorSlug !== 'default') {
+      console.log(`Login successful - redirecting to distributor: ${data.distributorSlug}`);
+      // Redirect to the correct distributor
+      window.location.href = `/?dist=${data.distributorSlug}`;
+      return;
+    }
+    
+    // If default or no specific distributor, just reload
     setLoggedIn(true);
     setBrandName(data.distributorName || '');
     setUserType(data.userType || 'Admin');
     
-    // Set page title to distributor name
     if (data.distributorName) {
       document.title = data.distributorName;
     }
     
-    window.location.href = '/'; // Refresh the page to trigger the useEffect
+    window.location.href = '/';
   };
 
   // Logout handler
@@ -210,12 +225,11 @@ function App({ distributorSlug }) {
       setLoggedIn(false);
       setBrandName('');
       setUserType('');
-      document.title = 'Feather'; // Reset title on logout
+      document.title = 'Feather';
       window.location.href = '/';
     }
   };
 
-  // Function for home button
   const handleHome = () => {
     window.location.href = '/';
   };
@@ -256,7 +270,6 @@ function App({ distributorSlug }) {
             </>
           }
         />
-        {/* Protect backoffice routes from Customer users */}
         <Route
           path="/backoffice"
           element={
@@ -310,7 +323,6 @@ function App({ distributorSlug }) {
               )
           }
         />
-        {/* Redirect any unknown routes to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
