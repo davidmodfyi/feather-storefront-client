@@ -694,8 +694,8 @@ app.delete('/api/branding/logo', (req, res) => {
 
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
+// Replace your login endpoint in backend/index.js with this:
 
-// Login route with detailed debugging
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -746,13 +746,17 @@ app.post('/api/login', async (req, res) => {
         return res.status(500).json({ error: 'Error saving session' });
       }
 
+      // NEW APPROACH: Return redirect URL instead of success
+      const redirectUrl = distributorSlug !== 'default' ? `/?dist=${distributorSlug}` : '/';
+      
       return res.json({
         status: 'logged_in',
         user_id: dbUser.id,
         distributorName: dbUser.distributor_name,
         userType: dbUser.type || 'Admin',
         accountId: dbUser.account_id,
-        distributorSlug: distributorSlug  // NEW: Include distributor slug
+        distributorSlug: distributorSlug,
+        redirectUrl: redirectUrl  // NEW: Tell frontend where to redirect
       });
     });
   } catch (error) {
@@ -760,71 +764,6 @@ app.post('/api/login', async (req, res) => {
     return res.status(500).json({ error: 'Server error during login' });
   }
 });
-app.post('/api/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    console.log('Login attempt:', { username, passwordLength: password ? password.length : 0 });
-
-    // Validate input
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required.' });
-    }
-
-    // Get user from database
-    const dbUser = database.getUserByUsername(username);
-
-    if (!dbUser) {
-      console.log('No user found with username:', username);
-      return res.status(401).json({ error: 'Invalid username or password' });
-    }
-
-    // Password check
-    if (password !== dbUser.password) {
-      console.log('Password mismatch for user:', username);
-      return res.status(401).json({ error: 'Invalid username or password' });
-    }
-
-    // Set session data
-    req.session.user_id = dbUser.id;
-    req.session.distributor_id = dbUser.distributor_id;
-    req.session.distributorName = dbUser.distributor_name;
-    req.session.userType = dbUser.type || 'Admin';
-    req.session.accountId = dbUser.account_id;
-
-    // Get distributor slug
-    const distributorSlug = getDistributorSlug(dbUser.distributor_id);
-
-    console.log('Session data set:', {
-      user_id: dbUser.id,
-      distributor_id: dbUser.distributor_id,
-      distributorName: dbUser.distributor_name,
-      userType: dbUser.type || 'Admin',
-      accountId: dbUser.account_id,
-      distributorSlug: distributorSlug
-    });
-
-    // Save session and respond
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error:', err);
-        return res.status(500).json({ error: 'Error saving session' });
-      }
-
-      return res.json({
-        status: 'logged_in',
-        user_id: dbUser.id,
-        distributorName: dbUser.distributor_name,
-        userType: dbUser.type || 'Admin',
-        accountId: dbUser.account_id,
-        distributorSlug: distributorSlug  // NEW: Include distributor slug
-      });
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).json({ error: 'Server error during login' });
-  }
-});
-
 
 // Logout route
 app.post('/api/logout', (req, res) => {
