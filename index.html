@@ -9,14 +9,21 @@
   <body>
     <div id="root"></div>
     <script type="module">
-      // Always start with default - distributor switching happens after login
-      window.FEATHER_DISTRIBUTOR = 'default';
+      // Check for distributor URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      let distributorSlug = urlParams.get('dist') || 'default';
       
-      console.log('Loading default Feather Storefront - distributor will be determined after login');
+      // Set distributor in global scope
+      window.FEATHER_DISTRIBUTOR = distributorSlug;
       
-      // Always load default main.jsx first
-      import(`./src/distributors/default/main.jsx`).catch(error => {
-        console.error('Failed to load default distributor:', error);
+      console.log(`Loading Feather Storefront for distributor: ${distributorSlug}`);
+      
+      // Load the appropriate distributor's main.jsx
+      import(`./src/distributors/${distributorSlug}/main.jsx`).catch(error => {
+        console.error(`Failed to load distributor ${distributorSlug}, falling back to default:`, error);
+        // Fallback to default if specific distributor fails
+        window.FEATHER_DISTRIBUTOR = 'default';
+        import(`./src/distributors/default/main.jsx`);
       });
     </script>
   </body>
