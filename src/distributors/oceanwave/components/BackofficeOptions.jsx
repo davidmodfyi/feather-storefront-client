@@ -11,13 +11,14 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
   const options = [
     { name: "Manage Customers", path: "/backoffice/customers" },
     { name: "Branding", path: "/backoffice/branding" },
+    { name: "AI Customization", path: "/backoffice/ai-chat" }, // NEW
     { name: "Manage Business Logic", path: "/backoffice/logic" },
     { name: "Manual File Upload", path: "/backoffice/upload" },
     { name: "Configure with AI", path: "/backoffice/ai" },
     { name: "Custom Table", path: "/backoffice/table" },
-    { name: "Logs", path: "/backoffice/logs" },
-    { name: "AI Customization", path: "/backoffice/ai-chat" }
+    { name: "Logs", path: "/backoffice/logs" }
   ];
+
   return (
     <div className="p-6">
       <div className="flex justify-between mb-4 ml-20">
@@ -34,13 +35,16 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
             key={option.name} 
             className={`border p-6 rounded shadow hover:shadow-md transition-shadow cursor-pointer ${
               option.name === "Manage Customers" ? 'bg-blue-50' : 
-              option.name === "Branding" ? 'bg-green-50' : ''
+              option.name === "Branding" ? 'bg-green-50' : 
+              option.name === "AI Customization" ? 'bg-purple-50' : '' // NEW
             }`}
             onClick={() => {
               if (option.name === "Manage Customers") {
                 navigate("/backoffice/customers");
               } else if (option.name === "Branding") {
                 navigate("/backoffice/branding");
+              } else if (option.name === "AI Customization") { // NEW
+                navigate("/backoffice/ai-chat");
               } else {
                 alert(`${option.name} functionality is not implemented yet.`);
               }
@@ -51,7 +55,10 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
               <p className="text-sm text-gray-600">View and manage your customer accounts</p>
             )}
             {option.name === "Branding" && (
-              <p className="text-sm text-gray-600">Customize your logo and appearance OCEAN WAVE</p>
+              <p className="text-sm text-gray-600">Customize your logo and appearance</p>
+            )}
+            {option.name === "AI Customization" && ( /* NEW */
+              <p className="text-sm text-gray-600">Chat with AI to customize your storefront in real-time</p>
             )}
           </div>
         ))}
