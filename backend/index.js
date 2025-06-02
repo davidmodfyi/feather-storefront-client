@@ -4,8 +4,7 @@ const database = require('./database');
 const session = require('express-session');
 const MemoryStore = require('memorystore')(session);
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs').promises;
+const path = require('path'); 
  
 
 require('dotenv').config();
@@ -44,23 +43,23 @@ const corsOptions = {
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 console.log('Using uploads directory:', uploadsDir);
 
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.promises.existsSync(uploadsDir)) {
+  fs.promises.mkdirSync(uploadsDir, { recursive: true });
   console.log('Created uploads directory');
 }
 const publicDir = isProduction
   ? '/opt/render/project/src/public'
   : path.join(__dirname, 'public');
 
-if (!fs.existsSync(publicDir)) {
-  fs.mkdirSync(publicDir, { recursive: true });
+if (!fs.promises.existsSync(publicDir)) {
+  fs.promises.mkdirSync(publicDir, { recursive: true });
 }
 
 console.log('Using public directory:', publicDir);
 console.log('Using uploads directory:', uploadsDir);
 
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.promises.existsSync(uploadsDir)) {
+  fs.promises.mkdirSync(uploadsDir, { recursive: true });
   console.log('Created uploads directory');
 }
 
@@ -228,7 +227,7 @@ app.get('/api/branding/logo', (req, res) => {
     const absolutePath = path.join(__dirname, 'public', relativePath);
     console.log('Checking logo at absolute path:', absolutePath);
     
-    if (!fs.existsSync(absolutePath)) {
+    if (!fs.promises.existsSync(absolutePath)) {
       console.log('Logo file not found at:', absolutePath);
       return res.json({ logo: null });
     }
@@ -257,9 +256,9 @@ app.get('/api/debug/logo-paths', (req, res) => {
     const diagnostics = {
       logo_path_in_db: distributor?.logo_path,
       public_dir: path.join(__dirname, 'public'),
-      public_dir_exists: fs.existsSync(path.join(__dirname, 'public')),
+      public_dir_exists: fs.promises.existsSync(path.join(__dirname, 'public')),
       uploads_dir: path.join(__dirname, 'public', 'uploads'),
-      uploads_dir_exists: fs.existsSync(path.join(__dirname, 'public', 'uploads')),
+      uploads_dir_exists: fs.promises.existsSync(path.join(__dirname, 'public', 'uploads')),
       working_directory: process.cwd(),
       __dirname: __dirname
     };
@@ -271,10 +270,10 @@ app.get('/api/debug/logo-paths', (req, res) => {
       
       const absolutePath = path.join(__dirname, 'public', relativePath);
       diagnostics.absolute_logo_path = absolutePath;
-      diagnostics.logo_file_exists = fs.existsSync(absolutePath);
+      diagnostics.logo_file_exists = fs.promises.existsSync(absolutePath);
       
       if (diagnostics.logo_file_exists) {
-        diagnostics.logo_file_stats = fs.statSync(absolutePath);
+        diagnostics.logo_file_stats = fs.promises.statSync(absolutePath);
       }
     }
     
@@ -312,7 +311,7 @@ app.get('/api/branding/header-logo', (req, res) => {
     const absolutePath = path.join(__dirname, 'public', relativePath);
     console.log('Checking header logo at absolute path:', absolutePath);
     
-    if (!fs.existsSync(absolutePath)) {
+    if (!fs.promises.existsSync(absolutePath)) {
       console.log('Header logo file not found at:', absolutePath);
       return res.json({ logo: null });
     }
@@ -389,8 +388,8 @@ app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
           
         const oldLogoPath = path.join(__dirname, 'public', relativePath);
         console.log('Checking for old header logo at:', oldLogoPath);
-        if (fs.existsSync(oldLogoPath)) {
-          fs.unlinkSync(oldLogoPath);
+        if (fs.promises.existsSync(oldLogoPath)) {
+          fs.promises.unlinkSync(oldLogoPath);
           console.log('Deleted old header logo');
         }
       } catch (err) {
@@ -447,8 +446,8 @@ app.post('/api/branding/logo', upload.single('logo'), (req, res) => {
           
         const oldLogoPath = path.join(__dirname, 'public', relativePath);
         console.log('Checking for old logo at:', oldLogoPath);
-        if (fs.existsSync(oldLogoPath)) {
-          fs.unlinkSync(oldLogoPath);
+        if (fs.promises.existsSync(oldLogoPath)) {
+          fs.promises.unlinkSync(oldLogoPath);
           console.log('Deleted old logo');
         }
       } catch (err) {
@@ -485,15 +484,15 @@ app.get('/api/diagnose-filesystem', (req, res) => {
     const result = {
       cwd: process.cwd(),
       dirname: __dirname,
-      publicDirExists: fs.existsSync(publicDir),
-      uploadsDirExists: fs.existsSync(uploadsDir),
+      publicDirExists: fs.promises.existsSync(publicDir),
+      uploadsDirExists: fs.promises.existsSync(uploadsDir),
       publicDirContents: [],
       uploadsDirContents: []
     };
     
     if (result.publicDirExists) {
       try {
-        result.publicDirContents = fs.readdirSync(publicDir);
+        result.publicDirContents = fs.promises.readdirSync(publicDir);
       } catch (err) {
         result.publicDirError = err.message;
       }
@@ -501,7 +500,7 @@ app.get('/api/diagnose-filesystem', (req, res) => {
     
     if (result.uploadsDirExists) {
       try {
-        result.uploadsDirContents = fs.readdirSync(uploadsDir);
+        result.uploadsDirContents = fs.promises.readdirSync(uploadsDir);
       } catch (err) {
         result.uploadsDirError = err.message;
       }
@@ -553,19 +552,19 @@ app.get('/api/diagnose-logo', (req, res) => {
         current_dir: __dirname,
         public_dir: {
           path: publicDir,
-          exists: fs.existsSync(publicDir),
+          exists: fs.promises.existsSync(publicDir),
           writable: false, // We'll set this below
           contents: []
         },
         uploads_dir: {
           path: uploadsDir,
-          exists: fs.existsSync(uploadsDir),
+          exists: fs.promises.existsSync(uploadsDir),
           writable: false, // We'll set this below
           contents: []
         },
         render_mount: {
           path: renderMountDir,
-          exists: fs.existsSync(renderMountDir),
+          exists: fs.promises.existsSync(renderMountDir),
           writable: false, // We'll set this below
           contents: []
         }
@@ -578,12 +577,12 @@ app.get('/api/diagnose-logo', (req, res) => {
       if (result.directories.public_dir.exists) {
         // Test write permission by trying to create a temporary file
         const testFile = path.join(publicDir, '.write-test-' + Date.now());
-        fs.writeFileSync(testFile, 'test');
-        fs.unlinkSync(testFile);
+        fs.promises.writeFileSync(testFile, 'test');
+        fs.promises.unlinkSync(testFile);
         result.directories.public_dir.writable = true;
         
         // Get directory contents
-        result.directories.public_dir.contents = fs.readdirSync(publicDir);
+        result.directories.public_dir.contents = fs.promises.readdirSync(publicDir);
       }
     } catch (e) {
       result.directories.public_dir.error = e.message;
@@ -592,11 +591,11 @@ app.get('/api/diagnose-logo', (req, res) => {
     try {
       if (result.directories.uploads_dir.exists) {
         const testFile = path.join(uploadsDir, '.write-test-' + Date.now());
-        fs.writeFileSync(testFile, 'test');
-        fs.unlinkSync(testFile);
+        fs.promises.writeFileSync(testFile, 'test');
+        fs.promises.unlinkSync(testFile);
         result.directories.uploads_dir.writable = true;
         
-        result.directories.uploads_dir.contents = fs.readdirSync(uploadsDir);
+        result.directories.uploads_dir.contents = fs.promises.readdirSync(uploadsDir);
       }
     } catch (e) {
       result.directories.uploads_dir.error = e.message;
@@ -605,11 +604,11 @@ app.get('/api/diagnose-logo', (req, res) => {
     try {
       if (result.directories.render_mount.exists) {
         const testFile = path.join(renderMountDir, '.write-test-' + Date.now());
-        fs.writeFileSync(testFile, 'test');
-        fs.unlinkSync(testFile);
+        fs.promises.writeFileSync(testFile, 'test');
+        fs.promises.unlinkSync(testFile);
         result.directories.render_mount.writable = true;
         
-        result.directories.render_mount.contents = fs.readdirSync(renderMountDir);
+        result.directories.render_mount.contents = fs.promises.readdirSync(renderMountDir);
       }
     } catch (e) {
       result.directories.render_mount.error = e.message;
@@ -633,8 +632,8 @@ app.get('/api/diagnose-logo', (req, res) => {
       
       result.file_checks = possiblePaths.map(p => ({
         path: p,
-        exists: fs.existsSync(p),
-        size: fs.existsSync(p) ? fs.statSync(p).size : null
+        exists: fs.promises.existsSync(p),
+        size: fs.promises.existsSync(p) ? fs.promises.statSync(p).size : null
       }));
     }
     
@@ -676,8 +675,8 @@ app.delete('/api/branding/logo', (req, res) => {
     
     // Delete the file
     const logoPath = path.join(__dirname, distributor.logo_path);
-    if (fs.existsSync(logoPath)) {
-      fs.unlinkSync(logoPath);
+    if (fs.promises.existsSync(logoPath)) {
+      fs.promises.unlinkSync(logoPath);
     }
     
     // Update distributor to clear logo path
@@ -848,7 +847,7 @@ app.post('/api/ai-customize', async (req, res) => {
 // Helper function to check if directory exists
 async function directoryExists(dirPath) {
   try {
-    const stats = await fs.stat(dirPath);
+    const stats = await fs.promises.stat(dirPath);
     return stats.isDirectory();
   } catch {
     return false;
@@ -953,7 +952,7 @@ async function parseAIRequest(message, distributorDir) {
 async function applyModification(modification) {
   try {
     // Read the file
-    const fileContent = await fs.readFile(modification.file, 'utf8');
+    const fileContent = await fs.promises.readFile(modification.file, 'utf8');
     
     // Apply the modification
     let modifiedContent;
@@ -969,7 +968,7 @@ async function applyModification(modification) {
     }
     
     // Write the file back
-    await fs.writeFile(modification.file, modifiedContent, 'utf8');
+    await fs.promises.writeFile(modification.file, modifiedContent, 'utf8');
     
     console.log(`Successfully modified: ${modification.file}`);
   } catch (error) {
@@ -1117,7 +1116,7 @@ app.post('/api/submit-order', async (req, res) => {
     const path = require('path');
     const csvFilePath = path.join(__dirname, `order_${orderId}_${orderDate}.csv`);
     
-    fs.writeFileSync(csvFilePath, csvContent);
+    fs.promises.writeFileSync(csvFilePath, csvContent);
     
     // Send email with CSV attachment
     // Note: This requires nodemailer or similar package to be installed
@@ -1156,7 +1155,7 @@ app.post('/api/submit-order', async (req, res) => {
     console.log('Email sent:', info.messageId);
     
     // Delete temporary CSV file
-    fs.unlinkSync(csvFilePath);
+    fs.promises.unlinkSync(csvFilePath);
     
     // Clear the user's cart
     db.prepare(`DELETE FROM cart_items WHERE user_id = ?`).run(req.session.user_id);
@@ -1574,7 +1573,7 @@ if (process.env.NODE_ENV === 'production') {
   console.log('Frontend build path:', frontendBuildPath);
   
   // Check if the directory exists
-  if (!fs.existsSync(frontendBuildPath)) {
+  if (!fs.promises.existsSync(frontendBuildPath)) {
     console.error('Warning: Frontend build directory does not exist:', frontendBuildPath);
     console.error('Make sure npm run build was executed successfully');
   } else {
