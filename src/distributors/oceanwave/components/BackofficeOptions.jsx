@@ -15,7 +15,8 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
     { name: "Manual File Upload", path: "/backoffice/upload" },
     { name: "Configure with AI", path: "/backoffice/ai" },
     { name: "Custom Table", path: "/backoffice/table" },
-    { name: "Logs", path: "/backoffice/logs" }
+    { name: "Logs", path: "/backoffice/logs" },
+    { name: "AI Customization", path: "/backoffice/ai-chat" }
   ];
   return (
     <div className="p-6">
