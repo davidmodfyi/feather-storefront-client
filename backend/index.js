@@ -774,10 +774,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Add this to your backend/index.js
-
-const fs = require('fs').promises;
-const path = require('path');
+ 
 
 // AI Customization endpoint
 app.post('/api/ai-customize', async (req, res) => {
