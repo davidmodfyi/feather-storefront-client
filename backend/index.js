@@ -10,11 +10,12 @@ const fs = require('fs');
 require('dotenv').config();
 
 const DISTRIBUTOR_MAPPING = {
-  1: 'oceanwave',    // Ocean Wave Foods
-  2: 'palma',        // Palma Cigars
+  'dist001': 'oceanwave',    // Ocean Wave Foods (string key)
+  'dist002': 'palma',        // Palma Cigars (string key)
+  1: 'oceanwave',            // Backup for numeric IDs
+  2: 'palma',                // Backup for numeric IDs
   // Add more as needed
 };
-
 function getDistributorSlug(distributorId) {
   return DISTRIBUTOR_MAPPING[distributorId] || 'default';
 }
