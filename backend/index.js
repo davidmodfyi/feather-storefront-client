@@ -776,6 +776,8 @@ app.post('/api/login', async (req, res) => {
 
  
 
+// Add this to your backend/index.js (NO IMPORTS - just the endpoint and functions)
+
 // AI Customization endpoint
 app.post('/api/ai-customize', async (req, res) => {
   console.log('AI Customization request received');
