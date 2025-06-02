@@ -8,23 +8,31 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module">
-      // Check for distributor URL parameter
-      const urlParams = new URLSearchParams(window.location.search);
-      let distributorSlug = urlParams.get('dist') || 'default';
-      
-      // Set distributor in global scope
-      window.FEATHER_DISTRIBUTOR = distributorSlug;
-      
-      console.log(`Loading Feather Storefront for distributor: ${distributorSlug}`);
-      
-      // Load the appropriate distributor's main.jsx
-      import(`./src/distributors/${distributorSlug}/main.jsx`).catch(error => {
-        console.error(`Failed to load distributor ${distributorSlug}, falling back to default:`, error);
-        // Fallback to default if specific distributor fails
-        window.FEATHER_DISTRIBUTOR = 'default';
-        import(`./src/distributors/default/main.jsx`);
-      });
-    </script>
+        <script type="module">
+          // Check for distributor URL parameter
+          const urlParams = new URLSearchParams(window.location.search);
+          let distributorSlug = urlParams.get('dist') || 'default';
+          
+          // Set distributor in global scope
+          window.FEATHER_DISTRIBUTOR = distributorSlug;
+          
+          console.log('=== FEATHER LOADING DEBUG ===');
+          console.log('Current URL:', window.location.href);
+          console.log('URL search params:', window.location.search);
+          console.log('Distributor slug from URL:', urlParams.get('dist'));
+          console.log('Final distributor slug:', distributorSlug);
+          console.log('Will attempt to load:', `./src/distributors/${distributorSlug}/main.jsx`);
+          
+          // Load the appropriate distributor's main.jsx
+          import(`./src/distributors/${distributorSlug}/main.jsx`).then(() => {
+            console.log(`✅ Successfully loaded distributor: ${distributorSlug}`);
+          }).catch(error => {
+            console.error(`❌ Failed to load distributor ${distributorSlug}:`, error);
+            console.log('Falling back to default...');
+            // Fallback to default if specific distributor fails
+            window.FEATHER_DISTRIBUTOR = 'default';
+            import(`./src/distributors/default/main.jsx`);
+          });
+        </script>
   </body>
 </html>
