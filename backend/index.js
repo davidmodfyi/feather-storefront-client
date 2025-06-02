@@ -730,6 +730,16 @@ app.post('/api/login', async (req, res) => {
     // Get distributor slug
     const distributorSlug = getDistributorSlug(dbUser.distributor_id);
 
+    console.log('=== LOGIN DEBUG ===');
+    console.log('dbUser.distributor_id:', dbUser.distributor_id);
+    console.log('distributorSlug from getDistributorSlug:', distributorSlug);
+    console.log('distributorSlug !== "default":', distributorSlug !== 'default');
+    
+    // Calculate redirect URL ONCE
+    const redirectUrl = distributorSlug !== 'default' ? `/?dist=${distributorSlug}` : '/';
+    console.log('Generated redirectUrl:', redirectUrl);
+    console.log('===================');
+      
     console.log('Session data set:', {
       user_id: dbUser.id,
       distributor_id: dbUser.distributor_id,
@@ -746,9 +756,7 @@ app.post('/api/login', async (req, res) => {
         return res.status(500).json({ error: 'Error saving session' });
       }
 
-      // NEW APPROACH: Return redirect URL instead of success
-      const redirectUrl = distributorSlug !== 'default' ? `/?dist=${distributorSlug}` : '/';
-      
+      // Use the redirectUrl calculated above (REMOVED the duplicate calculation)
       return res.json({
         status: 'logged_in',
         user_id: dbUser.id,
@@ -756,7 +764,7 @@ app.post('/api/login', async (req, res) => {
         userType: dbUser.type || 'Admin',
         accountId: dbUser.account_id,
         distributorSlug: distributorSlug,
-        redirectUrl: redirectUrl  // NEW: Tell frontend where to redirect
+        redirectUrl: redirectUrl  // Use the redirectUrl from above
       });
     });
   } catch (error) {
