@@ -1,12 +1,13 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 const database = require('./database');
 const session = require('express-session');
 const MemoryStore = require('memorystore')(session);
 const multer = require('multer');
-const Anthropic = require('@anthropic-ai/sdk');
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY // Add this to your environment variables
+  apiKey: process.env.ANTHROPIC_API_KEY
 });
 
 require('dotenv').config();
