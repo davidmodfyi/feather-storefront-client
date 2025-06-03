@@ -47,7 +47,7 @@ const corsOptions = {
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 console.log('Using uploads directory:', uploadsDir);
 
-if (!fs.promises.existsSync(uploadsDir)) {
+if (!fs.existsSync(uploadsDir)) {
   fs.promises.mkdirSync(uploadsDir, { recursive: true });
   console.log('Created uploads directory');
 }
@@ -62,7 +62,7 @@ if (!fs.promises.existsSync(publicDir)) {
 console.log('Using public directory:', publicDir);
 console.log('Using uploads directory:', uploadsDir);
 
-if (!fs.promises.existsSync(uploadsDir)) {
+if (!fs.existsSync(uploadsDir)) {
   fs.promises.mkdirSync(uploadsDir, { recursive: true });
   console.log('Created uploads directory');
 }
