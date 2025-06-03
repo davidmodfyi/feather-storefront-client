@@ -44,13 +44,14 @@ const corsOptions = {
   allowedHeaders: ['Content-Type']
 };
 
+
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 console.log('Using uploads directory:', uploadsDir);
 
-if (!fs.existsSync(uploadsDir)) {
-  await fs.promises.mkdir(uploadsDir, { recursive: true });
-  console.log('Created uploads directory');
-}
+
 const publicDir = isProduction
   ? '/opt/render/project/src/public'
   : path.join(__dirname, 'public');
