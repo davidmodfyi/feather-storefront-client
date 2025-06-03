@@ -48,7 +48,7 @@ const uploadsDir = path.join(__dirname, 'public', 'uploads');
 console.log('Using uploads directory:', uploadsDir);
 
 if (!fs.existsSync(uploadsDir)) {
-  fs.promises.mkdirSync(uploadsDir, { recursive: true });
+  await fs.promises.mkdir(uploadsDir, { recursive: true });
   console.log('Created uploads directory');
 }
 const publicDir = isProduction
@@ -63,7 +63,7 @@ console.log('Using public directory:', publicDir);
 console.log('Using uploads directory:', uploadsDir);
 
 if (!fs.existsSync(uploadsDir)) {
-  fs.promises.mkdirSync(uploadsDir, { recursive: true });
+  await fs.promises.mkdir(uploadsDir, { recursive: true });
   console.log('Created uploads directory');
 }
 
