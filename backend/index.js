@@ -1884,7 +1884,7 @@ if (process.env.NODE_ENV === 'production') {
   console.log('Frontend build path:', frontendBuildPath);
   
   // Check if the directory exists
-  if (!fs.promises.existsSync(frontendBuildPath)) {
+ if (!fs.existsSync(frontendBuildPath)) {
     console.error('Warning: Frontend build directory does not exist:', frontendBuildPath);
     console.error('Make sure npm run build was executed successfully');
   } else {
