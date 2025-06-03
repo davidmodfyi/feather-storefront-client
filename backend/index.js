@@ -4,7 +4,10 @@ const database = require('./database');
 const session = require('express-session');
 const MemoryStore = require('memorystore')(session);
 const multer = require('multer');
- 
+const Anthropic = require('@anthropic-ai/sdk');
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY // Add this to your environment variables
+});
 
 require('dotenv').config();
 
@@ -511,6 +514,313 @@ app.get('/api/diagnose-filesystem', (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+app.post('/api/ai-customize', async (req, res) => {
+  console.log('AI Customization request received');
+  
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+  
+  const { message, distributorSlug } = req.body;
+  
+  if (!message || !distributorSlug) {
+    return res.status(400).json({ error: 'Message and distributor slug are required' });
+  }
+  
+  try {
+    console.log(`AI customization request for ${distributorSlug}: ${message}`);
+    
+    // Define the distributor's source directory
+    const distributorDir = __dirname + '/../src/distributors/' + distributorSlug;
+    
+    // Check if distributor directory exists
+    if (!await directoryExists(distributorDir)) {
+      return res.status(404).json({ error: 'Distributor directory not found' });
+    }
+    
+    // Use Claude AI to parse the request and generate modifications
+    const modifications = await parseAIRequestWithClaude(message, distributorDir);
+    
+    if (modifications.length === 0) {
+      return res.json({
+        response: "I understand your request, but I couldn't determine specific code changes to make. Could you be more specific about what visual or functional changes you'd like? For example:\n\n• 'Make the Add to Cart buttons blue with rounded corners'\n• 'Add a promotional banner at the top of the page'\n• 'Create a dark mode toggle in the header'",
+        changes: []
+      });
+    }
+    
+    // Apply the modifications
+    const appliedChanges = [];
+    const errors = [];
+    
+    for (const mod of modifications) {
+      try {
+        await applyModification(mod);
+        appliedChanges.push(mod.description);
+        console.log(`Applied: ${mod.description}`);
+      } catch (error) {
+        console.error(`Failed to apply modification: ${mod.description}`, error);
+        errors.push(`Failed: ${mod.description} - ${error.message}`);
+      }
+    }
+    
+    let response;
+    if (appliedChanges.length > 0) {
+      response = `Great! I've successfully applied the following changes:\n\n${appliedChanges.map(change => `✓ ${change}`).join('\n')}`;
+      
+      if (errors.length > 0) {
+        response += `\n\nNote: Some changes couldn't be applied:\n${errors.map(error => `✗ ${error}`).join('\n')}`;
+      }
+      
+      response += `\n\nThe changes should be visible after refreshing your storefront. Is there anything else you'd like me to customize?`;
+    } else {
+      response = `I encountered issues applying your requested changes:\n\n${errors.join('\n')}\n\nPlease try being more specific or contact support if the problem persists.`;
+    }
+    
+    res.json({
+      response: response,
+      changes: appliedChanges,
+      errors: errors
+    });
+    
+  } catch (error) {
+    console.error('AI customization error:', error);
+    res.status(500).json({ 
+      error: 'Error processing customization request',
+      response: "I encountered an error while processing your request. Please try again or contact support."
+    });
+  }
+});
+
+// Claude AI-powered request parser
+async function parseAIRequestWithClaude(message, distributorDir) {
+  try {
+    console.log('Reading distributor files for AI analysis...');
+    
+    // Read current files to provide context to Claude
+    const currentFiles = await readDistributorFiles(distributorDir);
+    
+    // Generate prompt for Claude
+    const prompt = generateClaudePrompt(message, currentFiles);
+    
+    console.log('Sending request to Claude AI...');
+    
+    // Call Claude API
+    const claudeResponse = await anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20241022', // Latest Claude model
+      max_tokens: 4000,
+      temperature: 0.1, // Low temperature for consistent code generation
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
+    });
+    
+    const aiResponseText = claudeResponse.content[0].text;
+    console.log('Received response from Claude AI');
+    
+    // Parse Claude's response into modification objects
+    const modifications = parseClaudeResponse(aiResponseText, distributorDir);
+    
+    console.log(`Generated ${modifications.length} modifications`);
+    return modifications;
+    
+  } catch (error) {
+    console.error('Claude AI parsing error:', error);
+    if (error.status === 401) {
+      console.error('Claude API key invalid or missing');
+    }
+    return [];
+  }
+}
+
+// Read all relevant files in the distributor directory
+async function readDistributorFiles(distributorDir) {
+  const files = {};
+  const filesToRead = [
+    'components/Storefront.jsx',
+    'components/Header.jsx', 
+    'components/BackofficeOptions.jsx',
+    'main.jsx'
+  ];
+  
+  for (const filePath of filesToRead) {
+    const fullPath = distributorDir + '/' + filePath;
+    try {
+      const content = await fs.promises.readFile(fullPath, 'utf8');
+      files[filePath] = content;
+    } catch (error) {
+      console.log(`File not found: ${filePath}`);
+      files[filePath] = null;
+    }
+  }
+  
+  return files;
+}
+
+// Generate comprehensive prompt for Claude
+function generateClaudePrompt(userRequest, currentFiles) {
+  const fileContents = Object.entries(currentFiles)
+    .filter(([_, content]) => content !== null)
+    .map(([file, content]) => `\n=== ${file} ===\n${content}\n`)
+    .join('\n');
+
+  return `You are an expert React/Tailwind CSS developer helping a user customize their e-commerce storefront. 
+
+USER REQUEST: "${userRequest}"
+
+CURRENT CODEBASE:
+${fileContents}
+
+TASK: Analyze the user's request and generate specific code modifications to implement their desired changes.
+
+IMPORTANT GUIDELINES:
+- You are modifying a React storefront with Tailwind CSS
+- Preserve existing functionality unless explicitly asked to change it
+- Use modern React patterns (hooks, functional components)
+- Use Tailwind CSS classes for all styling
+- Be precise with find/replace operations - use exact strings that exist in the code
+- If creating new components, follow the existing code style
+- Consider responsive design (mobile-friendly)
+
+RESPOND WITH VALID JSON ONLY (no other text) IN THIS EXACT FORMAT:
+{
+  "understanding": "Brief explanation of what the user wants to accomplish",
+  "modifications": [
+    {
+      "file": "components/Storefront.jsx",
+      "type": "replace",
+      "description": "Human-readable description of this change",
+      "find": "exact string to find in the file",
+      "replace": "exact string to replace it with"
+    }
+  ],
+  "newFiles": [
+    {
+      "path": "components/NewComponent.jsx", 
+      "content": "complete file content for new files"
+    }
+  ],
+  "summary": "Overall summary of changes made"
+}
+
+EXAMPLES OF COMMON REQUESTS:
+- Color changes: Replace existing Tailwind color classes (bg-green-500 → bg-blue-500)
+- Styling: Add effects like hover:, shadow-, rounded-, etc.
+- Layout: Modify flex, grid, spacing classes
+- New features: Add new sections, components, or functionality
+- Responsive: Add sm:, md:, lg: breakpoint classes
+
+CRITICAL: Your find strings must match exactly what exists in the code files. Use precise, unique strings for reliable replacement.`;
+}
+
+// Parse Claude's response into modification objects
+function parseClaudeResponse(claudeResponse, distributorDir) {
+  try {
+    // Claude sometimes includes explanation before/after JSON, so extract just the JSON
+    const jsonMatch = claudeResponse.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('No valid JSON found in Claude response');
+      console.log('Raw Claude response:', claudeResponse);
+      return [];
+    }
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    const modifications = [];
+    
+    console.log('Claude understanding:', parsed.understanding);
+    
+    // Convert Claude modifications to our internal format
+    for (const mod of parsed.modifications || []) {
+      modifications.push({
+        type: mod.type || 'replace',
+        file: distributorDir + '/' + mod.file,
+        find: mod.find,
+        replace: mod.replace,
+        description: mod.description,
+        context: 'Claude AI modification'
+      });
+    }
+    
+    // Handle new file creation
+    for (const newFile of parsed.newFiles || []) {
+      modifications.push({
+        type: 'create_file',
+        file: distributorDir + '/' + newFile.path,
+        content: newFile.content,
+        description: `Created new file: ${newFile.path}`,
+        context: 'New file creation'
+      });
+    }
+    
+    console.log('Claude summary:', parsed.summary);
+    return modifications;
+    
+  } catch (error) {
+    console.error('Error parsing Claude response:', error);
+    console.log('Raw Claude response:', claudeResponse);
+    return [];
+  }
+}
+
+// Enhanced applyModification function
+async function applyModification(modification) {
+  try {
+    if (modification.type === 'create_file') {
+      // Ensure directory exists
+      const dir = modification.file.substring(0, modification.file.lastIndexOf('/'));
+      await fs.promises.mkdir(dir, { recursive: true });
+      
+      // Create new file
+      await fs.promises.writeFile(modification.file, modification.content, 'utf8');
+      console.log(`Created new file: ${modification.file}`);
+      return;
+    }
+    
+    // Read existing file
+    const fileContent = await fs.promises.readFile(modification.file, 'utf8');
+    
+    // Apply modification
+    let modifiedContent;
+    
+    if (modification.find && modification.replace !== undefined) {
+      // String replacement
+      if (!fileContent.includes(modification.find)) {
+        throw new Error(`Find string not found in file: "${modification.find.substring(0, 100)}..."`);
+      }
+      
+      modifiedContent = fileContent.replace(modification.find, modification.replace);
+      
+      if (modifiedContent === fileContent) {
+        throw new Error(`No changes made - find and replace strings are identical`);
+      }
+    } else {
+      throw new Error('Invalid modification format - missing find/replace');
+    }
+    
+    // Write back
+    await fs.promises.writeFile(modification.file, modifiedContent, 'utf8');
+    console.log(`Successfully modified: ${modification.file}`);
+    
+  } catch (error) {
+    console.error(`Failed to modify ${modification.file}:`, error);
+    throw error;
+  }
+}
+
+// Helper function to check if directory exists (if not already defined)
+async function directoryExists(dirPath) {
+  try {
+    const stats = await fs.promises.stat(dirPath);
+    return stats.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+
 
 app.get('/api/diagnose-logo', (req, res) => {
   try {
