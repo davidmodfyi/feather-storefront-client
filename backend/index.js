@@ -4,7 +4,6 @@ const database = require('./database');
 const session = require('express-session');
 const MemoryStore = require('memorystore')(session);
 const multer = require('multer');
-const path = require('path'); 
  
 
 require('dotenv').config();
