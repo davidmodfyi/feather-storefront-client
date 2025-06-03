@@ -56,15 +56,15 @@ const publicDir = isProduction
   ? '/opt/render/project/src/public'
   : path.join(__dirname, 'public');
 
-if (!fs.promises.existsSync(publicDir)) {
-  fs.promises.mkdirSync(publicDir, { recursive: true });
+if (!fs.existsSync(publicDir)) {
+  fs.mkdirSync(publicDir, { recursive: true });
 }
 
 console.log('Using public directory:', publicDir);
 console.log('Using uploads directory:', uploadsDir);
 
 if (!fs.existsSync(uploadsDir)) {
-  await fs.promises.mkdir(uploadsDir, { recursive: true });
+  fs.mkdirSync(uploadsDir, { recursive: true });
   console.log('Created uploads directory');
 }
 
