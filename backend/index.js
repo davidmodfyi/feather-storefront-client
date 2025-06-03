@@ -6,6 +6,7 @@ const database = require('./database');
 const session = require('express-session');
 const MemoryStore = require('memorystore')(session);
 const multer = require('multer');
+const Anthropic = require('@anthropic-ai/sdk');
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
 });
