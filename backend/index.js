@@ -558,7 +558,7 @@ app.post('/api/ai-customize', async (req, res) => {
     
     for (const mod of modifications) {
       try {
-        await applyModification(mod);
+        await applyModification(mod, req.session.distributor_id);
         appliedChanges.push(mod.description);
         console.log(`Applied: ${mod.description}`);
       } catch (error) {
@@ -765,20 +765,17 @@ function parseClaudeResponse(claudeResponse) {
 }
 
 // Enhanced applyModification function
-async function applyModification(modification) {
+async function applyModification(modification, distributorId) {
   try {
-    const response = await fetch('http://localhost:4000/api/styles', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        elementSelector: modification.elementSelector,
-        cssProperties: modification.cssProperties
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to save style: ${response.statusText}`);
-    }
+    // Insert or update the style directly in the database
+    db.prepare(`
+      INSERT OR REPLACE INTO distributor_styles (distributor_id, element_selector, css_properties, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    `).run(
+      distributorId,
+      modification.elementSelector,
+      JSON.stringify(modification.cssProperties)
+    );
 
     console.log(`Successfully saved style for: ${modification.elementSelector}`);
     
