@@ -34,6 +34,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
       })
       .catch(console.error);
 
+
 // Fetch custom styles
 	fetch('/api/styles', { credentials: 'include' })
 	  .then(res => res.json())
@@ -244,7 +245,7 @@ const filteredItems = items.filter(item => {
   };
 	
   return (
-   <div className="p-6">
+    <div className="p-6" style={getCustomStyle('page-background')}>
       {/* Header with logo */}
       {headerLogo && (
         <div className="absolute top-2 left-2" style={{ maxWidth: '40px', maxHeight: '40px' }}>
@@ -256,24 +257,25 @@ const filteredItems = items.filter(item => {
         </div>
       )}
       
-    <div className="flex justify-between mb-4 ml-20"> {/* Increased ml-14 to ml-20 */}
-      <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
-      <div className="flex gap-2 items-center">
-        <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
-        <button 
-          onClick={goToCart} 
-          className="px-3 py-1 bg-blue-500 text-white rounded flex items-center gap-1"
-        >
-          🛒 My Cart ({getCartItemCount()})
-        </button>
-        <button onClick={handleLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
+      <div className="flex justify-between mb-4 ml-20" style={getCustomStyle('header-nav')}>
+        <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
+        <div className="flex gap-2 items-center">
+          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
+          <button 
+            onClick={goToCart} 
+            className="px-3 py-1 bg-blue-500 text-white rounded flex items-center gap-1"
+          >
+            🛒 My Cart ({getCartItemCount()})
+          </button>
+          <button onClick={handleLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
+        </div>
       </div>
-    </div>
       
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="flex gap-2 mb-6 flex-wrap" style={getCustomStyle('category-filter-container')}>
         <button 
           onClick={() => setCategoryFilter(null)} 
           className={`px-4 py-2 ${!categoryFilter ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded`}
+          style={getCustomStyle('category-buttons')}
         >
           All
         </button>
@@ -282,52 +284,57 @@ const filteredItems = items.filter(item => {
             key={cat} 
             onClick={() => setCategoryFilter(cat)} 
             className={`px-4 py-2 ${categoryFilter === cat ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded`}
+            style={getCustomStyle('category-buttons')}
           >
             {cat}
           </button>
         ))}
       </div>
-<div className="mb-6">
-  <input
-    type="text"
-    placeholder="Search by name, SKU or description"
-    value={searchQuery}
-    onChange={(e) => setSearchQuery(e.target.value)}
-    className="w-full px-4 py-2 border rounded"
-  />
-</div>
+
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search by name, SKU or description"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-4 py-2 border rounded"
+          style={getCustomStyle('search-bar')}
+        />
+      </div>
       
       {loading ? (
         <div className="text-center py-8">
           <p>Loading products...</p>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-	{filteredItems.map(item => (
-	  <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow" style={getCustomStyle('product-card')}>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" style={getCustomStyle('product-grid')}>
+          {filteredItems.map(item => (
+            <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow" style={getCustomStyle('product-card')}>
               <div className="cursor-pointer" onClick={() => openProductDetails(item)}>
                 {item.image_url && (
-				<div className="mb-3">
-				  <img 
-					src={item.image_url} 
-					alt={item.name} 
-					className="w-full h-auto object-contain rounded max-h-48"
-				  />
-				</div>
+                  <div className="mb-3">
+                    <img 
+                      src={item.image_url} 
+                      alt={item.name} 
+                      className="w-full h-auto object-contain rounded max-h-48"
+                      style={getCustomStyle('product-image')}
+                    />
+                  </div>
                 )}
-                <h2 className="text-xl font-bold mb-2 hover:text-blue-600">{item.name}</h2>
-                <p className="mb-1 text-gray-600">SKU: {item.sku}</p>
-                <p className="mb-3 text-lg font-semibold">${item.unitPrice.toFixed(2)}</p>
+                <h2 className="text-xl font-bold mb-2 hover:text-blue-600" style={getCustomStyle('product-title')}>{item.name}</h2>
+                <p className="mb-1 text-gray-600" style={getCustomStyle('product-sku')}>SKU: {item.sku}</p>
+                <p className="mb-3 text-lg font-semibold" style={getCustomStyle('product-price')}>${item.unitPrice.toFixed(2)}</p>
                 {item.description && (
-                  <p className="mb-3 text-sm text-gray-700 line-clamp-2">{item.description}</p>
+                  <p className="mb-3 text-sm text-gray-700 line-clamp-2" style={getCustomStyle('product-description')}>{item.description}</p>
                 )}
               </div>
               
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-3" style={getCustomStyle('quantity-controls')}>
                 <span className="text-sm font-medium">Quantity:</span>
                 <button 
                   onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) - 1)}
                   className="px-2 py-1 bg-gray-200 rounded"
+                  style={getCustomStyle('quantity-button')}
                 >
                   -
                 </button>
@@ -338,23 +345,25 @@ const filteredItems = items.filter(item => {
                   value={quantities[item.id] || 1}
                   onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
                   className="w-12 text-center border rounded"
+                  style={getCustomStyle('quantity-input')}
                 />
                 
                 <button 
                   onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) + 1)}
                   className="px-2 py-1 bg-gray-200 rounded"
+                  style={getCustomStyle('quantity-button')}
                 >
                   +
                 </button>
               </div>
               
-		<button 
-		  onClick={() => handleAddToCart(item)}
-		  className={`w-full mt-2 px-4 py-2 ${getButtonClass(item.id)} text-white rounded`}
-		  style={getCustomStyle('add-to-cart-button')}
-		>
-		  {getButtonText(item.id)}
-		</button>
+              <button 
+                onClick={() => handleAddToCart(item)}
+                className={`w-full mt-2 px-4 py-2 ${getButtonClass(item.id)} text-white rounded`}
+                style={getCustomStyle('add-to-cart-button')}
+              >
+                {getButtonText(item.id)}
+              </button>
             </div>
           ))}
         </div>
@@ -362,8 +371,8 @@ const filteredItems = items.filter(item => {
       
       {/* Product Detail Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style={getCustomStyle('modal-overlay')}>
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto" style={getCustomStyle('modal-content')}>
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-2xl font-bold">{selectedItem.name}</h2>
