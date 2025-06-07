@@ -72,19 +72,14 @@ export default function AdminLogin({ onLogin }) {
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="w-80">
         {/* Feather Logo */}
-        <div className="flex justify-center mb-8">
-          <div className="text-center">
-            <img 
-              src="/feather.jpg" 
-              alt="Feather" 
-              className="w-24 h-24 mx-auto mb-4 object-contain"
-              style={{ backgroundColor: 'white' }}
-            />
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Feather</h1>
-          </div>
+        <div className="flex justify-center mb-6">
+          <img 
+            src="/feather.jpg" 
+            alt="Feather" 
+            className="w-32 h-32 object-contain"
+            style={{ backgroundColor: 'white' }}
+          />
         </div>
-        
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-700">Admin Login</h2>
         
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
