@@ -78,7 +78,7 @@ export default function AdminLogin({ onLogin }) {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-80">
-        <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center">Admin Login D</h1>
         
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
