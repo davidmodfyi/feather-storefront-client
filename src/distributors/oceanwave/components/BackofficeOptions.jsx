@@ -11,10 +11,9 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
   const options = [
     { name: "Manage Customers", path: "/backoffice/customers" },
     { name: "Branding", path: "/backoffice/branding" },
-    { name: "AI Customization", path: "/backoffice/ai-chat" }, // NEW
-    { name: "Manage Business Logic", path: "/backoffice/logic" },
+    { name: "Storefront UI Customization", path: "/backoffice/ai-chat" },
+    { name: "Storefront Logic Customization", path: "/backoffice/logic" },
     { name: "Manual File Upload", path: "/backoffice/upload" },
-    { name: "Configure with AI", path: "/backoffice/ai" },
     { name: "Custom Table", path: "/backoffice/table" },
     { name: "Logs", path: "/backoffice/logs" }
   ];
@@ -36,14 +35,15 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
             className={`border p-6 rounded shadow hover:shadow-md transition-shadow cursor-pointer ${
               option.name === "Manage Customers" ? 'bg-blue-50' : 
               option.name === "Branding" ? 'bg-green-50' : 
-              option.name === "AI Customization" ? 'bg-purple-50' : '' // NEW
+              option.name === "Storefront UI Customization" ? 'bg-purple-50' : 
+              option.name === "Storefront Logic Customization" ? 'bg-orange-50' : ''
             }`}
             onClick={() => {
               if (option.name === "Manage Customers") {
                 navigate("/backoffice/customers");
               } else if (option.name === "Branding") {
                 navigate("/backoffice/branding");
-              } else if (option.name === "AI Customization") { // NEW
+              } else if (option.name === "Storefront UI Customization") {
                 navigate("/backoffice/ai-chat");
               } else {
                 alert(`${option.name} functionality is not implemented yet.`);
@@ -55,10 +55,13 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
               <p className="text-sm text-gray-600">View and manage your customer accounts</p>
             )}
             {option.name === "Branding" && (
-              <p className="text-sm text-gray-600">Customize your logo and appearance (OW)</p>
+              <p className="text-sm text-gray-600">Customize your logo and appearance (Def)</p>
             )}
-            {option.name === "AI Customization" && ( /* NEW */
-              <p className="text-sm text-gray-600">Chat with AI to customize your storefront in real-time</p>
+            {option.name === "Storefront UI Customization" && (
+              <p className="text-sm text-gray-600">Configure directly with AI, powered by Claude</p>
+            )}
+            {option.name === "Storefront Logic Customization" && (
+              <p className="text-sm text-gray-600">Configure directly with AI, powered by Claude</p>
             )}
           </div>
         ))}
