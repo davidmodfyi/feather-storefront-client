@@ -596,68 +596,128 @@ app.post('/api/ai-customize', async (req, res) => {
 });
 
 // Claude AI-powered request parser
-async function parseAIRequestWithClaude(message, distributorDir) {
-  try {
-    console.log('Processing AI customization request with Claude...');
-    
-    // Create a prompt for Claude to generate style modifications
-    const prompt = `You are a UI/UX expert helping customize an e-commerce storefront. The user wants to make the following change:
+async function parseAIRequestWithClaude(userRequest, distributorDir) {
+  console.log('Processing AI customization request with Claude...');
+  
+  // Enhanced system prompt with all available elements and advanced styling capabilities
+  const systemPrompt = `You are an AI assistant that helps customize storefront appearance. 
 
-"${message}"
+AVAILABLE ELEMENTS TO STYLE:
+- "page-background" - main page container
+- "header-nav" - top navigation area with title and buttons
+- "category-filter-container" - container holding all category buttons
+- "category-buttons" - individual category filter buttons (All, Olive Oils, etc.)
+- "search-bar" - search input field
+- "product-grid" - grid container holding all products
+- "product-card" - individual product cards
+- "product-image" - product images
+- "product-title" - product names/titles
+- "product-sku" - SKU text
+- "product-price" - price text
+- "product-description" - product descriptions
+- "quantity-controls" - quantity selector container
+- "quantity-button" - +/- quantity buttons
+- "quantity-input" - quantity number input
+- "add-to-cart-button" - add to cart buttons
+- "modal-overlay" - product detail modal background
+- "modal-content" - product detail modal content
 
-You need to determine what CSS styles should be applied. The storefront has these customizable elements:
+STYLING CAPABILITIES:
+You can apply ANY CSS properties including:
+- Colors: backgroundColor, color, borderColor
+- Layout: display, flexDirection, justifyContent, alignItems, flexWrap
+- Positioning: position, top, left, right, bottom
+- Sizing: width, height, maxWidth, minHeight
+- Spacing: margin, padding, gap
+- Borders: border, borderRadius, borderWidth, borderStyle
+- Shadows: boxShadow
+- Text: fontSize, fontWeight, textAlign, textDecoration
+- Visibility: display (none to hide), opacity
+- Transform: transform, rotate, scale
+- And any other valid CSS properties
 
-1. "add-to-cart-button" - The Add to Cart buttons on product cards
-2. "product-card" - The product card containers  
-3. "page-background" - The main page background
-4. "header-nav" - The navigation header area
-5. "category-buttons" - The category filter buttons
+ADVANCED LAYOUT CHANGES:
+- To make elements horizontal: flexDirection: 'row'
+- To make elements vertical: flexDirection: 'column'  
+- To hide elements: display: 'none'
+- To center elements: justifyContent: 'center', alignItems: 'center'
+- To align left: justifyContent: 'flex-start'
+- To create dropdowns: position: 'relative' with child elements having position: 'absolute'
 
-Respond with ONLY a JSON object in this exact format:
+EXAMPLES:
+- "Make buttons black" → category-buttons: {backgroundColor: '#000000'}
+- "Hide the search bar" → search-bar: {display: 'none'}
+- "Center the category buttons" → category-filter-container: {justifyContent: 'center'}
+- "Make product cards bigger" → product-card: {transform: 'scale(1.1)'}
+- "Arrange category buttons vertically" → category-filter-container: {flexDirection: 'column', alignItems: 'flex-start'}
+
+Parse the user request and return a JSON object with modifications array. Each modification should have:
+- elementSelector: the exact element name from the list above
+- cssProperties: object with CSS property names as keys and values as strings
+- description: human-readable description of the change
+
+User request: "${userRequest}"
+
+Return ONLY a valid JSON object in this format:
 {
   "modifications": [
     {
-      "elementSelector": "add-to-cart-button",
+      "elementSelector": "element-name",
       "cssProperties": {
-        "backgroundColor": "rgb(180, 83, 9)",
-        "borderColor": "rgb(180, 83, 9)"
+        "cssProperty": "value"
       },
-      "description": "Changed Add to Cart buttons to brown color"
+      "description": "Description of change"
     }
   ],
-  "summary": "Applied brown styling to Add to Cart buttons"
-}
+  "summary": "Brief summary of all changes"
+}`;
 
-IMPORTANT: 
-- Use camelCase CSS properties (backgroundColor, not background-color)
-- Use specific color values (rgb() or hex)
-- Only modify elements that relate to the user's request
-- Common brown colors: rgb(180, 83, 9), rgb(139, 69, 19), rgb(101, 67, 33)`;
-
-    // Call Claude API
-    const claudeResponse = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 2000,
-      temperature: 0.1,
-      messages: [
-        {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 1000,
+        messages: [{
           role: 'user',
-          content: prompt
-        }
-      ]
+          content: systemPrompt
+        }]
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const claudeResponse = data.content[0].text;
     
-    const aiResponseText = claudeResponse.content[0].text;
     console.log('Received response from Claude AI');
     
-    // Parse Claude's response
-    const modifications = parseClaudeResponse(aiResponseText);
-    
-    console.log(`Generated ${modifications.length} modifications`);
-    return modifications;
+    try {
+      const parsed = JSON.parse(claudeResponse);
+      console.log('Claude understanding:', parsed);
+      
+      if (parsed.modifications && Array.isArray(parsed.modifications)) {
+        console.log(`Generated ${parsed.modifications.length} modifications`);
+        return parsed.modifications;
+      } else {
+        console.log('No valid modifications found in Claude response');
+        return [];
+      }
+    } catch (parseError) {
+      console.error('Failed to parse Claude response as JSON:', parseError);
+      console.log('Raw Claude response:', claudeResponse);
+      return [];
+    }
     
   } catch (error) {
-    console.error('Claude AI parsing error:', error);
+    console.error('Error calling Claude API:', error);
     return [];
   }
 }
