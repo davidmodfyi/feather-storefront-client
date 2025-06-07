@@ -8,7 +8,7 @@ export default function AdminLogin({ onLogin }) {
   const [debugInfo, setDebugInfo] = useState(null);
 
   // Set the document title to "Feather" for the login screen
-  useEffect(() => {
+  useEffect(() => { 
     document.title = "Feather";
   }, []);
 
