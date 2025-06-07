@@ -34,6 +34,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
       })
       .catch(console.error);
 
+
 // Fetch custom styles
 	fetch('/api/styles', { credentials: 'include' })
 	  .then(res => res.json())
@@ -274,6 +275,7 @@ const filteredItems = items.filter(item => {
         <button 
           onClick={() => setCategoryFilter(null)} 
           className={`px-4 py-2 ${!categoryFilter ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded`}
+		style={getCustomStyle('category-buttons')}
         >
           All
         </button>
@@ -282,6 +284,7 @@ const filteredItems = items.filter(item => {
             key={cat} 
             onClick={() => setCategoryFilter(cat)} 
             className={`px-4 py-2 ${categoryFilter === cat ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded`}
+		style={getCustomStyle('category-buttons')}
           >
             {cat}
           </button>
@@ -443,5 +446,6 @@ const filteredItems = items.filter(item => {
         </div>
       )}
     </div>
+    <div className="p-6" style={getCustomStyle('page-background')}>
   );
 }
