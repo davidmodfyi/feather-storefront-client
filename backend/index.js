@@ -525,6 +525,117 @@ app.post('/api/execute-logic-scripts', async (req, res) => {
   }
 });
 
+app.post('/api/claude-logic-chat', requireAuth, async (req, res) => {
+  try {
+    const { message, customerAttributes, triggerPoints } = req.body;
+    
+    const systemPrompt = `You are an expert at creating JavaScript logic scripts for e-commerce storefronts. 
+
+AVAILABLE CUSTOMER ATTRIBUTES: ${customerAttributes.join(', ')}
+
+AVAILABLE TRIGGER POINTS:
+- storefront_load: When customer first visits the store
+- quantity_change: When customer changes item quantities  
+- add_to_cart: When customer adds items to cart
+- submit: Before order is submitted
+
+CONTEXT OBJECTS AVAILABLE IN SCRIPTS:
+- customer: Object with all customer attributes (${customerAttributes.join(', ')})
+- cart: Object with {items: [{product_id, name, price, quantity}], total, subtotal}
+- products: Array of all available products
+
+SCRIPT REQUIREMENTS:
+1. Return an object: {allow: true/false, message?: "popup text", modifyCart?: {}}
+2. Use only safe JavaScript - no external API calls, no dangerous operations
+3. Be precise and handle edge cases
+4. Always include clear error handling
+
+When user requests logic, follow this process:
+1. Understand the requirement clearly
+2. Ask clarifying questions if needed
+3. Determine the appropriate trigger point
+4. Generate the JavaScript code
+5. Provide a clear description
+6. Show examples of when it would trigger
+7. Ask for confirmation before finalizing
+
+Be conversational and helpful. Explain your reasoning.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-sonnet-20240229',
+        max_tokens: 2000,
+        messages: [
+          {
+            role: 'user',
+            content: `${systemPrompt}\n\nUser request: ${message}`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Claude API request failed');
+    }
+
+    const data = await response.json();
+    const claudeResponse = data.content[0].text;
+
+    // Try to extract script from Claude's response
+    let script = null;
+    
+    // Look for script indicators in Claude's response
+    if (claudeResponse.includes('```javascript') || claudeResponse.includes('return {')) {
+      // Claude provided a script - extract it and create script object
+      const codeMatch = claudeResponse.match(/```javascript\n([\s\S]*?)\n```/) || 
+                       claudeResponse.match(/```\n([\s\S]*?)\n```/);
+      
+      if (codeMatch) {
+        script = {
+          script_content: codeMatch[1].trim(),
+          description: "Auto-generated logic script", // Claude should provide this
+          trigger_point: determineTriggerPoint(claudeResponse) // Auto-detect from context
+        };
+      }
+    }
+
+    res.json({
+      message: claudeResponse,
+      script: script
+    });
+
+  } catch (error) {
+    console.error('Claude API error:', error);
+    res.status(500).json({ error: 'Failed to process request with Claude' });
+  }
+});
+
+// Helper function to determine trigger point from Claude's response
+function determineTriggerPoint(response) {
+  const lowerResponse = response.toLowerCase();
+  
+  if (lowerResponse.includes('submit') || lowerResponse.includes('order') || lowerResponse.includes('minimum')) {
+    return 'submit';
+  }
+  if (lowerResponse.includes('add to cart') || lowerResponse.includes('adding')) {
+    return 'add_to_cart';
+  }
+  if (lowerResponse.includes('quantity') || lowerResponse.includes('amount')) {
+    return 'quantity_change';
+  }
+  if (lowerResponse.includes('storefront') || lowerResponse.includes('load') || lowerResponse.includes('visit')) {
+    return 'storefront_load';
+  }
+  
+  // Default to storefront_load if unclear
+  return 'storefront_load';
+}
 
 // Upload header logo endpoint
 app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
