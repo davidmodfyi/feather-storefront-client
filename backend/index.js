@@ -598,21 +598,47 @@ app.post('/api/ai-customize', async (req, res) => {
 // Claude AI-powered request parser
 async function parseAIRequestWithClaude(message, distributorDir) {
   try {
-    console.log('Reading distributor files for AI analysis...');
+    console.log('Processing AI customization request with Claude...');
     
-    // Read current files to provide context to Claude
-    const currentFiles = await readDistributorFiles(distributorDir);
-    
-    // Generate prompt for Claude
-    const prompt = generateClaudePrompt(message, currentFiles);
-    
-    console.log('Sending request to Claude AI...');
-    
+    // Create a prompt for Claude to generate style modifications
+    const prompt = `You are a UI/UX expert helping customize an e-commerce storefront. The user wants to make the following change:
+
+"${message}"
+
+You need to determine what CSS styles should be applied. The storefront has these customizable elements:
+
+1. "add-to-cart-button" - The Add to Cart buttons on product cards
+2. "product-card" - The product card containers  
+3. "page-background" - The main page background
+4. "header-nav" - The navigation header area
+5. "category-buttons" - The category filter buttons
+
+Respond with ONLY a JSON object in this exact format:
+{
+  "modifications": [
+    {
+      "elementSelector": "add-to-cart-button",
+      "cssProperties": {
+        "backgroundColor": "rgb(180, 83, 9)",
+        "borderColor": "rgb(180, 83, 9)"
+      },
+      "description": "Changed Add to Cart buttons to brown color"
+    }
+  ],
+  "summary": "Applied brown styling to Add to Cart buttons"
+}
+
+IMPORTANT: 
+- Use camelCase CSS properties (backgroundColor, not background-color)
+- Use specific color values (rgb() or hex)
+- Only modify elements that relate to the user's request
+- Common brown colors: rgb(180, 83, 9), rgb(139, 69, 19), rgb(101, 67, 33)`;
+
     // Call Claude API
     const claudeResponse = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022', // Latest Claude model
-      max_tokens: 4000,
-      temperature: 0.1, // Low temperature for consistent code generation
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 2000,
+      temperature: 0.1,
       messages: [
         {
           role: 'user',
@@ -624,20 +650,18 @@ async function parseAIRequestWithClaude(message, distributorDir) {
     const aiResponseText = claudeResponse.content[0].text;
     console.log('Received response from Claude AI');
     
-    // Parse Claude's response into modification objects
-    const modifications = parseClaudeResponse(aiResponseText, distributorDir);
+    // Parse Claude's response
+    const modifications = parseClaudeResponse(aiResponseText);
     
     console.log(`Generated ${modifications.length} modifications`);
     return modifications;
     
   } catch (error) {
     console.error('Claude AI parsing error:', error);
-    if (error.status === 401) {
-      console.error('Claude API key invalid or missing');
-    }
     return [];
   }
 }
+
 
 // Read all relevant files in the distributor directory
 async function readDistributorFiles(distributorDir) {
@@ -720,50 +744,22 @@ CRITICAL: Your find strings must match exactly what exists in the code files. Us
 }
 
 // Parse Claude's response into modification objects
-function parseClaudeResponse(claudeResponse, distributorDir) {
+function parseClaudeResponse(claudeResponse) {
   try {
     // Claude sometimes includes explanation before/after JSON, so extract just the JSON
     const jsonMatch = claudeResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error('No valid JSON found in Claude response');
-      console.log('Raw Claude response:', claudeResponse);
       return [];
     }
     
     const parsed = JSON.parse(jsonMatch[0]);
-    const modifications = [];
+    console.log('Claude understanding:', parsed);
     
-    console.log('Claude understanding:', parsed.understanding);
-    
-    // Convert Claude modifications to our internal format
-    for (const mod of parsed.modifications || []) {
-      modifications.push({
-        type: mod.type || 'replace',
-        file: distributorDir + '/' + mod.file,
-        find: mod.find,
-        replace: mod.replace,
-        description: mod.description,
-        context: 'Claude AI modification'
-      });
-    }
-    
-    // Handle new file creation
-    for (const newFile of parsed.newFiles || []) {
-      modifications.push({
-        type: 'create_file',
-        file: distributorDir + '/' + newFile.path,
-        content: newFile.content,
-        description: `Created new file: ${newFile.path}`,
-        context: 'New file creation'
-      });
-    }
-    
-    console.log('Claude summary:', parsed.summary);
-    return modifications;
+    return parsed.modifications || [];
     
   } catch (error) {
     console.error('Error parsing Claude response:', error);
-    console.log('Raw Claude response:', claudeResponse);
     return [];
   }
 }
@@ -771,44 +767,23 @@ function parseClaudeResponse(claudeResponse, distributorDir) {
 // Enhanced applyModification function
 async function applyModification(modification) {
   try {
-    if (modification.type === 'create_file') {
-      // Ensure directory exists
-      const dir = modification.file.substring(0, modification.file.lastIndexOf('/'));
-      await fs.promises.mkdir(dir, { recursive: true });
-      
-      // Create new file
-      await fs.promises.writeFile(modification.file, modification.content, 'utf8');
-      console.log(`Created new file: ${modification.file}`);
-      return;
+    const response = await fetch('http://localhost:4000/api/styles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        elementSelector: modification.elementSelector,
+        cssProperties: modification.cssProperties
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to save style: ${response.statusText}`);
     }
-    
-    // Read existing file
-    const fileContent = await fs.promises.readFile(modification.file, 'utf8');
-    
-    // Apply modification
-    let modifiedContent;
-    
-    if (modification.find && modification.replace !== undefined) {
-      // String replacement
-      if (!fileContent.includes(modification.find)) {
-        throw new Error(`Find string not found in file: "${modification.find.substring(0, 100)}..."`);
-      }
-      
-      modifiedContent = fileContent.replace(modification.find, modification.replace);
-      
-      if (modifiedContent === fileContent) {
-        throw new Error(`No changes made - find and replace strings are identical`);
-      }
-    } else {
-      throw new Error('Invalid modification format - missing find/replace');
-    }
-    
-    // Write back
-    await fs.promises.writeFile(modification.file, modifiedContent, 'utf8');
-    console.log(`Successfully modified: ${modification.file}`);
+
+    console.log(`Successfully saved style for: ${modification.elementSelector}`);
     
   } catch (error) {
-    console.error(`Failed to modify ${modification.file}:`, error);
+    console.error(`Failed to save style for ${modification.elementSelector}:`, error);
     throw error;
   }
 }
