@@ -55,7 +55,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
               <p className="text-sm text-gray-600">View and manage your customer accounts</p>
             )}
             {option.name === "Branding" && (
-              <p className="text-sm text-gray-600">Customize your logo and appearance (Def)</p>
+              <p className="text-sm text-gray-600">Customize your logo and appearance</p>
             )}
             {option.name === "Storefront UI Customization" && (
               <p className="text-sm text-gray-600">Configure directly with AI, powered by Claude</p>
