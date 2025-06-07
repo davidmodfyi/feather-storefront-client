@@ -32,7 +32,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const app = express();
 app.use(express.json());
 const PORT = process.env.PORT || 4000;
-
+app.use(express.static('public'));
 // Log the application startup for debugging
 console.log('Starting Feather API server...');
 console.log('Environment:', process.env.NODE_ENV || 'development');
