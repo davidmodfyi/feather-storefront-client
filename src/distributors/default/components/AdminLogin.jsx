@@ -76,9 +76,51 @@ export default function AdminLogin({ onLogin }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="w-80">
-        <h1 className="text-2xl font-bold mb-6 text-center">Admin Login D</h1>
+        {/* Feather Logo */}
+        <div className="flex justify-center mb-8">
+          <div className="text-center">
+            {/* Feather Icon SVG with white background */}
+            <div className="mb-4">
+              <svg 
+                width="80" 
+                height="80" 
+                viewBox="0 0 100 100" 
+                className="mx-auto"
+                style={{ background: 'white' }}
+              >
+                {/* White background circle */}
+                <circle cx="50" cy="50" r="50" fill="white"/>
+                
+                {/* Feather icon - simplified version */}
+                <g transform="translate(20, 15)">
+                  <path
+                    d="M30 10 Q45 5 55 15 Q58 25 55 35 Q50 45 40 50 L35 45 Q25 35 20 25 Q18 15 30 10 Z"
+                    fill="#3B82F6"
+                    stroke="#1E40AF"
+                    strokeWidth="1"
+                  />
+                  <path
+                    d="M25 20 Q35 18 45 25 M28 28 Q38 26 48 33 M31 36 Q41 34 51 41"
+                    stroke="#1E40AF"
+                    strokeWidth="1"
+                    fill="none"
+                  />
+                  <path
+                    d="M35 45 L30 55 Q28 58 25 55 Q22 52 25 50 L30 45"
+                    fill="#1E40AF"
+                  />
+                </g>
+              </svg>
+            </div>
+            
+            {/* Feather Text */}
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Feather</h1>
+          </div>
+        </div>
+        
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-700">Admin Login</h2>
         
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
