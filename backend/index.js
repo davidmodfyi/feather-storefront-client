@@ -331,6 +331,201 @@ app.get('/api/branding/header-logo', (req, res) => {
   }
 });
 
+// Get all logic scripts for a distributor
+app.get('/api/logic-scripts', requireAuth, async (req, res) => {
+  try {
+    const distributorId = req.user.distributor_id;
+    
+    const scripts = await db.query(`
+      SELECT id, trigger_point, description, sequence_order, active, created_at
+      FROM logic_scripts 
+      WHERE distributor_id = ? 
+      ORDER BY trigger_point, sequence_order
+    `, [distributorId]);
+    
+    res.json(scripts);
+  } catch (error) {
+    console.error('Error fetching logic scripts:', error);
+    res.status(500).json({ error: 'Failed to fetch logic scripts' });
+  }
+});
+
+// Get script content for editing
+app.get('/api/logic-scripts/:id', requireAuth, async (req, res) => {
+  try {
+    const distributorId = req.user.distributor_id;
+    const scriptId = req.params.id;
+    
+    const script = await db.query(`
+      SELECT * FROM logic_scripts 
+      WHERE id = ? AND distributor_id = ?
+    `, [scriptId, distributorId]);
+    
+    if (script.length === 0) {
+      return res.status(404).json({ error: 'Script not found' });
+    }
+    
+    res.json(script[0]);
+  } catch (error) {
+    console.error('Error fetching script:', error);
+    res.status(500).json({ error: 'Failed to fetch script' });
+  }
+});
+
+// Create new logic script
+app.post('/api/logic-scripts', requireAuth, async (req, res) => {
+  try {
+    const distributorId = req.user.distributor_id;
+    const { trigger_point, script_content, description } = req.body;
+    
+    // Get next sequence order for this trigger point
+    const maxOrder = await db.query(`
+      SELECT COALESCE(MAX(sequence_order), 0) as max_order 
+      FROM logic_scripts 
+      WHERE distributor_id = ? AND trigger_point = ?
+    `, [distributorId, trigger_point]);
+    
+    const nextOrder = maxOrder[0].max_order + 1;
+    
+    const result = await db.query(`
+      INSERT INTO logic_scripts (distributor_id, trigger_point, script_content, description, sequence_order)
+      VALUES (?, ?, ?, ?, ?)
+    `, [distributorId, trigger_point, script_content, description, nextOrder]);
+    
+    res.json({ success: true, id: result.lastID });
+  } catch (error) {
+    console.error('Error creating logic script:', error);
+    res.status(500).json({ error: 'Failed to create logic script' });
+  }
+});
+
+// Update script order
+app.put('/api/logic-scripts/reorder', requireAuth, async (req, res) => {
+  try {
+    const distributorId = req.user.distributor_id;
+    const { scripts } = req.body; // Array of { id, sequence_order }
+    
+    // Update all scripts in a transaction
+    await db.query('START TRANSACTION');
+    
+    for (const script of scripts) {
+      await db.query(`
+        UPDATE logic_scripts 
+        SET sequence_order = ? 
+        WHERE id = ? AND distributor_id = ?
+      `, [script.sequence_order, script.id, distributorId]);
+    }
+    
+    await db.query('COMMIT');
+    res.json({ success: true });
+  } catch (error) {
+    await db.query('ROLLBACK');
+    console.error('Error reordering scripts:', error);
+    res.status(500).json({ error: 'Failed to reorder scripts' });
+  }
+});
+
+// Delete logic script
+app.delete('/api/logic-scripts/:id', requireAuth, async (req, res) => {
+  try {
+    const distributorId = req.user.distributor_id;
+    const scriptId = req.params.id;
+    
+    await db.query(`
+      DELETE FROM logic_scripts 
+      WHERE id = ? AND distributor_id = ?
+    `, [scriptId, distributorId]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting script:', error);
+    res.status(500).json({ error: 'Failed to delete script' });
+  }
+});
+
+// Get customer attributes for script context
+app.get('/api/customer-attributes', requireAuth, async (req, res) => {
+  try {
+    const distributorId = req.user.distributor_id;
+    
+    // Get sample customer data to show available attributes
+    const sampleCustomer = await db.query(`
+      SELECT * FROM accounts 
+      WHERE distributor_id = ? 
+      LIMIT 1
+    `, [distributorId]);
+    
+    if (sampleCustomer.length === 0) {
+      return res.json({ attributes: [] });
+    }
+    
+    // Return list of available attributes
+    const attributes = Object.keys(sampleCustomer[0]).filter(key => 
+      !['id', 'distributor_id', 'created_at', 'updated_at'].includes(key)
+    );
+    
+    res.json({ attributes, sampleData: sampleCustomer[0] });
+  } catch (error) {
+    console.error('Error fetching customer attributes:', error);
+    res.status(500).json({ error: 'Failed to fetch customer attributes' });
+  }
+});
+
+// Execute logic scripts (for frontend to call)
+app.post('/api/execute-logic-scripts', async (req, res) => {
+  try {
+    const { distributor_id, trigger_point, context } = req.body;
+    
+    // Get all active scripts for this trigger point
+    const scripts = await db.query(`
+      SELECT script_content, description 
+      FROM logic_scripts 
+      WHERE distributor_id = ? AND trigger_point = ? AND active = TRUE
+      ORDER BY sequence_order
+    `, [distributor_id, trigger_point]);
+    
+    const results = [];
+    
+    for (const script of scripts) {
+      try {
+        // Create a safe execution environment
+        const scriptFunction = new Function('customer', 'cart', 'products', script.script_content);
+        const result = scriptFunction(context.customer, context.cart, context.products);
+        
+        results.push({
+          description: script.description,
+          result: result
+        });
+        
+        // If any script blocks, stop execution
+        if (result && result.allow === false) {
+          return res.json({
+            allowed: false,
+            message: result.message,
+            results: results
+          });
+        }
+      } catch (error) {
+        console.error(`Script execution error (${script.description}):`, error);
+        // Continue with other scripts if one fails
+        results.push({
+          description: script.description,
+          result: { allow: true, error: error.message }
+        });
+      }
+    }
+    
+    res.json({
+      allowed: true,
+      results: results
+    });
+  } catch (error) {
+    console.error('Error executing logic scripts:', error);
+    res.status(500).json({ error: 'Failed to execute logic scripts' });
+  }
+});
+
+
 // Upload header logo endpoint
 app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
   console.log('Header logo upload request');
