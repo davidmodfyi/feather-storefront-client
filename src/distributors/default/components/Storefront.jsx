@@ -12,6 +12,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [headerLogo, setHeaderLogo] = useState(null);
+  const [customStyles, setCustomStyles] = useState({});
 
   // Fetch user info, items, and cart
  useEffect(() => {
@@ -33,6 +34,15 @@ export default function Storefront({ onLogout, onHome, brandName }) {
       })
       .catch(console.error);
 
+// Fetch custom styles
+	fetch('/api/styles', { credentials: 'include' })
+	  .then(res => res.json())
+	  .then(data => {
+	    console.log('Custom styles loaded:', data);
+	    setCustomStyles(data);
+	  })
+	  .catch(console.error);
+	 
     // Fetch all items
     fetch('/api/items', { credentials: 'include' })
       .then(res => res.json())
@@ -229,6 +239,10 @@ const filteredItems = items.filter(item => {
   
   return true;
 });
+  const getCustomStyle = (elementSelector) => {
+    return customStyles[elementSelector] || {};
+  };
+	
   return (
    <div className="p-6">
       {/* Header with logo */}
@@ -289,8 +303,8 @@ const filteredItems = items.filter(item => {
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredItems.map(item => (
-            <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow">
+	{filteredItems.map(item => (
+	  <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow" style={getCustomStyle('product-card')}>
               <div className="cursor-pointer" onClick={() => openProductDetails(item)}>
                 {item.image_url && (
 				<div className="mb-3">
@@ -334,12 +348,13 @@ const filteredItems = items.filter(item => {
                 </button>
               </div>
               
-              <button 
-                onClick={() => handleAddToCart(item)}
-                className={`w-full mt-2 px-4 py-2 ${getButtonClass(item.id)} text-white rounded`}
-              >
-                {getButtonText(item.id)}
-              </button>
+		<button 
+		  onClick={() => handleAddToCart(item)}
+		  className={`w-full mt-2 px-4 py-2 ${getButtonClass(item.id)} text-white rounded`}
+		  style={getCustomStyle('add-to-cart-button')}
+		>
+		  {getButtonText(item.id)}
+		</button>
             </div>
           ))}
         </div>
