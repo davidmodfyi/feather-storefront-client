@@ -1005,6 +1005,71 @@ app.delete('/api/branding/logo', (req, res) => {
   }
 });
 
+app.get('/api/styles', (req, res) => {
+  console.log('Styles request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const styles = db.prepare(`
+      SELECT element_selector, css_properties 
+      FROM distributor_styles 
+      WHERE distributor_id = ?
+    `).all(req.session.distributor_id);
+    
+    // Convert to a more usable format
+    const styleMap = {};
+    styles.forEach(style => {
+      try {
+        styleMap[style.element_selector] = JSON.parse(style.css_properties);
+      } catch (e) {
+        console.error('Error parsing CSS properties:', e);
+      }
+    });
+    
+    res.json(styleMap);
+  } catch (error) {
+    console.error('Error fetching styles:', error);
+    res.status(500).json({ error: 'Error fetching styles' });
+  }
+});
+
+// Update or create custom styles
+app.post('/api/styles', (req, res) => {
+  console.log('Update styles request');
+  
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+  
+  const { elementSelector, cssProperties } = req.body;
+  
+  if (!elementSelector || !cssProperties) {
+    return res.status(400).json({ error: 'Missing elementSelector or cssProperties' });
+  }
+  
+  try {
+    // Insert or update the style
+    db.prepare(`
+      INSERT OR REPLACE INTO distributor_styles (distributor_id, element_selector, css_properties, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    `).run(
+      req.session.distributor_id,
+      elementSelector,
+      JSON.stringify(cssProperties)
+    );
+    
+    console.log(`Updated style for ${elementSelector} for distributor ${req.session.distributor_id}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating styles:', error);
+    res.status(500).json({ error: 'Error updating styles' });
+  }
+});
+
+
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 // Replace your login endpoint in backend/index.js with this:
