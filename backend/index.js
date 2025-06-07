@@ -1296,38 +1296,6 @@ async function parseAIRequest(message, distributorDir) {
   return modifications;
 }
 
-// Helper function to apply a modification to a file
-async function applyModification(modification) {
-  try {
-    // Read the file
-    const fileContent = await fs.promises.readFile(modification.file, 'utf8');
-    
-    // Apply the modification
-    let modifiedContent;
-    if (modification.find instanceof RegExp) {
-      modifiedContent = fileContent.replace(modification.find, modification.replace);
-    } else {
-      modifiedContent = fileContent.replace(new RegExp(modification.find, 'g'), modification.replace);
-    }
-    
-    // Check if any changes were made
-    if (modifiedContent === fileContent) {
-      throw new Error(`No matching content found for: ${modification.description}`);
-    }
-    
-    // Write the file back
-    await fs.promises.writeFile(modification.file, modifiedContent, 'utf8');
-    
-    console.log(`Successfully modified: ${modification.file}`);
-  } catch (error) {
-    console.error(`Failed to modify ${modification.file}:`, error);
-    throw error;
-  }
-}
-
-
-
-
 // Logout route
 app.post('/api/logout', (req, res) => {
   console.log('Logout request received');
