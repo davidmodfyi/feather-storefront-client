@@ -1,5 +1,3 @@
-// Update your AdminLogin.jsx component to set the title
-
 import { useState, useEffect } from "react";
 
 export default function AdminLogin({ onLogin }) {
@@ -22,7 +20,6 @@ export default function AdminLogin({ onLogin }) {
     console.log(`Attempting to log in as: ${username}`);
     
     try {
-      // Make the login request directly here
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -32,11 +29,9 @@ export default function AdminLogin({ onLogin }) {
       
       console.log('Login response status:', res.status);
       
-      // Convert response to text for debugging
       const responseText = await res.text();
       console.log('Response text:', responseText);
       
-      // Parse if it's JSON
       let responseData = null;
       try {
         responseData = JSON.parse(responseText);
@@ -48,11 +43,9 @@ export default function AdminLogin({ onLogin }) {
       if (res.ok) {
         console.log('Login successful');
         
-        // Call the parent's onLogin handler with the response data
         if (onLogin) {
           onLogin(responseData);
         } else {
-          // If no onLogin handler, redirect to home
           window.location.href = "/";
         }
       } else {
@@ -81,41 +74,12 @@ export default function AdminLogin({ onLogin }) {
         {/* Feather Logo */}
         <div className="flex justify-center mb-8">
           <div className="text-center">
-            {/* Feather Icon SVG with white background */}
-            <div className="mb-4">
-              <svg 
-                width="80" 
-                height="80" 
-                viewBox="0 0 100 100" 
-                className="mx-auto"
-                style={{ background: 'white' }}
-              >
-                {/* White background circle */}
-                <circle cx="50" cy="50" r="50" fill="white"/>
-                
-                {/* Feather icon - simplified version */}
-                <g transform="translate(20, 15)">
-                  <path
-                    d="M30 10 Q45 5 55 15 Q58 25 55 35 Q50 45 40 50 L35 45 Q25 35 20 25 Q18 15 30 10 Z"
-                    fill="#3B82F6"
-                    stroke="#1E40AF"
-                    strokeWidth="1"
-                  />
-                  <path
-                    d="M25 20 Q35 18 45 25 M28 28 Q38 26 48 33 M31 36 Q41 34 51 41"
-                    stroke="#1E40AF"
-                    strokeWidth="1"
-                    fill="none"
-                  />
-                  <path
-                    d="M35 45 L30 55 Q28 58 25 55 Q22 52 25 50 L30 45"
-                    fill="#1E40AF"
-                  />
-                </g>
-              </svg>
-            </div>
-            
-            {/* Feather Text */}
+            <img 
+              src="/feather.jpg" 
+              alt="Feather" 
+              className="w-24 h-24 mx-auto mb-4 object-contain"
+              style={{ backgroundColor: 'white' }}
+            />
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Feather</h1>
           </div>
         </div>
