@@ -9,6 +9,8 @@ import OrderHistory from './components/OrderHistory';
 import Branding from './components/Branding';
 import { useNavigate } from 'react-router-dom';
 import AIChat from './components/AIChat';
+import LogicCustomizationChat from './LogicCustomizationChat';
+import LogicScriptsManagement from './LogicScriptsManagement';
 
 // Header Component with Logo
 function Header({ brandName }) {
@@ -244,6 +246,26 @@ function App({ distributorSlug }) {
               <Cart brandName={brandName} onLogout={handleLogout} onHome={handleHome} userType={userType} />
             </>
           }
+        />
+        <Route 
+          path="/backoffice/logic" 
+          element={
+            <LogicCustomizationChat 
+              onLogout={handleLogout} 
+              onHome={handleHome} 
+              brandName={brandName} 
+            />
+          } 
+        />
+        <Route 
+          path="/backoffice/logic-scripts" 
+          element={
+            <LogicScriptsManagement 
+              onLogout={handleLogout} 
+              onHome={handleHome} 
+              brandName={brandName} 
+            />
+          } 
         />
         <Route
           path="/backoffice"
