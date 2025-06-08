@@ -332,7 +332,12 @@ app.get('/api/branding/header-logo', (req, res) => {
 });
 
 // Get all logic scripts for a distributor
-app.get('/api/logic-scripts', requireAuth, async (req, res) => {
+
+
+app.get('/api/logic-scripts', async (req, res) => {
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
   try {
     const distributorId = req.user.distributor_id;
     
@@ -351,7 +356,11 @@ app.get('/api/logic-scripts', requireAuth, async (req, res) => {
 });
 
 // Get script content for editing
-app.get('/api/logic-scripts/:id', requireAuth, async (req, res) => {
+app.get('/api/logic-scripts/:id', async (req, res) => {
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+ 
   try {
     const distributorId = req.user.distributor_id;
     const scriptId = req.params.id;
@@ -372,7 +381,11 @@ app.get('/api/logic-scripts/:id', requireAuth, async (req, res) => {
   }
 });
 // Create new logic script
-app.post('/api/logic-scripts', requireAuth, async (req, res) => {
+app.post('/api/logic-scripts', async (req, res) => {
+
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
   try {
     const distributorId = req.user.distributor_id;
     const { trigger_point, script_content, description } = req.body;
@@ -399,7 +412,13 @@ app.post('/api/logic-scripts', requireAuth, async (req, res) => {
 });
 
 // Update script order
-app.put('/api/logic-scripts/reorder', requireAuth, async (req, res) => {
+
+app.put('/api/logic-scripts/reorder', async (req, res) => {
+
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+
   try {
     const distributorId = req.user.distributor_id;
     const { scripts } = req.body; // Array of { id, sequence_order }
@@ -424,7 +443,11 @@ app.put('/api/logic-scripts/reorder', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/logic-scripts/:id', requireAuth, async (req, res) => {
+app.put('/api/logic-scripts/:id', async (req, res) => {
+
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
   try {
     const distributorId = req.user.distributor_id;
     const scriptId = req.params.id;
@@ -465,7 +488,13 @@ app.put('/api/logic-scripts/:id', requireAuth, async (req, res) => {
 	}
 });
 // Delete logic script
-app.delete('/api/logic-scripts/:id', requireAuth, async (req, res) => {
+
+
+app.delete('/api/logic-scripts/:id', async (req, res) => {
+
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
   try {
     const distributorId = req.user.distributor_id;
     const scriptId = req.params.id;
@@ -483,7 +512,11 @@ app.delete('/api/logic-scripts/:id', requireAuth, async (req, res) => {
 });
 
 // Get customer attributes for script context
-app.get('/api/customer-attributes', requireAuth, async (req, res) => {
+app.get('/api/customer-attributes', async (req, res) => {
+
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
   try {
     const distributorId = req.user.distributor_id;
     
@@ -564,7 +597,11 @@ app.post('/api/execute-logic-scripts', async (req, res) => {
   }
 });
 
-app.post('/api/claude-logic-chat', requireAuth, async (req, res) => {
+app.post('/api/claude-logic-chat', async (req, res) => {
+
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
   try {
     const { message, customerAttributes, triggerPoints } = req.body;
     
