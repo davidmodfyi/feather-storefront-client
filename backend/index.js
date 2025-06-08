@@ -693,33 +693,7 @@ function determineTriggerPoint(response) {
   // Default to storefront_load if unclear
   return 'storefront_load';
 }
-  
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-  
-  try {
-    console.log('File uploaded:', req.file);
-    
-    // Store relative path from public directory - use the path that multer created
-    const relativeFilePath = 'uploads/' + path.basename(req.file.path);
-    console.log('Storing relative file path for header logo:', relativeFilePath);
-    
-    db.prepare(`
-      UPDATE distributors 
-      SET header_logo_path = ? 
-      WHERE id = ?
-    `).run(relativeFilePath, req.session.distributor_id);
-    
-    // Return the URL to access the logo
-    const logoUrl = '/' + relativeFilePath;
-    console.log('Header logo URL:', logoUrl);
-    res.json({ success: true, logo: logoUrl });
-  } catch (error) {
-    console.error('Error uploading header logo:', error);
-    res.status(500).json({ error: 'Error uploading header logo' });
-  }
-});
+
 // Delete header logo endpoint
 app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
   console.log('Header logo upload request');
