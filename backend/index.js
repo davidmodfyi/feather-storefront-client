@@ -550,14 +550,38 @@ SCRIPT REQUIREMENTS:
 3. Be precise and handle edge cases
 4. Always include clear error handling
 
+IMPORTANT: When providing a complete script, format it EXACTLY like this:
+
+SCRIPT_START
+trigger_point: [trigger_point_key]
+description: [Brief description of what this script does]
+```javascript
+[Your JavaScript code here]
+```
+SCRIPT_END
+
+Example script format:
+SCRIPT_START
+trigger_point: submit
+description: Prevent orders under $100 minimum
+```javascript
+if (cart.total < 100) {
+  return {
+    allow: false,
+    message: "Your order must be at least $100. Current total: $" + cart.total.toFixed(2)
+  };
+}
+return { allow: true };
+```
+SCRIPT_END
+
 When user requests logic, follow this process:
 1. Understand the requirement clearly
 2. Ask clarifying questions if needed
 3. Determine the appropriate trigger point
-4. Generate the JavaScript code
-5. Provide a clear description
-6. Show examples of when it would trigger
-7. Ask for confirmation before finalizing
+4. Generate the JavaScript code using the SCRIPT_START/SCRIPT_END format
+5. Provide a clear description and examples
+6. Ask for confirmation before finalizing
 
 Be conversational and helpful. Explain your reasoning.`;
 
@@ -587,22 +611,16 @@ Be conversational and helpful. Explain your reasoning.`;
     const data = await response.json();
     const claudeResponse = data.content[0].text;
 
-    // Try to extract script from Claude's response
+    // Extract script using the new format
     let script = null;
+    const scriptMatch = claudeResponse.match(/SCRIPT_START\s*\ntrigger_point:\s*([^\n]+)\s*\ndescription:\s*([^\n]+)\s*\n```javascript\s*\n([\s\S]*?)\n```\s*\nSCRIPT_END/);
     
-    // Look for script indicators in Claude's response
-    if (claudeResponse.includes('```javascript') || claudeResponse.includes('return {')) {
-      // Claude provided a script - extract it and create script object
-      const codeMatch = claudeResponse.match(/```javascript\n([\s\S]*?)\n```/) || 
-                       claudeResponse.match(/```\n([\s\S]*?)\n```/);
-      
-      if (codeMatch) {
-        script = {
-          script_content: codeMatch[1].trim(),
-          description: "Auto-generated logic script", // Claude should provide this
-          trigger_point: determineTriggerPoint(claudeResponse) // Auto-detect from context
-        };
-      }
+    if (scriptMatch) {
+      script = {
+        trigger_point: scriptMatch[1].trim(),
+        description: scriptMatch[2].trim(),
+        script_content: scriptMatch[3].trim()
+      };
     }
 
     res.json({
@@ -636,14 +654,6 @@ function determineTriggerPoint(response) {
   // Default to storefront_load if unclear
   return 'storefront_load';
 }
-
-// Upload header logo endpoint
-app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
-  console.log('Header logo upload request');
-  
-  if (!req.session.distributor_id) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
   
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
