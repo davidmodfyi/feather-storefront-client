@@ -45,6 +45,8 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
                 navigate("/backoffice/branding");
               } else if (option.name === "Storefront UI Customization") {
                 navigate("/backoffice/ai-chat");
+              } else if (option.name === "Storefront Logic Customization") {
+                navigate("/backoffice/logic");
               } else {
                 alert(`${option.name} functionality is not implemented yet.`);
               }
