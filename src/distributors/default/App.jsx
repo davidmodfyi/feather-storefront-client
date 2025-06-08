@@ -9,8 +9,8 @@ import OrderHistory from './components/OrderHistory';
 import Branding from './components/Branding';
 import { useNavigate } from 'react-router-dom';
 import AIChat from './components/AIChat';
-import LogicCustomizationChat from './LogicCustomizationChat';
-import LogicScriptsManagement from './LogicScriptsManagement';
+import LogicCustomizationChat from './components/LogicCustomizationChat';
+import LogicScriptsManagement from './components/LogicScriptsManagement';
 
 // Header Component with Logo
 function Header({ brandName }) {
