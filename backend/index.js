@@ -450,8 +450,20 @@ app.put('/api/logic-scripts/:id', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'No fields to update' });
     }
     
-    updateValues.push(scriptId, distributorI// Add these endpoints to your index.js server file
-
+	updateValues.push(scriptId, distributorId);
+	
+	await db.query(`
+	  UPDATE logic_scripts 
+	  SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+	  WHERE id = ? AND distributor_id = ?
+	`, updateValues);
+	
+	res.json({ success: true });
+	} catch (error) {
+	  console.error('Error updating script:', error);
+	  res.status(500).json({ error: 'Failed to update script' });
+	}
+});
 // Delete logic script
 app.delete('/api/logic-scripts/:id', requireAuth, async (req, res) => {
   try {
