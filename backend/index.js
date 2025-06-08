@@ -371,7 +371,6 @@ app.get('/api/logic-scripts/:id', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch script' });
   }
 });
-
 // Create new logic script
 app.post('/api/logic-scripts', requireAuth, async (req, res) => {
   try {
@@ -392,7 +391,7 @@ app.post('/api/logic-scripts', requireAuth, async (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `, [distributorId, trigger_point, script_content, description, nextOrder]);
     
-    res.json({ success: true, id: result.lastID });
+    res.json({ success: true, id: result.insertId });
   } catch (error) {
     console.error('Error creating logic script:', error);
     res.status(500).json({ error: 'Failed to create logic script' });
@@ -424,6 +423,34 @@ app.put('/api/logic-scripts/reorder', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Failed to reorder scripts' });
   }
 });
+
+app.put('/api/logic-scripts/:id', requireAuth, async (req, res) => {
+  try {
+    const distributorId = req.user.distributor_id;
+    const scriptId = req.params.id;
+    const { active, description, script_content } = req.body;
+    
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (active !== undefined) {
+      updateFields.push('active = ?');
+      updateValues.push(active);
+    }
+    if (description !== undefined) {
+      updateFields.push('description = ?');
+      updateValues.push(description);
+    }
+    if (script_content !== undefined) {
+      updateFields.push('script_content = ?');
+      updateValues.push(script_content);
+    }
+    
+    if (updateFields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+    
+    updateValues.push(scriptId, distributorI// Add these endpoints to your index.js server file
 
 // Delete logic script
 app.delete('/api/logic-scripts/:id', requireAuth, async (req, res) => {
