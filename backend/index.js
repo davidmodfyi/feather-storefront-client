@@ -594,16 +594,16 @@ IMPORTANT: When providing a complete script, format it EXACTLY like this:
 SCRIPT_START
 trigger_point: [trigger_point_key]
 description: [Brief description of what this script does]
-```javascript
+
 [Your JavaScript code here]
-```
+
 SCRIPT_END
 
 Example script format:
 SCRIPT_START
 trigger_point: submit
 description: Prevent orders under $100 minimum
-```javascript
+
 if (cart.total < 100) {
   return {
     allow: false,
@@ -611,7 +611,7 @@ if (cart.total < 100) {
   };
 }
 return { allow: true };
-```
+
 SCRIPT_END
 
 When user requests logic, follow this process:
