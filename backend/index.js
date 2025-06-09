@@ -341,12 +341,11 @@ app.get('/api/logic-scripts', async (req, res) => {
   try {
     const distributorId = req.session.distributor_id;
     
-    const scripts = await db.prepare(`
+    const stmt = db.prepare(`
       SELECT id, trigger_point, description, sequence_order, active, created_at
       FROM logic_scripts 
-      WHERE distributor_id = ? 
-      ORDER BY trigger_point, sequence_order
-    `, [distributorId]);
+      WHERE distributor_id = ?`);
+    const scripts = stmt.all(distributorId);
     
     res.json(scripts);
   } catch (error) {
@@ -365,10 +364,11 @@ app.get('/api/logic-scripts/:id', async (req, res) => {
     const distributorId = req.session.distributor_id;
     const scriptId = req.params.id;
     
-    const script = await db.prepare(`
+   const stmt = db.prepare(`
       SELECT * FROM logic_scripts 
-      WHERE id = ? AND distributor_id = ?
-    `, [scriptId, distributorId]);
+      WHERE id = ? AND distributor_id = ?`);
+      const script = stmt.get(scriptId, distributorId);
+      if (!script)
     
     if (script.length === 0) {
       return res.status(404).json({ error: 'Script not found' });
@@ -381,35 +381,39 @@ app.get('/api/logic-scripts/:id', async (req, res) => {
   }
 });
 // Create new logic script
-app.post('/api/logic-scripts', async (req, res) => {
-
+app.post('/api/logic-scripts', (req, res) => {
   if (!req.session.distributor_id || req.session.userType !== 'Admin') {
     return res.status(401).json({ error: 'Not authorized' });
   }
+  
   try {
     const distributorId = req.session.distributor_id;
     const { trigger_point, script_content, description } = req.body;
     
     // Get next sequence order for this trigger point
-    const maxOrder = await db.prepare(`
+    const maxOrderStmt = db.prepare(`
       SELECT COALESCE(MAX(sequence_order), 0) as max_order 
       FROM logic_scripts 
       WHERE distributor_id = ? AND trigger_point = ?
-    `, [distributorId, trigger_point]);
+    `);
     
-    const nextOrder = maxOrder[0].max_order + 1;
+    const maxOrderResult = maxOrderStmt.get(distributorId, trigger_point);
+    const nextOrder = maxOrderResult.max_order + 1;
     
-    const result = await db.prepare(`
-      INSERT INTO logic_scripts (distributor_id, trigger_point, script_content, description, sequence_order)
-      VALUES (?, ?, ?, ?, ?)
-    `, [distributorId, trigger_point, script_content, description, nextOrder]);
+    const insertStmt = db.prepare(`
+      INSERT INTO logic_scripts (distributor_id, trigger_point, script_content, description, sequence_order, active)
+      VALUES (?, ?, ?, ?, ?, 1)
+    `);
     
-    res.json({ success: true, id: result.insertId });
+    const result = insertStmt.run(distributorId, trigger_point, script_content, description, nextOrder);
+    
+    res.json({ success: true, id: result.lastInsertRowid });
   } catch (error) {
     console.error('Error creating logic script:', error);
     res.status(500).json({ error: 'Failed to create logic script' });
   }
 });
+
 
 // Update script order
 
@@ -424,7 +428,10 @@ app.put('/api/logic-scripts/reorder', async (req, res) => {
     const { scripts } = req.body; // Array of { id, sequence_order }
     
     // Update all scripts in a transaction
-    await db.prepare('START TRANSACTION');
+   const updateStmt = db.prepare(`UPDATE ... WHERE id = ? AND distributor_id = ?`);
+	for (const script of scripts) {
+	  updateStmt.run(script.sequence_order, script.id, distributorId);
+	}
     
     for (const script of scripts) {
       await db.prepare(`
