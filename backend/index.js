@@ -339,7 +339,7 @@ app.get('/api/logic-scripts', async (req, res) => {
     return res.status(401).json({ error: 'Not authorized' });
   }
   try {
-    const distributorId = req.user.distributor_id;
+    const distributorId = req.session.distributor_id;
     
     const scripts = await db.query(`
       SELECT id, trigger_point, description, sequence_order, active, created_at
@@ -362,7 +362,7 @@ app.get('/api/logic-scripts/:id', async (req, res) => {
   }
  
   try {
-    const distributorId = req.user.distributor_id;
+    const distributorId = req.session.distributor_id;
     const scriptId = req.params.id;
     
     const script = await db.query(`
@@ -387,7 +387,7 @@ app.post('/api/logic-scripts', async (req, res) => {
     return res.status(401).json({ error: 'Not authorized' });
   }
   try {
-    const distributorId = req.user.distributor_id;
+    const distributorId = req.session.distributor_id;
     const { trigger_point, script_content, description } = req.body;
     
     // Get next sequence order for this trigger point
@@ -420,7 +420,7 @@ app.put('/api/logic-scripts/reorder', async (req, res) => {
   }
 
   try {
-    const distributorId = req.user.distributor_id;
+    const distributorId = req.session.distributor_id;
     const { scripts } = req.body; // Array of { id, sequence_order }
     
     // Update all scripts in a transaction
@@ -449,7 +449,7 @@ app.put('/api/logic-scripts/:id', async (req, res) => {
     return res.status(401).json({ error: 'Not authorized' });
   }
   try {
-    const distributorId = req.user.distributor_id;
+    const distributorId = req.session.distributor_id;
     const scriptId = req.params.id;
     const { active, description, script_content } = req.body;
     
@@ -496,7 +496,7 @@ app.delete('/api/logic-scripts/:id', async (req, res) => {
     return res.status(401).json({ error: 'Not authorized' });
   }
   try {
-    const distributorId = req.user.distributor_id;
+    const distributorId = req.session.distributor_id;
     const scriptId = req.params.id;
     
     await db.query(`
@@ -514,11 +514,11 @@ app.delete('/api/logic-scripts/:id', async (req, res) => {
 // Get customer attributes for script context
 app.get('/api/customer-attributes', async (req, res) => {
 
-  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+  if (!req.session || !req.session.distributor_id || req.session.userType !== 'Admin') {
     return res.status(401).json({ error: 'Not authorized' });
   }
   try {
-    const distributorId = req.user.distributor_id;
+    const distributorId = req.session.distributor_id;
     
     // Get sample customer data to show available attributes
     const sampleCustomer = await db.query(`
@@ -538,7 +538,7 @@ app.get('/api/customer-attributes', async (req, res) => {
     
     res.json({ attributes, sampleData: sampleCustomer[0] });
   } catch (error) {
-    console.error('Error fetching customer attributes:', error);
+    console.error('Customer attributes error:', error);
     res.status(500).json({ error: 'Failed to fetch customer attributes' });
   }
 });
