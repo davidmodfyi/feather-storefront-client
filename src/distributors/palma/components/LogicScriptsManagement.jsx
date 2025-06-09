@@ -23,10 +23,19 @@ export default function LogicScriptsManagement({ onLogout, onHome, brandName }) 
   async function fetchScripts() {
     try {
       const response = await fetch('/api/logic-scripts', { credentials: 'include' });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
-      setScripts(data);
+      
+      // Ensure data is always an array
+      setScripts(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching scripts:', error);
+      // Set empty array on error
+      setScripts([]);
     } finally {
       setLoading(false);
     }
@@ -41,7 +50,7 @@ export default function LogicScriptsManagement({ onLogout, onHome, brandName }) 
         credentials: 'include'
       });
       
-      setScripts(prev => prev.filter(script => script.id !== scriptId));
+      setScripts(prev => (Array.isArray(prev) ? prev : []).filter(script => script.id !== scriptId));
     } catch (error) {
       console.error('Error deleting script:', error);
       alert('Failed to delete script');
@@ -57,7 +66,7 @@ export default function LogicScriptsManagement({ onLogout, onHome, brandName }) 
         body: JSON.stringify({ active: !currentActive })
       });
       
-      setScripts(prev => prev.map(script => 
+      setScripts(prev => (Array.isArray(prev) ? prev : []).map(script => 
         script.id === scriptId ? { ...script, active: !currentActive } : script
       ));
     } catch (error) {
@@ -82,8 +91,11 @@ export default function LogicScriptsManagement({ onLogout, onHome, brandName }) 
       return;
     }
 
+    // Ensure scripts is an array before filtering
+    const safeScripts = Array.isArray(scripts) ? scripts : [];
+
     // Reorder scripts within the same trigger point
-    const triggerScripts = scripts
+    const triggerScripts = safeScripts
       .filter(s => s.trigger_point === draggedItem.trigger_point)
       .sort((a, b) => a.sequence_order - b.sequence_order);
 
@@ -110,7 +122,7 @@ export default function LogicScriptsManagement({ onLogout, onHome, brandName }) 
       });
 
       // Update local state
-      setScripts(prev => prev.map(script => {
+      setScripts(prev => (Array.isArray(prev) ? prev : []).map(script => {
         const updated = updatedScripts.find(u => u.id === script.id);
         return updated ? { ...script, sequence_order: updated.sequence_order } : script;
       }));
@@ -123,7 +135,9 @@ export default function LogicScriptsManagement({ onLogout, onHome, brandName }) 
   }
 
   function getScriptsByTrigger(triggerPoint) {
-    return scripts
+    // Ensure scripts is an array before filtering
+    const safeScripts = Array.isArray(scripts) ? scripts : [];
+    return safeScripts
       .filter(script => script.trigger_point === triggerPoint)
       .sort((a, b) => a.sequence_order - b.sequence_order);
   }
@@ -135,6 +149,9 @@ export default function LogicScriptsManagement({ onLogout, onHome, brandName }) 
       </div>
     );
   }
+
+  // Ensure scripts is an array for summary calculations
+  const safeScripts = Array.isArray(scripts) ? scripts : [];
 
   return (
     <div className="p-6">
@@ -263,7 +280,7 @@ export default function LogicScriptsManagement({ onLogout, onHome, brandName }) 
 
       {/* Summary */}
       <div className="mt-8 text-center text-gray-600">
-        <p>Total Scripts: {scripts.length} | Active: {scripts.filter(s => s.active).length}</p>
+        <p>Total Scripts: {safeScripts.length} | Active: {safeScripts.filter(s => s.active).length}</p>
       </div>
     </div>
   );
