@@ -513,30 +513,29 @@ app.delete('/api/logic-scripts/:id', async (req, res) => {
 
 // Get customer attributes for script context
 app.get('/api/customer-attributes', async (req, res) => {
-
   if (!req.session || !req.session.distributor_id || req.session.userType !== 'Admin') {
     return res.status(401).json({ error: 'Not authorized' });
   }
   try {
     const distributorId = req.session.distributor_id;
     
-    // Get sample customer data to show available attributes
-    const sampleCustomer = await db.prepare(`
+    // Fix: Use db.prepare().get() instead of db.query()
+    const sampleCustomer = db.prepare(`
       SELECT * FROM accounts 
       WHERE distributor_id = ? 
       LIMIT 1
-    `, [distributorId]);
+    `).get(distributorId);
     
-    if (sampleCustomer.length === 0) {
+    if (!sampleCustomer) {
       return res.json({ attributes: [] });
     }
     
     // Return list of available attributes
-    const attributes = Object.keys(sampleCustomer[0]).filter(key => 
+    const attributes = Object.keys(sampleCustomer).filter(key => 
       !['id', 'distributor_id', 'created_at', 'updated_at'].includes(key)
     );
     
-    res.json({ attributes, sampleData: sampleCustomer[0] });
+    res.json({ attributes, sampleData: sampleCustomer });
   } catch (error) {
     console.error('Customer attributes error:', error);
     res.status(500).json({ error: 'Failed to fetch customer attributes' });
