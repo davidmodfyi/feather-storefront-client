@@ -696,7 +696,7 @@ Be conversational and helpful. Explain your reasoning.`;
 
     // Extract script using the new format
     let script = null;
-    const scriptMatch = claudeResponse.match(/SCRIPT_START\s*\ntrigger_point:\s*([^\n]+)\s*\ndescription:\s*([^\n]+)\s*\n```javascript\s*\n([\s\S]*?)\n```\s*\nSCRIPT_END/);
+    const scriptMatch = claudeResponse.match(/SCRIPT_START\s*\ntrigger_point:\s*([^\n]+)\s*\ndescription:\s*([^\n]+)\s*\n([\s\S]*?)\nSCRIPT_END/);
     
     if (scriptMatch) {
       script = {
