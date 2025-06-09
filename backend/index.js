@@ -341,7 +341,7 @@ app.get('/api/logic-scripts', async (req, res) => {
   try {
     const distributorId = req.session.distributor_id;
     
-    const scripts = await db.query(`
+    const scripts = await db.prepare(`
       SELECT id, trigger_point, description, sequence_order, active, created_at
       FROM logic_scripts 
       WHERE distributor_id = ? 
@@ -365,7 +365,7 @@ app.get('/api/logic-scripts/:id', async (req, res) => {
     const distributorId = req.session.distributor_id;
     const scriptId = req.params.id;
     
-    const script = await db.query(`
+    const script = await db.prepare(`
       SELECT * FROM logic_scripts 
       WHERE id = ? AND distributor_id = ?
     `, [scriptId, distributorId]);
@@ -391,7 +391,7 @@ app.post('/api/logic-scripts', async (req, res) => {
     const { trigger_point, script_content, description } = req.body;
     
     // Get next sequence order for this trigger point
-    const maxOrder = await db.query(`
+    const maxOrder = await db.prepare(`
       SELECT COALESCE(MAX(sequence_order), 0) as max_order 
       FROM logic_scripts 
       WHERE distributor_id = ? AND trigger_point = ?
@@ -399,7 +399,7 @@ app.post('/api/logic-scripts', async (req, res) => {
     
     const nextOrder = maxOrder[0].max_order + 1;
     
-    const result = await db.query(`
+    const result = await db.prepare(`
       INSERT INTO logic_scripts (distributor_id, trigger_point, script_content, description, sequence_order)
       VALUES (?, ?, ?, ?, ?)
     `, [distributorId, trigger_point, script_content, description, nextOrder]);
@@ -424,20 +424,20 @@ app.put('/api/logic-scripts/reorder', async (req, res) => {
     const { scripts } = req.body; // Array of { id, sequence_order }
     
     // Update all scripts in a transaction
-    await db.query('START TRANSACTION');
+    await db.prepare('START TRANSACTION');
     
     for (const script of scripts) {
-      await db.query(`
+      await db.prepare(`
         UPDATE logic_scripts 
         SET sequence_order = ? 
         WHERE id = ? AND distributor_id = ?
       `, [script.sequence_order, script.id, distributorId]);
     }
     
-    await db.query('COMMIT');
+    await db.prepare('COMMIT');
     res.json({ success: true });
   } catch (error) {
-    await db.query('ROLLBACK');
+    await db.prepare('ROLLBACK');
     console.error('Error reordering scripts:', error);
     res.status(500).json({ error: 'Failed to reorder scripts' });
   }
@@ -475,7 +475,7 @@ app.put('/api/logic-scripts/:id', async (req, res) => {
     
 	updateValues.push(scriptId, distributorId);
 	
-	await db.query(`
+	await db.prepare(`
 	  UPDATE logic_scripts 
 	  SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
 	  WHERE id = ? AND distributor_id = ?
@@ -499,7 +499,7 @@ app.delete('/api/logic-scripts/:id', async (req, res) => {
     const distributorId = req.session.distributor_id;
     const scriptId = req.params.id;
     
-    await db.query(`
+    await db.prepare(`
       DELETE FROM logic_scripts 
       WHERE id = ? AND distributor_id = ?
     `, [scriptId, distributorId]);
@@ -521,7 +521,7 @@ app.get('/api/customer-attributes', async (req, res) => {
     const distributorId = req.session.distributor_id;
     
     // Get sample customer data to show available attributes
-    const sampleCustomer = await db.query(`
+    const sampleCustomer = await db.prepare(`
       SELECT * FROM accounts 
       WHERE distributor_id = ? 
       LIMIT 1
@@ -549,7 +549,7 @@ app.post('/api/execute-logic-scripts', async (req, res) => {
     const { distributor_id, trigger_point, context } = req.body;
     
     // Get all active scripts for this trigger point
-    const scripts = await db.query(`
+    const scripts = await db.prepare(`
       SELECT script_content, description 
       FROM logic_scripts 
       WHERE distributor_id = ? AND trigger_point = ? AND active = TRUE
