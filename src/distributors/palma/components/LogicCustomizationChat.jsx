@@ -9,7 +9,6 @@ export default function LogicCustomizationChat({ onLogout, onHome, brandName }) 
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [customerAttributes, setCustomerAttributes] = useState([]);
-  const [pendingScript, setPendingScript] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -60,12 +59,6 @@ What kind of business logic would you like to set up?`
     setIsLoading(true);
 
     try {
-      // If confirming a pending script
-      if (pendingScript && (userMessage.toLowerCase().includes('confirm') || userMessage.toLowerCase().includes('yes'))) {
-        await confirmScript();
-        return;
-      }
-
       // Call Claude API to generate script
       const response = await fetch('/api/claude-logic-chat', {
         method: 'POST',
@@ -84,45 +77,43 @@ What kind of business logic would you like to set up?`
       
       setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
       
+      // If a script was generated, automatically save it
       if (data.script) {
-        setPendingScript(data.script);
+        try {
+          const saveResponse = await fetch('/api/logic-scripts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(data.script)
+          });
+
+          if (!saveResponse.ok) throw new Error('Failed to save script');
+
+          // Add success message
+          setMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: '✅ Perfect! Your logic script has been saved and is now active. You can view and manage all your scripts by clicking "Manage Scripts" above.',
+            changes: [data.script.description]
+          }]);
+
+          // Show success notification like the AI customize chat
+          setTimeout(() => {
+            alert('Logic script successfully created and saved!');
+          }, 1000);
+
+        } catch (saveError) {
+          console.error('Error saving script:', saveError);
+          setMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: 'I generated the script successfully, but there was an error saving it to the database. Please try again or contact support.' 
+          }]);
+        }
       }
     } catch (error) {
       console.error('Error:', error);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         content: 'Sorry, I encountered an error. Please try again.' 
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function confirmScript() {
-    if (!pendingScript) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/logic-scripts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(pendingScript)
-      });
-
-      if (!response.ok) throw new Error('Failed to save script');
-
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: '✅ Perfect! Your logic script has been saved and is now active. You can view and manage all your scripts by clicking "Manage Scripts" above.' 
-      }]);
-      
-      setPendingScript(null);
-    } catch (error) {
-      console.error('Error saving script:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Sorry, there was an error saving your script. Please try again.' 
       }]);
     } finally {
       setIsLoading(false);
@@ -169,29 +160,24 @@ What kind of business logic would you like to set up?`
                   : 'bg-white border shadow-sm'
               }`}>
                 <div className="whitespace-pre-wrap">{message.content}</div>
+                
+                {/* Show changes if any (like the AI customize chat) */}
+                {message.changes && message.changes.length > 0 && (
+                  <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded">
+                    <p className="text-sm font-medium text-green-800 mb-1">Script Created:</p>
+                    <ul className="text-sm text-green-700">
+                      {message.changes.map((change, index) => (
+                        <li key={index} className="flex items-start">
+                          <span className="text-green-500 mr-1">✓</span>
+                          {change}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           ))}
-          
-          {/* Pending Script Preview */}
-          {pendingScript && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h3 className="font-semibold text-yellow-800 mb-2">📋 Script Preview</h3>
-              <div className="space-y-2 text-sm">
-                <p><strong>Description:</strong> {pendingScript.description}</p>
-                <p><strong>Trigger Point:</strong> {triggerPoints.find(tp => tp.key === pendingScript.trigger_point)?.label}</p>
-                <details className="mt-2">
-                  <summary className="cursor-pointer font-medium text-yellow-700">View Generated Code</summary>
-                  <pre className="mt-2 p-3 bg-gray-100 rounded text-xs overflow-x-auto">
-                    {pendingScript.script_content}
-                  </pre>
-                </details>
-              </div>
-              <div className="mt-3 pt-3 border-t border-yellow-200">
-                <p className="text-yellow-700 font-medium">Type "confirm" to save this script, or ask me to make changes.</p>
-              </div>
-            </div>
-          )}
           
           {isLoading && (
             <div className="flex justify-start">
