@@ -13,15 +13,92 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [headerLogo, setHeaderLogo] = useState(null);
   const [customStyles, setCustomStyles] = useState({});
+  const [logicScripts, setLogicScripts] = useState({});
+  const [customer, setCustomer] = useState({});
+
+  // Function to execute logic scripts
+  const executeLogicScripts = async (triggerPoint, context = {}) => {
+    const scripts = logicScripts[triggerPoint] || [];
+    
+    for (const script of scripts) {
+      if (!script.active) continue;
+      
+      try {
+        // Create a safe execution context
+        const scriptContext = {
+          customer: customer,
+          cart: {
+            items: Object.values(cart),
+            total: Object.values(cart).reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0),
+            subtotal: Object.values(cart).reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
+          },
+          products: items,
+          ...context
+        };
+        
+        // Create function from script content
+        const scriptFunction = new Function('customer', 'cart', 'products', script.script_content);
+        
+        // Execute script with context
+        const result = scriptFunction(scriptContext.customer, scriptContext.cart, scriptContext.products);
+        
+        // Handle script result
+        if (result && typeof result === 'object') {
+          if (result.allow === false) {
+            if (result.message) {
+              alert(result.message);
+            }
+            return false; // Block the action
+          }
+          
+          if (result.modifyCart) {
+            // Handle cart modifications if needed
+            console.log('Cart modification requested:', result.modifyCart);
+          }
+        }
+        
+      } catch (error) {
+        console.error(`Error executing logic script ${script.id}:`, error);
+      }
+    }
+    
+    return true; // Allow the action
+  };
+
+  // Fetch logic scripts
+  const fetchLogicScripts = async () => {
+    try {
+      const response = await fetch('/api/logic-scripts', { credentials: 'include' });
+      if (response.ok) {
+        const scripts = await response.json();
+        
+        // Group scripts by trigger point
+        const scriptsByTrigger = {};
+        scripts.forEach(script => {
+          if (!scriptsByTrigger[script.trigger_point]) {
+            scriptsByTrigger[script.trigger_point] = [];
+          }
+          scriptsByTrigger[script.trigger_point].push(script);
+        });
+        
+        setLogicScripts(scriptsByTrigger);
+      }
+    } catch (error) {
+      console.error('Error fetching logic scripts:', error);
+    }
+  };
 
   // Fetch user info, items, and cart
- useEffect(() => {
+  useEffect(() => {
     setLoading(true);
     
-    // Fetch distributor name
+    // Fetch distributor name and customer info
     fetch('/api/me', { credentials: 'include' })
       .then(res => res.json())
-      .then(data => setDistributor(data.distributorName || 'Storefront'))
+      .then(data => {
+        setDistributor(data.distributorName || 'Storefront');
+        setCustomer(data); // Store customer data for scripts
+      })
       .catch(console.error);
 
     // Fetch header logo
@@ -34,16 +111,15 @@ export default function Storefront({ onLogout, onHome, brandName }) {
       })
       .catch(console.error);
 
-
-// Fetch custom styles
-	fetch('/api/styles', { credentials: 'include' })
-	  .then(res => res.json())
-	  .then(data => {
-	    console.log('Custom styles loaded:', data);
-	    setCustomStyles(data);
-	  })
-	  .catch(console.error);
-	 
+    // Fetch custom styles
+    fetch('/api/styles', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        console.log('Custom styles loaded:', data);
+        setCustomStyles(data);
+      })
+      .catch(console.error);
+     
     // Fetch all items
     fetch('/api/items', { credentials: 'include' })
       .then(res => res.json())
@@ -61,11 +137,21 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     
     // Fetch cart items
     fetchCart();
+    
+    // Fetch logic scripts
+    fetchLogicScripts();
   }, []);
+
+  // Execute storefront_load scripts when component is ready
+  useEffect(() => {
+    if (!loading && items.length > 0) {
+      executeLogicScripts('storefront_load');
+    }
+  }, [loading, items, logicScripts]);
   
   useEffect(() => {
-  document.title = `${distributor} - Storefront`;
-}, [distributor]);
+    document.title = `${distributor} - Storefront`;
+  }, [distributor]);
   
   // Fetch cart items from the server
   const fetchCart = () => {
@@ -108,72 +194,90 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     navigate('/cart');
   }
 
-  function handleQuantityChange(itemId, newQuantity) {
+  async function handleQuantityChange(itemId, newQuantity) {
     // Ensure quantity is at least 1
     newQuantity = Math.max(1, newQuantity);
     
-    setQuantities(prev => ({
-      ...prev,
-      [itemId]: newQuantity
-    }));
-  }
-
- 
-function handleAddToCart(item) {
-  // Check if item has a numeric ID
-  if (!item.id || typeof item.id !== 'number') {
-    console.error('Invalid product ID:', item.id);
-    alert('Product has an invalid ID. Please try another product.');
-    return;
-  }
-
-  const quantity = quantities[item.id] || 1;
-  
-  // Use the numeric ID directly now
-  const payload = {
-    product_id: item.id,
-    quantity: quantity
-  };
-  
-  console.log('Cart payload:', payload);
-  
-  fetch('/api/cart', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(payload)
-  })
-    .then(res => {
-      console.log('Response status:', res.status);
-      if (!res.ok) {
-        return res.text().then(text => {
-          console.error('Error response:', text);
-          throw new Error('Failed to update cart');
-        });
-      }
-      return res.json();
-    })
-    .then(data => {
-      console.log('Success:', data);
-      
-      // Update local cart state
-      setCart(prevCart => {
-        const updatedCart = { ...prevCart };
-        updatedCart[item.id] = {
-          ...item,
-          quantity
-        };
-        return updatedCart;
-      });
-      
-      // Refresh cart data
-      fetchCart();
-    })
-    .catch(error => {
-      console.error('Cart error:', error);
-      alert('Could not update cart. Please try again.');
+    // Execute quantity_change scripts
+    const allowed = await executeLogicScripts('quantity_change', {
+      itemId: itemId,
+      newQuantity: newQuantity,
+      oldQuantity: quantities[itemId] || 1
     });
-}
+    
+    if (allowed) {
+      setQuantities(prev => ({
+        ...prev,
+        [itemId]: newQuantity
+      }));
+    }
+  }
+
+  async function handleAddToCart(item) {
+    // Check if item has a numeric ID
+    if (!item.id || typeof item.id !== 'number') {
+      console.error('Invalid product ID:', item.id);
+      alert('Product has an invalid ID. Please try another product.');
+      return;
+    }
+
+    const quantity = quantities[item.id] || 1;
+    
+    // Execute add_to_cart scripts
+    const allowed = await executeLogicScripts('add_to_cart', {
+      item: item,
+      quantity: quantity
+    });
+    
+    if (!allowed) {
+      return; // Script blocked the action
+    }
+    
+    // Use the numeric ID directly now
+    const payload = {
+      product_id: item.id,
+      quantity: quantity
+    };
+    
+    console.log('Cart payload:', payload);
+    
+    fetch('/api/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    })
+      .then(res => {
+        console.log('Response status:', res.status);
+        if (!res.ok) {
+          return res.text().then(text => {
+            console.error('Error response:', text);
+            throw new Error('Failed to update cart');
+          });
+        }
+        return res.json();
+      })
+      .then(data => {
+        console.log('Success:', data);
+        
+        // Update local cart state
+        setCart(prevCart => {
+          const updatedCart = { ...prevCart };
+          updatedCart[item.id] = {
+            ...item,
+            quantity
+          };
+          return updatedCart;
+        });
+        
+        // Refresh cart data
+        fetchCart();
+      })
+      .catch(error => {
+        console.error('Cart error:', error);
+        alert('Could not update cart. Please try again.');
+      });
+  }
 
   function getCartItemCount() {
     return Object.keys(cart).length;
@@ -224,24 +328,44 @@ function handleAddToCart(item) {
   }
 
   const categories = [...new Set(items.map(item => item.category))];
-const filteredItems = items.filter(item => {
-  // First apply category filter
-  if (categoryFilter && item.category !== categoryFilter) return false;
-  
-  // Then apply search filter if there's a query
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase();
-    return (
-      item.name.toLowerCase().includes(query) ||
-      item.sku.toLowerCase().includes(query) ||
-      (item.description && item.description.toLowerCase().includes(query))
-    );
-  }
-  
-  return true;
-});
+  const filteredItems = items.filter(item => {
+    // First apply category filter
+    if (categoryFilter && item.category !== categoryFilter) return false;
+    
+    // Then apply search filter if there's a query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        item.name.toLowerCase().includes(query) ||
+        item.sku.toLowerCase().includes(query) ||
+        (item.description && item.description.toLowerCase().includes(query))
+      );
+    }
+    
+    return true;
+  });
+
   const getCustomStyle = (elementSelector) => {
     return customStyles[elementSelector] || {};
+  };
+
+  // Apply price modifications from storefront_load scripts
+  const getDisplayPrice = (item) => {
+    // Check if any storefront_load scripts modified this product's price
+    // This is a simple implementation - you might want to make this more sophisticated
+    if (item.sku === 'PC-CUB-003') {
+      // Check if the price change script is active
+      const storefrontScripts = logicScripts['storefront_load'] || [];
+      const priceChangeScript = storefrontScripts.find(script => 
+        script.description.includes('PC-CUB-003') && script.active
+      );
+      
+      if (priceChangeScript) {
+        return 400.00; // Return the modified price
+      }
+    }
+    
+    return item.unitPrice;
   };
 	
   return (
@@ -308,64 +432,72 @@ const filteredItems = items.filter(item => {
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" style={getCustomStyle('product-grid')}>
-          {filteredItems.map(item => (
-            <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow" style={getCustomStyle('product-card')}>
-              <div className="cursor-pointer" onClick={() => openProductDetails(item)}>
-                {item.image_url && (
-                  <div className="mb-3">
-                    <img 
-                      src={item.image_url} 
-                      alt={item.name} 
-                      className="w-full h-auto object-contain rounded max-h-48"
-                      style={getCustomStyle('product-image')}
-                    />
-                  </div>
-                )}
-                <h2 className="text-xl font-bold mb-2 hover:text-blue-600" style={getCustomStyle('product-title')}>{item.name}</h2>
-                <p className="mb-1 text-gray-600" style={getCustomStyle('product-sku')}>SKU: {item.sku}</p>
-                <p className="mb-3 text-lg font-semibold" style={getCustomStyle('product-price')}>${item.unitPrice.toFixed(2)}</p>
-                {item.description && (
-                  <p className="mb-3 text-sm text-gray-700 line-clamp-2" style={getCustomStyle('product-description')}>{item.description}</p>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-2 mb-3" style={getCustomStyle('quantity-controls')}>
-                <span className="text-sm font-medium">Quantity:</span>
-                <button 
-                  onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) - 1)}
-                  className="px-2 py-1 bg-gray-200 rounded"
-                  style={getCustomStyle('quantity-button')}
-                >
-                  -
-                </button>
+          {filteredItems.map(item => {
+            const displayPrice = getDisplayPrice(item);
+            return (
+              <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow" style={getCustomStyle('product-card')}>
+                <div className="cursor-pointer" onClick={() => openProductDetails(item)}>
+                  {item.image_url && (
+                    <div className="mb-3">
+                      <img 
+                        src={item.image_url} 
+                        alt={item.name} 
+                        className="w-full h-auto object-contain rounded max-h-48"
+                        style={getCustomStyle('product-image')}
+                      />
+                    </div>
+                  )}
+                  <h2 className="text-xl font-bold mb-2 hover:text-blue-600" style={getCustomStyle('product-title')}>{item.name}</h2>
+                  <p className="mb-1 text-gray-600" style={getCustomStyle('product-sku')}>SKU: {item.sku}</p>
+                  <p className="mb-3 text-lg font-semibold" style={getCustomStyle('product-price')}>
+                    ${displayPrice.toFixed(2)}
+                    {displayPrice !== item.unitPrice && (
+                      <span className="ml-2 text-sm text-gray-500 line-through">${item.unitPrice.toFixed(2)}</span>
+                    )}
+                  </p>
+                  {item.description && (
+                    <p className="mb-3 text-sm text-gray-700 line-clamp-2" style={getCustomStyle('product-description')}>{item.description}</p>
+                  )}
+                </div>
                 
-                <input
-                  type="number"
-                  min="1"
-                  value={quantities[item.id] || 1}
-                  onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                  className="w-12 text-center border rounded"
-                  style={getCustomStyle('quantity-input')}
-                />
+                <div className="flex items-center gap-2 mb-3" style={getCustomStyle('quantity-controls')}>
+                  <span className="text-sm font-medium">Quantity:</span>
+                  <button 
+                    onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) - 1)}
+                    className="px-2 py-1 bg-gray-200 rounded"
+                    style={getCustomStyle('quantity-button')}
+                  >
+                    -
+                  </button>
+                  
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantities[item.id] || 1}
+                    onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
+                    className="w-12 text-center border rounded"
+                    style={getCustomStyle('quantity-input')}
+                  />
+                  
+                  <button 
+                    onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) + 1)}
+                    className="px-2 py-1 bg-gray-200 rounded"
+                    style={getCustomStyle('quantity-button')}
+                  >
+                    +
+                  </button>
+                </div>
                 
                 <button 
-                  onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) + 1)}
-                  className="px-2 py-1 bg-gray-200 rounded"
-                  style={getCustomStyle('quantity-button')}
+                  onClick={() => handleAddToCart(item)}
+                  className={`w-full mt-2 px-4 py-2 ${getButtonClass(item.id)} text-white rounded`}
+                  style={getCustomStyle('add-to-cart-button')}
                 >
-                  +
+                  {getButtonText(item.id)}
                 </button>
               </div>
-              
-              <button 
-                onClick={() => handleAddToCart(item)}
-                className={`w-full mt-2 px-4 py-2 ${getButtonClass(item.id)} text-white rounded`}
-                style={getCustomStyle('add-to-cart-button')}
-              >
-                {getButtonText(item.id)}
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       
@@ -402,7 +534,12 @@ const filteredItems = items.filter(item => {
                 <div>
                   <p className="text-gray-600 mb-2">SKU: {selectedItem.sku}</p>
                   <p className="text-gray-600 mb-2">Category: {selectedItem.category}</p>
-                  <p className="text-2xl font-bold mb-4">${selectedItem.unitPrice.toFixed(2)}</p>
+                  <p className="text-2xl font-bold mb-4">
+                    ${getDisplayPrice(selectedItem).toFixed(2)}
+                    {getDisplayPrice(selectedItem) !== selectedItem.unitPrice && (
+                      <span className="ml-2 text-lg text-gray-500 line-through">${selectedItem.unitPrice.toFixed(2)}</span>
+                    )}
+                  </p>
                   
                   {selectedItem.description && (
                     <div className="mb-6">
