@@ -417,8 +417,7 @@ app.post('/api/logic-scripts', (req, res) => {
 
 // Update script order
 
-app.put('/api/logic-scripts/reorder', async (req, res) => {
-
+app.put('/api/logic-scripts/reorder', (req, res) => {
   if (!req.session.distributor_id || req.session.userType !== 'Admin') {
     return res.status(401).json({ error: 'Not authorized' });
   }
@@ -427,34 +426,29 @@ app.put('/api/logic-scripts/reorder', async (req, res) => {
     const distributorId = req.session.distributor_id;
     const { scripts } = req.body; // Array of { id, sequence_order }
     
-    // Update all scripts in a transaction
-   const updateStmt = db.prepare(`UPDATE ... WHERE id = ? AND distributor_id = ?`);
-	for (const script of scripts) {
-	  updateStmt.run(script.sequence_order, script.id, distributorId);
-	}
+    // Update all scripts using prepared statement
+    const updateStmt = db.prepare(`
+      UPDATE logic_scripts 
+      SET sequence_order = ? 
+      WHERE id = ? AND distributor_id = ?
+    `);
     
     for (const script of scripts) {
-      await db.prepare(`
-        UPDATE logic_scripts 
-        SET sequence_order = ? 
-        WHERE id = ? AND distributor_id = ?
-      `, [script.sequence_order, script.id, distributorId]);
+      updateStmt.run(script.sequence_order, script.id, distributorId);
     }
     
-    await db.prepare('COMMIT');
     res.json({ success: true });
   } catch (error) {
-    await db.prepare('ROLLBACK');
     console.error('Error reordering scripts:', error);
     res.status(500).json({ error: 'Failed to reorder scripts' });
   }
 });
 
-app.put('/api/logic-scripts/:id', async (req, res) => {
-
+app.put('/api/logic-scripts/:id', (req, res) => {
   if (!req.session.distributor_id || req.session.userType !== 'Admin') {
     return res.status(401).json({ error: 'Not authorized' });
   }
+  
   try {
     const distributorId = req.session.distributor_id;
     const scriptId = req.params.id;
@@ -480,36 +474,40 @@ app.put('/api/logic-scripts/:id', async (req, res) => {
       return res.status(400).json({ error: 'No fields to update' });
     }
     
-	updateValues.push(scriptId, distributorId);
-	
-	await db.prepare(`
-	  UPDATE logic_scripts 
-	  SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
-	  WHERE id = ? AND distributor_id = ?
-	`, updateValues);
-	
-	res.json({ success: true });
-	} catch (error) {
-	  console.error('Error updating script:', error);
-	  res.status(500).json({ error: 'Failed to update script' });
-	}
+    updateValues.push(scriptId, distributorId);
+    
+    const updateStmt = db.prepare(`
+      UPDATE logic_scripts 
+      SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND distributor_id = ?
+    `);
+    
+    updateStmt.run(...updateValues);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating script:', error);
+    res.status(500).json({ error: 'Failed to update script' });
+  }
 });
 // Delete logic script
 
 
-app.delete('/api/logic-scripts/:id', async (req, res) => {
-
+app.delete('/api/logic-scripts/:id', (req, res) => {
   if (!req.session.distributor_id || req.session.userType !== 'Admin') {
     return res.status(401).json({ error: 'Not authorized' });
   }
+  
   try {
     const distributorId = req.session.distributor_id;
     const scriptId = req.params.id;
     
-    await db.prepare(`
+    const deleteStmt = db.prepare(`
       DELETE FROM logic_scripts 
       WHERE id = ? AND distributor_id = ?
-    `, [scriptId, distributorId]);
+    `);
+    
+    deleteStmt.run(scriptId, distributorId);
     
     res.json({ success: true });
   } catch (error) {
@@ -517,6 +515,7 @@ app.delete('/api/logic-scripts/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete script' });
   }
 });
+
 
 // Get customer attributes for script context
 app.get('/api/customer-attributes', async (req, res) => {
@@ -550,17 +549,19 @@ app.get('/api/customer-attributes', async (req, res) => {
 });
 
 // Execute logic scripts (for frontend to call)
-app.post('/api/execute-logic-scripts', async (req, res) => {
+app.post('/api/execute-logic-scripts', (req, res) => {
   try {
     const { distributor_id, trigger_point, context } = req.body;
     
     // Get all active scripts for this trigger point
-    const scripts = await db.prepare(`
+    const scriptsStmt = db.prepare(`
       SELECT script_content, description 
       FROM logic_scripts 
-      WHERE distributor_id = ? AND trigger_point = ? AND active = TRUE
+      WHERE distributor_id = ? AND trigger_point = ? AND active = 1
       ORDER BY sequence_order
-    `, [distributor_id, trigger_point]);
+    `);
+    
+    const scripts = scriptsStmt.all(distributor_id, trigger_point);
     
     const results = [];
     
