@@ -49,6 +49,7 @@ class PricingEngine {
       console.error('Error fetching logic scripts:', error);
       return {};
     }
+    console.log('Found scripts for distributor', distributorId, ':', scripts);
   }
 
   // Clear the script cache (call this when scripts are modified)
@@ -122,6 +123,7 @@ class PricingEngine {
 
   // Apply pricing modifications to a single product (distributor-specific, SYNC)
   applyProductPricing(product, distributorId, customer = {}) {
+     console.log('applyProductPricing called for product:', product.sku, 'distributor:', distributorId);
     const scripts = this.getActiveLogicScripts(distributorId);
     const storefrontScripts = scripts['storefront_load'] || [];
 
