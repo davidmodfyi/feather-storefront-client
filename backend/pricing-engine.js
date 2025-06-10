@@ -1,4 +1,4 @@
-// pricing-engine.js - Centralized pricing logic for backend
+// pricing-engine.js - Centralized pricing logic for backend (SYNCHRONOUS VERSION)
 // This module handles executing logic scripts and applying price modifications
 // to ensure consistent pricing across all API endpoints for each distributor
 
@@ -9,8 +9,8 @@ class PricingEngine {
     this.cacheExpiry = 5 * 60 * 1000; // 5 minutes
   }
 
-  // Get active logic scripts from database with caching (distributor-specific)
-  async getActiveLogicScripts(distributorId) {
+  // Get active logic scripts from database with caching (distributor-specific, SYNC)
+  getActiveLogicScripts(distributorId) {
     const cacheKey = `scripts_${distributorId}`;
     const now = Date.now();
     const cached = this.scriptCache.get(cacheKey);
@@ -20,12 +20,14 @@ class PricingEngine {
     }
 
     try {
-      const scripts = await this.db.all(`
+      // Use synchronous database calls like your working pattern
+      const stmt = this.db.prepare(`
         SELECT id, trigger_point, script_content, description, active, created_at
         FROM logic_scripts 
         WHERE active = 1 AND distributor_id = ?
         ORDER BY created_at ASC
-      `, [distributorId]);
+      `);
+      const scripts = stmt.all(distributorId);
 
       // Group scripts by trigger point
       const scriptsByTrigger = {};
@@ -54,9 +56,9 @@ class PricingEngine {
     this.scriptCache.clear();
   }
 
-  // Execute logic scripts for a specific trigger point and distributor
-  async executeLogicScripts(triggerPoint, distributorId, context = {}) {
-    const scriptsByTrigger = await this.getActiveLogicScripts(distributorId);
+  // Execute logic scripts for a specific trigger point and distributor (SYNC)
+  executeLogicScripts(triggerPoint, distributorId, context = {}) {
+    const scriptsByTrigger = this.getActiveLogicScripts(distributorId);
     const scripts = scriptsByTrigger[triggerPoint] || [];
 
     for (const script of scripts) {
@@ -118,9 +120,9 @@ class PricingEngine {
     return { allowed: true };
   }
 
-  // Apply pricing modifications to a single product (distributor-specific)
-  async applyProductPricing(product, distributorId, customer = {}) {
-    const scripts = await this.getActiveLogicScripts(distributorId);
+  // Apply pricing modifications to a single product (distributor-specific, SYNC)
+  applyProductPricing(product, distributorId, customer = {}) {
+    const scripts = this.getActiveLogicScripts(distributorId);
     const storefrontScripts = scripts['storefront_load'] || [];
 
     // Apply price modifications from storefront_load scripts for this distributor
@@ -150,34 +152,35 @@ class PricingEngine {
     };
   }
 
-  // Apply pricing modifications to multiple products (distributor-specific)
-  async applyProductsPricing(products, distributorId, customer = {}) {
+  // Apply pricing modifications to multiple products (distributor-specific, SYNC)
+  applyProductsPricing(products, distributorId, customer = {}) {
     const modifiedProducts = [];
     
     for (const product of products) {
-      const modifiedProduct = await this.applyProductPricing(product, distributorId, customer);
+      const modifiedProduct = this.applyProductPricing(product, distributorId, customer);
       modifiedProducts.push(modifiedProduct);
     }
     
     return modifiedProducts;
   }
 
-  // Apply pricing to cart items (distributor-specific)
-  async applyCartPricing(cartItems, distributorId, customer = {}) {
+  // Apply pricing to cart items (distributor-specific, SYNC)
+  applyCartPricing(cartItems, distributorId, customer = {}) {
     const modifiedItems = [];
     
     for (const item of cartItems) {
-      const modifiedItem = await this.applyProductPricing(item, distributorId, customer);
+      const modifiedItem = this.applyProductPricing(item, distributorId, customer);
       modifiedItems.push(modifiedItem);
     }
     
     return modifiedItems;
   }
 
-  // Validate an action (like add to cart, quantity change, etc.) for a distributor
-  async validateAction(triggerPoint, distributorId, context) {
-    return await this.executeLogicScripts(triggerPoint, distributorId, context);
+  // Validate an action (like add to cart, quantity change, etc.) for a distributor (SYNC)
+  validateAction(triggerPoint, distributorId, context) {
+    return this.executeLogicScripts(triggerPoint, distributorId, context);
   }
+}
 }
 
 // Example usage in your API routes:
@@ -296,9 +299,5 @@ async function onLogicScriptChanged(distributorId) {
 }
 
 module.exports = {
-  PricingEngine,
-  getItemsWithPricing,
-  getCartWithPricing,
-  addToCartWithValidation,
-  onLogicScriptChanged
+  PricingEngine
 };
