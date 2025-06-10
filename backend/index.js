@@ -2047,17 +2047,28 @@ app.get('/api/cart', (req, res) => {
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
+  const distributorId = req.session.distributor_id;
+  if (!distributorId) {
+    console.log('No distributor_id in session');
+    return res.status(401).json({ error: 'No distributor found' });
+  }
+  
   try {
-    // Get cart items with product details
+    // Get cart items with product details (ensure they belong to this distributor)
     const cartItems = db.prepare(`
       SELECT ci.id as cart_item_id, ci.quantity, p.*
       FROM cart_items ci
       JOIN products p ON ci.product_id = p.id
-      WHERE ci.user_id = ?
-    `).all(req.session.user_id);
+      WHERE ci.user_id = ? AND p.distributor_id = ?
+    `).all(req.session.user_id, distributorId);
     
     console.log(`Found ${cartItems.length} cart items for user ${req.session.user_id}`);
-    res.json(cartItems);
+    
+    // NEW: Apply pricing engine to cart items (synchronous)
+    const customer = req.session.user || {};
+    const cartItemsWithPricing = pricingEngine.applyCartPricing(cartItems, distributorId, customer);
+    
+    res.json(cartItemsWithPricing);
   } catch (error) {
     console.error('Error fetching cart items:', error);
     res.status(500).json({ error: 'Error fetching cart items' });
