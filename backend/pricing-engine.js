@@ -143,7 +143,7 @@ class PricingEngine {
       } catch (error) {
         console.error(`Error applying pricing script ${script.id}:`, error);
       }
-    }
+}
 
     return {
       ...product,
@@ -151,7 +151,7 @@ class PricingEngine {
       originalPrice: product.unitPrice !== modifiedPrice ? product.unitPrice : undefined
     };
   }
-
+}
 // Example usage in your API routes:
 
 // In your main server file, create a global pricing engine instance
