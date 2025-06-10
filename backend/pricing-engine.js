@@ -151,6 +151,35 @@ class PricingEngine {
       originalPrice: product.unitPrice !== modifiedPrice ? product.unitPrice : undefined
     };
   }
+  applyProductsPricing(products, distributorId, customer = {}) {
+    const modifiedProducts = [];
+    
+    for (const product of products) {
+      const modifiedProduct = this.applyProductPricing(product, distributorId, customer);
+      modifiedProducts.push(modifiedProduct);
+    }
+    
+    return modifiedProducts;
+  }
+
+  // Apply pricing to cart items (distributor-specific, SYNC)
+  applyCartPricing(cartItems, distributorId, customer = {}) {
+    const modifiedItems = [];
+    
+    for (const item of cartItems) {
+      const modifiedItem = this.applyProductPricing(item, distributorId, customer);
+      modifiedItems.push(modifiedItem);
+    }
+    
+    return modifiedItems;
+  }
+
+  // Validate an action (like add to cart, quantity change, etc.) for a distributor (SYNC)
+  validateAction(triggerPoint, distributorId, context) {
+    return this.executeLogicScripts(triggerPoint, distributorId, context);
+  }
+
+  
 }
 // Example usage in your API routes:
 
