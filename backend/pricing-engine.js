@@ -152,37 +152,6 @@ class PricingEngine {
     };
   }
 
-  // Apply pricing modifications to multiple products (distributor-specific, SYNC)
-  applyProductsPricing(products, distributorId, customer = {}) {
-    const modifiedProducts = [];
-    
-    for (const product of products) {
-      const modifiedProduct = this.applyProductPricing(product, distributorId, customer);
-      modifiedProducts.push(modifiedProduct);
-    }
-    
-    return modifiedProducts;
-  }
-
-  // Apply pricing to cart items (distributor-specific, SYNC)
-  applyCartPricing(cartItems, distributorId, customer = {}) {
-    const modifiedItems = [];
-    
-    for (const item of cartItems) {
-      const modifiedItem = this.applyProductPricing(item, distributorId, customer);
-      modifiedItems.push(modifiedItem);
-    }
-    
-    return modifiedItems;
-  }
-
-  // Validate an action (like add to cart, quantity change, etc.) for a distributor (SYNC)
-  validateAction(triggerPoint, distributorId, context) {
-    return this.executeLogicScripts(triggerPoint, distributorId, context);
-  }
-}
-}
-
 // Example usage in your API routes:
 
 // In your main server file, create a global pricing engine instance
