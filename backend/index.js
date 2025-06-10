@@ -8,7 +8,7 @@ const MemoryStore = require('memorystore')(session);
 const multer = require('multer');
 const Anthropic = require('@anthropic-ai/sdk');
 const { PricingEngine } = require('./pricing-engine');
-const pricingEngine = new PricingEngine(db);
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
 });
