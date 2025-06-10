@@ -2009,7 +2009,11 @@ app.get('/api/items', (req, res) => {
   const products = database.getProductsByDistributor(distributorId);
   console.log('Found products count:', products.length);
   
-  res.json(products);
+  // NEW: Apply pricing engine (synchronous)
+  const customer = req.session.user || {};
+  const productsWithPricing = pricingEngine.applyProductsPricing(products, distributorId, customer);
+  
+  res.json(productsWithPricing);
 });
 
 // Accounts endpoint
