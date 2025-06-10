@@ -28,6 +28,7 @@ function getDistributorSlug(distributorId) {
 
 // Get the db object from the database module
 const db = database.db;
+const pricingEngine = new PricingEngine(db);
 const isProduction = process.env.NODE_ENV === 'production';
 
 
