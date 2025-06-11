@@ -1848,7 +1848,7 @@ app.post('/api/submit-order', async (req, res) => {
     
     console.log('Validating order submission for distributor:', distributorId, 'total:', orderTotal);
     
-    const validation = pricingEngine.validateAction('submit_order', distributorId, {
+    const validation = pricingEngine.validateAction('submit', distributorId, {
       customer: user,
       cart: { 
         items: items, 
