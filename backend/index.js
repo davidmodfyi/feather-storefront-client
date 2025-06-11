@@ -857,6 +857,18 @@ app.post('/api/branding/logo', upload.single('logo'), (req, res) => {
   }
 });
 
+app.get('/debug/scripts', (req, res) => {
+  try {
+    const scripts = db.prepare(`
+      SELECT id, name, trigger_point, active, distributor_id 
+      FROM logic_scripts WHERE active = 1
+    `).all();
+    res.json(scripts);
+  } catch (error) {
+    res.json({ error: error.message });
+  }
+});
+
 app.get('/api/diagnose-filesystem', (req, res) => {
   try {
     const publicDir = path.join(__dirname, 'public');
