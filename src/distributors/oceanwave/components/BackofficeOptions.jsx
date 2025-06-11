@@ -60,10 +60,24 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
               <p className="text-sm text-gray-600">Customize your logo and appearance (Def)</p>
             )}
             {option.name === "Storefront UI Customization" && (
-              <p className="text-sm text-gray-600">Configure directly with AI, powered by Claude</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-gray-600">Configure directly with AI, powered by Claude</p>
+                <img 
+                  src="/claudelogo.png" 
+                  alt="Claude" 
+                  className="w-4 h-4 opacity-75" 
+                />
+              </div>
             )}
             {option.name === "Storefront Logic Customization" && (
-              <p className="text-sm text-gray-600">Configure directly with AI, powered by Claude</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-gray-600">Configure directly with AI, powered by Claude</p>
+                <img 
+                  src="/claudelogo.png" 
+                  alt="Claude" 
+                  className="w-4 h-4 opacity-75" 
+                />
+              </div>
             )}
           </div>
         ))}
