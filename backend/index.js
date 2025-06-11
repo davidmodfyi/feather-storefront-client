@@ -1831,6 +1831,30 @@ app.post('/api/submit-order', async (req, res) => {
       return total + (item.quantity * item.unitPrice);
     }, 0);
     
+    // ADD VALIDATION HERE - Check business rules before processing order
+    const distributorId = user.distributor_id || 1; // Use default distributor if none set
+    
+    console.log('Validating order submission for distributor:', distributorId, 'total:', orderTotal);
+    
+    const validation = pricingEngine.validateAction('submit_order', distributorId, {
+      customer: user,
+      cart: { 
+        items: items, 
+        total: orderTotal, 
+        subtotal: orderTotal 
+      },
+      products: items
+    });
+    
+    if (!validation.allowed) {
+      console.log('Order validation failed:', validation.message);
+      return res.status(400).json({ 
+        error: validation.message || 'Order submission not allowed' 
+      });
+    }
+    
+    console.log('Order validation passed');
+    
     // Add total row
     csvContent += `${orderDate},${user.account_id || 'N/A'},${user.customer_name || user.username},${user.username},"","Order Total","","",${orderTotal.toFixed(2)}\n`;
     
@@ -1922,9 +1946,7 @@ app.post('/api/submit-order', async (req, res) => {
     console.error('Error processing order:', error);
     res.status(500).json({ error: 'Error processing order' });
   }
-});
-
-
+}); 
 // Connect account for ordering
 app.post('/api/connect-account', (req, res) => {
   console.log('Connect account request');
