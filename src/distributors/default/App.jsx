@@ -76,19 +76,19 @@ function PortalPage({ brandName, onLogout, userType }) {
         <div className="flex gap-4">
           <button 
             onClick={() => navigate('/storefront')}
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded"
+            className="px-6 py-3 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold rounded border border-blue-200"
           >
             Storefront
           </button>
           <button 
             onClick={() => navigate('/orders')}
-            className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded"
+            className="px-6 py-3 bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold rounded border border-purple-200"
           >
             Order History
           </button>
           <button 
             onClick={onLogout}
-            className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded"
+            className="px-6 py-3 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded border border-red-200"
           >
             Logout
           </button>
@@ -109,25 +109,25 @@ function PortalPage({ brandName, onLogout, userType }) {
       <div className="flex gap-4">
         <button 
           onClick={() => navigate('/storefront')}
-          className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded"
+          className="px-6 py-3 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold rounded border border-blue-200"
         >
           Storefront
         </button>
         <button 
           onClick={() => navigate('/backoffice')}
-          className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded"
+          className="px-6 py-3 bg-green-100 hover:bg-green-200 text-green-800 font-bold rounded border border-green-200"
         >
           Backoffice
         </button>
         <button 
           onClick={() => navigate('/orders')}
-          className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded"
+          className="px-6 py-3 bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold rounded border border-purple-200"
         >
           Order History
         </button>
         <button 
           onClick={onLogout}
-          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded"
+          className="px-6 py-3 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded border border-red-200"
         >
           Logout
         </button>
