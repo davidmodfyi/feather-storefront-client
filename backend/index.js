@@ -1868,7 +1868,8 @@ app.post('/api/submit-order', async (req, res) => {
     const path = require('path');
     const csvFilePath = path.join(__dirname, `order_${orderId}_${orderDate}.csv`);
     
-    fs.promises.writeFileSync(csvFilePath, csvContent);
+    // FIXED: Use regular fs.writeFileSync (synchronous) instead of fs.promises.writeFileSync
+    fs.writeFileSync(csvFilePath, csvContent);
     
     // Send email with CSV attachment
     // Note: This requires nodemailer or similar package to be installed
@@ -1876,13 +1877,13 @@ app.post('/api/submit-order', async (req, res) => {
     const nodemailer = require('nodemailer');
     
     // Create SMTP service account
-	const transporter = nodemailer.createTransport({
-	  service: 'gmail',
-	  auth: {
-		user: 'david@mod.fyi',
-		pass: process.env.GMAIL_APP_PASSWORD 
-	  }
-	});
+    const transporter = nodemailer.createTransporter({
+      service: 'gmail',
+      auth: {
+        user: 'david@mod.fyi',
+        pass: process.env.GMAIL_APP_PASSWORD 
+      }
+    });
     
     // Send mail with defined transport object
     const info = await transporter.sendMail({
@@ -1906,8 +1907,8 @@ app.post('/api/submit-order', async (req, res) => {
     
     console.log('Email sent:', info.messageId);
     
-    // Delete temporary CSV file
-    fs.promises.unlinkSync(csvFilePath);
+    // FIXED: Use regular fs.unlinkSync (synchronous) instead of fs.promises.unlinkSync
+    fs.unlinkSync(csvFilePath);
     
     // Clear the user's cart
     db.prepare(`DELETE FROM cart_items WHERE user_id = ?`).run(req.session.user_id);
