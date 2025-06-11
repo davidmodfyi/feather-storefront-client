@@ -29,6 +29,8 @@ class PricingEngine {
       `);
       const scripts = stmt.all(distributorId);
 
+      console.log('Found scripts for distributor', distributorId, ':', scripts);
+
       // Group scripts by trigger point
       const scriptsByTrigger = {};
       scripts.forEach(script => {
@@ -49,7 +51,6 @@ class PricingEngine {
       console.error('Error fetching logic scripts:', error);
       return {};
     }
-    console.log('Found scripts for distributor', distributorId, ':', scripts);
   }
 
   // Clear the script cache (call this when scripts are modified)
@@ -121,63 +122,174 @@ class PricingEngine {
     return { allowed: true };
   }
 
-let modifiedPrice = product.unitPrice;
+  // Check if a product matches the criteria in a pricing rule description
+  productMatchesCriteria(product, description) {
+    const lowerDesc = description.toLowerCase();
+    const lowerSku = product.sku.toLowerCase();
+    const lowerName = (product.name || '').toLowerCase();
+    const lowerCategory = (product.category || '').toLowerCase();
+    const lowerBrand = (product.brand || '').toLowerCase();
 
-for (const script of storefrontScripts) {
-  try {
-    // Check for percentage discount (like "90% discount")
-    const percentMatch = script.description.match(/(\d+)%\s+discount/i);
-    if (percentMatch) {
-      const discountPercent = parseFloat(percentMatch[1]);
-      modifiedPrice = modifiedPrice * (1 - discountPercent / 100);
-      console.log(`Applied ${discountPercent}% discount to ${product.sku}: ${product.unitPrice} -> ${modifiedPrice}`);
-      continue; // Apply this discount and continue to next script
+    // Check for "all products" or "all items"
+    if (lowerDesc.includes('all product') || lowerDesc.includes('all item')) {
+      return true;
     }
-  
+
+    // Check for specific SKU match
+    if (lowerDesc.includes(lowerSku)) {
+      return true;
+    }
+
+    // Check for brand match (e.g., "Apply 20% discount to Nike products")
+    if (lowerBrand && lowerDesc.includes(lowerBrand)) {
+      return true;
+    }
+
+    // Check for category match (e.g., "Apply $10 off all Electronics")
+    if (lowerCategory && lowerDesc.includes(lowerCategory)) {
+      return true;
+    }
+
+    // Check for name match
+    if (lowerName && lowerDesc.includes(lowerName)) {
+      return true;
+    }
+
+    // Check for comma-separated SKU list (e.g., "Apply discount to SKU-001, SKU-002, SKU-003")
+    const skuMatches = lowerDesc.match(/sku[:\s]*([a-z0-9\-,\s]+)/i);
+    if (skuMatches) {
+      const skuList = skuMatches[1].split(',').map(s => s.trim().toLowerCase());
+      if (skuList.includes(lowerSku)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Parse and apply pricing rule from description
+  applyPricingRule(originalPrice, description) {
+    const lowerDesc = description.toLowerCase();
+    
+    try {
+      // 1. Percentage discount (e.g., "Apply 20% discount", "20% off")
+      const percentMatch = lowerDesc.match(/(\d+(?:\.\d+)?)%\s*(?:discount|off)/);
+      if (percentMatch) {
+        const discountPercent = parseFloat(percentMatch[1]);
+        const newPrice = originalPrice * (1 - discountPercent / 100);
+        return {
+          newPrice: Math.max(0, newPrice),
+          type: 'percentage_discount',
+          value: discountPercent
+        };
+      }
+
+      // 2. Dollar amount off (e.g., "$5 off", "Apply $10 discount")
+      const dollarOffMatch = lowerDesc.match(/\$(\d+(?:\.\d{2})?)\s*(?:off|discount)/);
+      if (dollarOffMatch) {
+        const discountAmount = parseFloat(dollarOffMatch[1]);
+        const newPrice = originalPrice - discountAmount;
+        return {
+          newPrice: Math.max(0, newPrice),
+          type: 'dollar_discount',
+          value: discountAmount
+        };
+      }
+
+      // 3. Set specific price (e.g., "Set price to $25.99", "Price at $15")
+      const setPriceMatch = lowerDesc.match(/(?:set price to|price at|new price)\s*\$(\d+(?:\.\d{2})?)/);
+      if (setPriceMatch) {
+        const newPrice = parseFloat(setPriceMatch[1]);
+        return {
+          newPrice: Math.max(0, newPrice),
+          type: 'set_price',
+          value: newPrice
+        };
+      }
+
+      // 4. Percentage markup (e.g., "Add 15% markup", "15% markup")
+      const markupMatch = lowerDesc.match(/(?:add\s*)?(\d+(?:\.\d+)?)%\s*markup/);
+      if (markupMatch) {
+        const markupPercent = parseFloat(markupMatch[1]);
+        const newPrice = originalPrice * (1 + markupPercent / 100);
+        return {
+          newPrice: newPrice,
+          type: 'percentage_markup',
+          value: markupPercent
+        };
+      }
+
+      // 5. Dollar amount added (e.g., "Add $5", "$3 additional")
+      const dollarAddMatch = lowerDesc.match(/(?:add\s*)?\$(\d+(?:\.\d{2})?)\s*(?:additional)?/);
+      if (dollarAddMatch) {
+        const addAmount = parseFloat(dollarAddMatch[1]);
+        const newPrice = originalPrice + addAmount;
+        return {
+          newPrice: newPrice,
+          type: 'dollar_addition',
+          value: addAmount
+        };
+      }
+
+    } catch (error) {
+      console.error('Error parsing pricing rule:', error);
+    }
+
+    return null; // No pricing rule found
+  }
 
   // Apply pricing modifications to a single product (distributor-specific, SYNC)
   applyProductPricing(product, distributorId, customer = {}) {
-      console.log('=== Processing product:', product.sku, 'Original price:', product.unitPrice);
-      
-      const scripts = this.getActiveLogicScripts(distributorId);
-      console.log('All scripts found:', Object.keys(scripts));
-      
-      const storefrontScripts = scripts['storefront_load'] || [];
-      console.log('Storefront scripts count:', storefrontScripts.length);
-      
-      if (storefrontScripts.length > 0) {
-        console.log('First script description:', storefrontScripts[0].description);
-      }
+    console.log('=== Processing product:', product.sku, 'Original price:', product.unitPrice);
     
-      console.log('applyProductPricing called for product:', product.sku, 'distributor:', distributorId);
+    const scripts = this.getActiveLogicScripts(distributorId);
+    console.log('All scripts found:', Object.keys(scripts));
+    
+    const storefrontScripts = scripts['storefront_load'] || [];
+    console.log('Storefront scripts count:', storefrontScripts.length);
+    
+    if (storefrontScripts.length > 0) {
+      console.log('First script description:', storefrontScripts[0].description);
+    }
 
-  
-      // Apply price modifications from storefront_load scripts for this distributor
-      let modifiedPrice = product.unitPrice;
-    
+    var modifiedPrice = product.unitPrice;
+    var appliedRules = [];
+
     for (const script of storefrontScripts) {
       try {
-        // Check if this script modifies this specific product
-        if (script.description.includes(product.sku)) {
-          // Simple pattern matching for price changes
-          // This could be made more sophisticated
-          const priceMatch = script.description.match(/\$(\d+(?:\.\d{2})?)/);
-          if (priceMatch) {
-            modifiedPrice = parseFloat(priceMatch[1]);
-            break; // Apply first matching script
+        // Check if this script applies to this product
+        if (this.productMatchesCriteria(product, script.description)) {
+          console.log('Product', product.sku, 'matches criteria for script:', script.description);
+          
+          const pricingResult = this.applyPricingRule(modifiedPrice, script.description);
+          if (pricingResult) {
+            modifiedPrice = pricingResult.newPrice;
+            appliedRules.push({
+              description: script.description,
+              type: pricingResult.type,
+              value: pricingResult.value,
+              oldPrice: product.unitPrice,
+              newPrice: modifiedPrice
+            });
+            console.log('Applied pricing rule to', product.sku, ':', pricingResult.type, pricingResult.value, '-> new price:', modifiedPrice);
           }
         }
       } catch (error) {
         console.error(`Error applying pricing script ${script.id}:`, error);
       }
-}
+    }
 
+    console.log('Final price for', product.sku, ':', modifiedPrice);
+    
     return {
       ...product,
       unitPrice: modifiedPrice,
-      originalPrice: product.unitPrice !== modifiedPrice ? product.unitPrice : undefined
+      originalPrice: product.unitPrice !== modifiedPrice ? product.unitPrice : undefined,
+      appliedPricingRules: appliedRules.length > 0 ? appliedRules : undefined
     };
   }
+
+  // Apply pricing modifications to multiple products (distributor-specific, SYNC)
   applyProductsPricing(products, distributorId, customer = {}) {
     const modifiedProducts = [];
     
@@ -205,122 +317,6 @@ for (const script of storefrontScripts) {
   validateAction(triggerPoint, distributorId, context) {
     return this.executeLogicScripts(triggerPoint, distributorId, context);
   }
-
-  
-}
-// Example usage in your API routes:
-
-// In your main server file, create a global pricing engine instance
-// const pricingEngine = new PricingEngine(db);
-
-// Modified /api/items endpoint (distributor-aware)
-async function getItemsWithPricing(req, res) {
-  try {
-    // Get customer info from session (includes distributor)
-    const customer = req.session.user || {};
-    const distributorId = customer.distributorId;
-    
-    if (!distributorId) {
-      return res.status(400).json({ error: 'No distributor found for user' });
-    }
-    
-    // Fetch base products from database for this distributor
-    const items = await db.all(`
-      SELECT * FROM products 
-      WHERE distributor_id = ? 
-      ORDER BY name
-    `, [distributorId]);
-    
-    // Apply pricing logic for this distributor
-    const itemsWithPricing = await pricingEngine.applyProductsPricing(items, distributorId, customer);
-    
-    res.json(itemsWithPricing);
-  } catch (error) {
-    console.error('Error fetching items:', error);
-    res.status(500).json({ error: 'Failed to fetch items' });
-  }
-}
-
-// Modified /api/cart endpoint (distributor-aware)
-async function getCartWithPricing(req, res) {
-  try {
-    const customer = req.session.user || {};
-    const distributorId = customer.distributorId;
-    
-    if (!distributorId) {
-      return res.status(400).json({ error: 'No distributor found for user' });
-    }
-    
-    // Fetch cart items from database for this user and distributor
-    const cartItems = await db.all(`
-      SELECT ci.id as cart_item_id, ci.quantity, 
-             p.id, p.name, p.sku, p.unitPrice, p.description, p.image_url, p.category
-      FROM cart_items ci
-      JOIN products p ON ci.product_id = p.id
-      WHERE ci.user_id = ? AND p.distributor_id = ?
-    `, [req.session.user.id, distributorId]);
-    
-    // Apply pricing logic to cart items for this distributor
-    const cartWithPricing = await pricingEngine.applyCartPricing(cartItems, distributorId, customer);
-    
-    res.json(cartWithPricing);
-  } catch (error) {
-    console.error('Error fetching cart:', error);
-    res.status(500).json({ error: 'Failed to fetch cart' });
-  }
-}
-
-// Modified add to cart endpoint with validation (distributor-aware)
-async function addToCartWithValidation(req, res) {
-  try {
-    const { product_id, quantity } = req.body;
-    const customer = req.session.user || {};
-    const distributorId = customer.distributorId;
-    
-    if (!distributorId) {
-      return res.status(400).json({ error: 'No distributor found for user' });
-    }
-    
-    // Get product details (ensure it belongs to this distributor)
-    const product = await db.get(`
-      SELECT * FROM products 
-      WHERE id = ? AND distributor_id = ?
-    `, [product_id, distributorId]);
-    
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found for this distributor' });
-    }
-    
-    // Apply pricing to get current price for this distributor
-    const productWithPricing = await pricingEngine.applyProductPricing(product, distributorId, customer);
-    
-    // Validate the action with logic scripts for this distributor
-    const validation = await pricingEngine.validateAction('add_to_cart', distributorId, {
-      customer,
-      item: productWithPricing,
-      quantity
-    });
-    
-    if (!validation.allowed) {
-      return res.status(400).json({ 
-        error: validation.message || 'Action not allowed' 
-      });
-    }
-    
-    // Proceed with adding to cart using current price
-    // ... rest of add to cart logic
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error adding to cart:', error);
-    res.status(500).json({ error: 'Failed to add to cart' });
-  }
-}
-
-// Helper function to invalidate pricing cache when scripts change (distributor-specific)
-async function onLogicScriptChanged(distributorId) {
-  const cacheKey = `scripts_${distributorId}`;
-  pricingEngine.scriptCache.delete(cacheKey);
 }
 
 module.exports = {
