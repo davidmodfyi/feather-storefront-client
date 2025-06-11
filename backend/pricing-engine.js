@@ -121,6 +121,20 @@ class PricingEngine {
     return { allowed: true };
   }
 
+let modifiedPrice = product.unitPrice;
+
+for (const script of storefrontScripts) {
+  try {
+    // Check for percentage discount (like "90% discount")
+    const percentMatch = script.description.match(/(\d+)%\s+discount/i);
+    if (percentMatch) {
+      const discountPercent = parseFloat(percentMatch[1]);
+      modifiedPrice = modifiedPrice * (1 - discountPercent / 100);
+      console.log(`Applied ${discountPercent}% discount to ${product.sku}: ${product.unitPrice} -> ${modifiedPrice}`);
+      continue; // Apply this discount and continue to next script
+    }
+  
+
   // Apply pricing modifications to a single product (distributor-specific, SYNC)
   applyProductPricing(product, distributorId, customer = {}) {
       console.log('=== Processing product:', product.sku, 'Original price:', product.unitPrice);
