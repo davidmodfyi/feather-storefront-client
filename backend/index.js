@@ -1877,7 +1877,7 @@ app.post('/api/submit-order', async (req, res) => {
     const nodemailer = require('nodemailer');
     
     // Create SMTP service account
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: 'david@mod.fyi',
