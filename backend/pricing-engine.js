@@ -123,12 +123,24 @@ class PricingEngine {
 
   // Apply pricing modifications to a single product (distributor-specific, SYNC)
   applyProductPricing(product, distributorId, customer = {}) {
-     console.log('applyProductPricing called for product:', product.sku, 'distributor:', distributorId);
-    const scripts = this.getActiveLogicScripts(distributorId);
-    const storefrontScripts = scripts['storefront_load'] || [];
-
-    // Apply price modifications from storefront_load scripts for this distributor
-    let modifiedPrice = product.unitPrice;
+      console.log('=== Processing product:', product.sku, 'Original price:', product.unitPrice);
+      
+      const scripts = this.getActiveLogicScripts(distributorId);
+      console.log('All scripts found:', Object.keys(scripts));
+      
+      const storefrontScripts = scripts['storefront_load'] || [];
+      console.log('Storefront scripts count:', storefrontScripts.length);
+      
+      if (storefrontScripts.length > 0) {
+        console.log('First script description:', storefrontScripts[0].description);
+      }
+    
+      console.log('applyProductPricing called for product:', product.sku, 'distributor:', distributorId);
+      const scripts = this.getActiveLogicScripts(distributorId);
+      const storefrontScripts = scripts['storefront_load'] || [];
+  
+      // Apply price modifications from storefront_load scripts for this distributor
+      let modifiedPrice = product.unitPrice;
     
     for (const script of storefrontScripts) {
       try {
