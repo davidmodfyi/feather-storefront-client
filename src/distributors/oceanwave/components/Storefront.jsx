@@ -350,23 +350,57 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   };
 
   // Apply price modifications from storefront_load scripts
-  const getDisplayPrice = (item) => {
-    // Check if any storefront_load scripts modified this product's price
-    // This is a simple implementation - you might want to make this more sophisticated
-    if (item.sku === 'PC-CUB-003') {
-      // Check if the price change script is active
-      const storefrontScripts = logicScripts['storefront_load'] || [];
-      const priceChangeScript = storefrontScripts.find(script => 
-        script.description.includes('PC-CUB-003') && script.active
+const getDisplayPrice = (item) => {
+  let modifiedPrice = item.unitPrice;
+  
+  // Execute storefront_load scripts to get price modifications
+  const storefrontScripts = logicScripts['storefront_load'] || [];
+  
+  for (const script of storefrontScripts) {
+    if (!script.active) continue;
+    
+    try {
+      // Create execution context
+      const scriptContext = {
+        customer: customer,
+        cart: {
+          items: Object.values(cart),
+          total: Object.values(cart).reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0),
+          subtotal: Object.values(cart).reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
+        },
+        products: items,
+        currentProduct: item // Add the current product to context
+      };
+      
+      // Create function from script content
+      const scriptFunction = new Function(
+        'customer', 
+        'cart', 
+        'products', 
+        'currentProduct',
+        script.script_content
       );
       
-      if (priceChangeScript) {
-        return 400.00; // Return the modified price
+      // Execute script
+      const result = scriptFunction(
+        scriptContext.customer, 
+        scriptContext.cart, 
+        scriptContext.products,
+        scriptContext.currentProduct
+      );
+      
+      // Handle price modifications
+      if (result && typeof result === 'object' && result.modifyPrice !== undefined) {
+        modifiedPrice = result.modifyPrice;
       }
+      
+    } catch (error) {
+      console.error(`Error executing pricing script ${script.id}:`, error);
     }
-    
-    return item.unitPrice;
-  };
+  }
+  
+  return modifiedPrice;
+};
 	
   return (
     <div className="p-6" style={getCustomStyle('page-background')}>
