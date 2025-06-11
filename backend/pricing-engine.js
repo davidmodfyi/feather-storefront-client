@@ -136,8 +136,7 @@ class PricingEngine {
       }
     
       console.log('applyProductPricing called for product:', product.sku, 'distributor:', distributorId);
-      const scripts = this.getActiveLogicScripts(distributorId);
-      const storefrontScripts = scripts['storefront_load'] || [];
+
   
       // Apply price modifications from storefront_load scripts for this distributor
       let modifiedPrice = product.unitPrice;
