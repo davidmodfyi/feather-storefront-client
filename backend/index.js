@@ -860,7 +860,7 @@ app.post('/api/branding/logo', upload.single('logo'), (req, res) => {
 app.get('/debug/scripts', (req, res) => {
   try {
     const scripts = db.prepare(`
-      SELECT id, name, trigger_point, active, distributor_id 
+      SELECT id, trigger_point, active, distributor_id 
       FROM logic_scripts WHERE active = 1
     `).all();
     res.json(scripts);
