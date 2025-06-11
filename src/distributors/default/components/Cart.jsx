@@ -140,46 +140,48 @@ useEffect(() => {
       });
   }
 
-	const handleSubmitOrder = async () => {
-		  if (cartItems.length === 0) {
-			alert('Your cart is empty. Please add items before submitting an order.');
-			return;
-		  }
+const handleSubmitOrder = async () => {
+  if (cartItems.length === 0) {
+    alert('Your cart is empty. Please add items before submitting an order.');
+    return;
+  }
 
-		  try {
-			// Prepare order data
-			const orderData = {
-			  items: cartItems,
-			  subtotal: subtotal,
-			  email: "david@mod.fyi" // Hard-coded recipient email as requested
-			};
+  try {
+    // Prepare order data
+    const orderData = {
+      items: cartItems,
+      subtotal: subtotal,
+      email: "david@mod.fyi" // Hard-coded recipient email as requested
+    };
 
-			// Submit order to backend
-			const response = await fetch('/api/submit-order', {
-			  method: 'POST',
-			  headers: { 'Content-Type': 'application/json' },
-			  credentials: 'include',
-			  body: JSON.stringify(orderData)
-			});
+    // Submit order to backend
+    const response = await fetch('/api/submit-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(orderData)
+    });
 
-			if (!response.ok) {
-			  throw new Error('Failed to submit order');
-			}
+    const result = await response.json();
 
-			const result = await response.json();
-			
-			if (result.success) {
-			  alert('Your order has been submitted successfully! A confirmation email has been sent.');
-			  // Clear cart after successful order
-			  handleClearCart();
-			} else {
-			  alert(`Error: ${result.error}`);
-			}
-		  } catch (error) {
-			console.error('Error submitting order:', error);
-			alert('There was an error submitting your order. Please try again.');
-		  }
-		};
+    if (!response.ok) {
+      // Show the actual error message from the server
+      alert(result.error || 'Failed to submit order');
+      return;
+    }
+    
+    if (result.success) {
+      alert('Your order has been submitted successfully! A confirmation email has been sent.');
+      // Clear cart after successful order
+      handleClearCart();
+    } else {
+      alert(`Error: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('Error submitting order:', error);
+    alert('There was an error submitting your order. Please try again.');
+  }
+};
 
   function calculateSubtotal() {
     return cartItems.reduce((total, item) => {
