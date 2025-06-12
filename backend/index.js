@@ -235,7 +235,8 @@ app.get('/api/branding/logo', (req, res) => {
     const absolutePath = path.join(__dirname, 'public', relativePath);
     console.log('Checking logo at absolute path:', absolutePath);
     
-    if (!fs.promises.existsSync(absolutePath)) {
+    // FIXED: Use fs.existsSync instead of fs.promises.existsSync
+    if (!fs.existsSync(absolutePath)) {
       console.log('Logo file not found at:', absolutePath);
       return res.json({ logo: null });
     }
@@ -248,47 +249,6 @@ app.get('/api/branding/logo', (req, res) => {
   } catch (error) {
     console.error('Error getting logo:', error);
     res.status(500).json({ error: 'Error getting logo' });
-  }
-});
-
-app.get('/api/debug/logo-paths', (req, res) => {
-  if (!req.session.distributor_id) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  
-  try {
-    const distributor = db.prepare(`
-      SELECT logo_path FROM distributors WHERE id = ?
-    `).get(req.session.distributor_id);
-    
-    const diagnostics = {
-      logo_path_in_db: distributor?.logo_path,
-      public_dir: path.join(__dirname, 'public'),
-      public_dir_exists: fs.promises.existsSync(path.join(__dirname, 'public')),
-      uploads_dir: path.join(__dirname, 'public', 'uploads'),
-      uploads_dir_exists: fs.promises.existsSync(path.join(__dirname, 'public', 'uploads')),
-      working_directory: process.cwd(),
-      __dirname: __dirname
-    };
-    
-    if (distributor?.logo_path) {
-      const relativePath = distributor.logo_path.startsWith('/') 
-        ? distributor.logo_path.substring(1) 
-        : distributor.logo_path;
-      
-      const absolutePath = path.join(__dirname, 'public', relativePath);
-      diagnostics.absolute_logo_path = absolutePath;
-      diagnostics.logo_file_exists = fs.promises.existsSync(absolutePath);
-      
-      if (diagnostics.logo_file_exists) {
-        diagnostics.logo_file_stats = fs.promises.statSync(absolutePath);
-      }
-    }
-    
-    res.json(diagnostics);
-  } catch (error) {
-    console.error('Error in logo diagnostics:', error);
-    res.status(500).json({ error: error.message });
   }
 });
 
@@ -319,7 +279,8 @@ app.get('/api/branding/header-logo', (req, res) => {
     const absolutePath = path.join(__dirname, 'public', relativePath);
     console.log('Checking header logo at absolute path:', absolutePath);
     
-    if (!fs.promises.existsSync(absolutePath)) {
+    // FIXED: Use fs.existsSync instead of fs.promises.existsSync
+    if (!fs.existsSync(absolutePath)) {
       console.log('Header logo file not found at:', absolutePath);
       return res.json({ logo: null });
     }
@@ -333,7 +294,6 @@ app.get('/api/branding/header-logo', (req, res) => {
     res.status(500).json({ error: 'Error getting header logo' });
   }
 });
-
 // Get all logic scripts for a distributor
 
 
