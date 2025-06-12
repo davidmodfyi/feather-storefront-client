@@ -72,7 +72,7 @@ function PortalPage({ brandName, onLogout, userType }) {
         ) : (
           <h1 className="text-2xl font-bold mb-4">{brandName || 'Feather Storefront'}</h1>
         )}
-        <p className="mb-6">Welcome! What would you like to do?</p>
+        <p className="mb-6">?</p>
         <div className="flex gap-4">
           <button 
             onClick={() => navigate('/storefront')}
@@ -90,7 +90,7 @@ function PortalPage({ brandName, onLogout, userType }) {
             onClick={onLogout}
             className="px-6 py-3 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded border border-red-200"
           >
-            Logout
+            Log Out
           </button>
         </div>
       </div>
@@ -105,7 +105,7 @@ function PortalPage({ brandName, onLogout, userType }) {
       ) : (
         <h1 className="text-2xl font-bold mb-4">{brandName || 'Feather Storefront'}</h1>
       )}
-      <p className="mb-6">Select a portal to continue</p>
+      <p className="mb-6"></p>
       <div className="flex gap-4">
         <button 
           onClick={() => navigate('/storefront')}
@@ -129,7 +129,7 @@ function PortalPage({ brandName, onLogout, userType }) {
           onClick={onLogout}
           className="px-6 py-3 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded border border-red-200"
         >
-          Logout
+          Log Out
         </button>
       </div>
     </div>
