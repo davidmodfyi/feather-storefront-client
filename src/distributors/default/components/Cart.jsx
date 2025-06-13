@@ -149,11 +149,12 @@ const handleSubmitOrder = async () => {
 
   try {
     // Prepare order data
-    const orderData = {
-      items: cartItems,
-      subtotal: subtotal,
-      email: "david@mod.fyi" // Hard-coded recipient email as requested
-    };
+	const orderData = { 
+	  items: cartItems, 
+	  total: subtotal,      // For the validation script
+	  subtotal: subtotal,   // In case something else needs it
+	  email: "david@mod.fyi" 
+	};
 
     // Submit order to backend
     const response = await fetch('/api/submit-order', {
