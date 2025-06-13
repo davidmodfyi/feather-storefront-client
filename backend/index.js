@@ -9,7 +9,7 @@ const multer = require('multer');
 const Anthropic = require('@anthropic-ai/sdk');
 const { PricingEngine } = require('./pricing-engine');
 
-const anthropic = new Anthropic({
+ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
 });
 
