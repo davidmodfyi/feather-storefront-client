@@ -818,20 +818,41 @@ app.post('/api/branding/logo', upload.single('logo'), (req, res) => {
 });
 
 app.get('/api/debug/scripts', (req, res) => {
-  const query = 'SELECT * FROM logic_scripts ORDER BY id';
+  console.log('🔍 Debug endpoint called - fetching logic_scripts');
   
-  db.all(query, [], (err, rows) => {
-    if (err) {
-      console.error('Error fetching logic_scripts:', err);
-      res.status(500).json({ error: err.message });
-      return;
-    }
+  try {
+    const query = 'SELECT * FROM logic_scripts ORDER BY id';
+    console.log('📋 Executing query:', query);
     
-    res.json({
-      count: rows.length,
-      scripts: rows
+    db.all(query, [], (err, rows) => {
+      if (err) {
+        console.error('❌ Database error:', err);
+        res.status(500).json({ 
+          error: 'Database error', 
+          details: err.message,
+          stack: err.stack 
+        });
+        return;
+      }
+      
+      console.log('✅ Query successful, found', rows.length, 'rows');
+      console.log('📊 Rows:', JSON.stringify(rows, null, 2));
+      
+      res.json({
+        success: true,
+        count: rows.length,
+        scripts: rows
+      });
     });
-  });
+    
+  } catch (error) {
+    console.error('❌ Catch block error:', error);
+    res.status(500).json({ 
+      error: 'Server error', 
+      details: error.message,
+      stack: error.stack 
+    });
+  }
 });
 
 app.get('/api/diagnose-filesystem', (req, res) => {
