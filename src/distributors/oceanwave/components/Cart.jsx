@@ -24,12 +24,6 @@ useEffect(() => {
   document.title = `${distributor} - Cart`;
 }, [distributor]);
 
-
-const alert = (message, title = "Notice", buttonText = "OK") => {
-  setModalConfig({ title, message, buttonText });
-  setShowModal(true);
-};
-	
   // Fetch cart items from the server
   const fetchCart = () => {
     setLoading(true);
