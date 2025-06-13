@@ -8,7 +8,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-
+ 
   useEffect(() => {
     // Fetch user info
     fetch('/api/me', { credentials: 'include' })
