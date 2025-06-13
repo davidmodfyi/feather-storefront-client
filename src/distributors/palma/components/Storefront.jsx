@@ -351,17 +351,21 @@ export default function Storefront({ onLogout, onHome, brandName }) {
 
   // Apply price modifications from storefront_load scripts
 const getDisplayPrice = (item) => {
+  console.log('🔍 Getting display price for:', item.sku, 'original price:', item.unitPrice);
+  
   let modifiedPrice = item.unitPrice;
-    console.log('🔍 Getting display price for:', item.sku, 'original price:', item.unitPrice);
-
+  
   // Execute storefront_load scripts to get price modifications
   const storefrontScripts = logicScripts['storefront_load'] || [];
+  console.log('📋 Storefront_load scripts found:', storefrontScripts.length);
   
   for (const script of storefrontScripts) {
     if (!script.active) continue;
     
+    console.log('🔄 Processing script:', script.id);
+    
     try {
-      // Create execution context
+      // Create execution context that matches what AI generates
       const scriptContext = {
         customer: customer,
         cart: {
@@ -369,38 +373,45 @@ const getDisplayPrice = (item) => {
           total: Object.values(cart).reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0),
           subtotal: Object.values(cart).reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
         },
-        products: items,
-        currentProduct: item // Add the current product to context
+        products: [item], // Pass as array for AI-generated scripts
+        currentProduct: item
       };
-      console.log('🎯 Script context:', scriptContext);
-      // Create function from script content
+      
+      // Execute script with proper context
       const scriptFunction = new Function(
-        'customer', 
-        'cart', 
-        'products', 
-        'currentProduct',
+        'customer', 'cart', 'products', 'currentProduct',
         script.script_content
       );
       
-      // Execute script
       const result = scriptFunction(
         scriptContext.customer, 
         scriptContext.cart, 
         scriptContext.products,
         scriptContext.currentProduct
       );
-       console.log('✅ Script result:', result);
-      // Handle price modifications
-      if (result && typeof result === 'object' && result.modifyPrice !== undefined) {
-	console.log('💰 Price modified from', modifiedPrice, 'to', result.modifyPrice);
+      
+      console.log('✅ Script result:', result);
+      
+      // Check if the script modified the products array
+      if (scriptContext.products && scriptContext.products.length > 0) {
+        const modifiedProduct = scriptContext.products[0];
+        if (modifiedProduct.price !== undefined) {
+          console.log('💰 Price modified via products array:', modifiedProduct.price);
+          modifiedPrice = modifiedProduct.price;
+        }
+      }
+      
+      // Also check for direct price modification
+      if (result && result.modifyPrice !== undefined) {
+        console.log('💰 Price modified via result:', result.modifyPrice);
         modifiedPrice = result.modifyPrice;
       }
       
     } catch (error) {
-      console.error(`Error executing pricing script ${script.id}:`, error);
-     
+      console.error('❌ Error executing pricing script', script.id, ':', error);
     }
   }
+  
   console.log('🏁 Final price for', item.sku, ':', modifiedPrice);
   return modifiedPrice;
 };
