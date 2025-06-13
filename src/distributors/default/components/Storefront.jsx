@@ -352,7 +352,8 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   // Apply price modifications from storefront_load scripts
 const getDisplayPrice = (item) => {
   let modifiedPrice = item.unitPrice;
-  
+    console.log('🔍 Getting display price for:', item.sku, 'original price:', item.unitPrice);
+
   // Execute storefront_load scripts to get price modifications
   const storefrontScripts = logicScripts['storefront_load'] || [];
   
@@ -371,7 +372,7 @@ const getDisplayPrice = (item) => {
         products: items,
         currentProduct: item // Add the current product to context
       };
-      
+      console.log('🎯 Script context:', scriptContext);
       // Create function from script content
       const scriptFunction = new Function(
         'customer', 
@@ -388,17 +389,19 @@ const getDisplayPrice = (item) => {
         scriptContext.products,
         scriptContext.currentProduct
       );
-      
+       console.log('✅ Script result:', result);
       // Handle price modifications
       if (result && typeof result === 'object' && result.modifyPrice !== undefined) {
+	console.log('💰 Price modified from', modifiedPrice, 'to', result.modifyPrice);
         modifiedPrice = result.modifyPrice;
       }
       
     } catch (error) {
       console.error(`Error executing pricing script ${script.id}:`, error);
+     
     }
   }
-  
+  console.log('🏁 Final price for', item.sku, ':', modifiedPrice);
   return modifiedPrice;
 };
 	
