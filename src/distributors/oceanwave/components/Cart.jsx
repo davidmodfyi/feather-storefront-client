@@ -7,6 +7,12 @@ export default function Cart({ onLogout, onHome, brandName }) {
   const [quantities, setQuantities] = useState({});
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [showModal, setShowModal] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+	  title: '',
+	  message: '',
+	  buttonText: 'OK'
+	});
 
   useEffect(() => {
     // Fetch user info
@@ -23,6 +29,39 @@ useEffect(() => {
   document.title = `${distributor} - Cart`;
 }, [distributor]);
 
+const CustomModal = ({ isOpen, onClose, title, message, buttonText = "OK" }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all">
+        <div className="p-6">
+          {title && (
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              {title}
+            </h3>
+          )}
+          <p className="text-gray-700 mb-6 leading-relaxed">
+            {message}
+          </p>
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              {buttonText}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};	
+const showCustomAlert = (message, title = "Notice", buttonText = "OK") => {
+  setModalConfig({ title, message, buttonText });
+  setShowModal(true);
+};
+	
   // Fetch cart items from the server
   const fetchCart = () => {
     setLoading(true);
@@ -95,7 +134,7 @@ useEffect(() => {
       })
       .catch(error => {
         console.error('Error updating cart:', error);
-        alert('There was an error updating your cart. Please try again.');
+        showCustomAlert('There was an error updating your cart. Please try again.');
       });
   }
 
@@ -114,7 +153,7 @@ useEffect(() => {
       })
       .catch(error => {
         console.error('Error removing item from cart:', error);
-        alert('There was an error removing the item from your cart. Please try again.');
+        showCustomAlert('There was an error removing the item from your cart. Please try again.');
       });
   }
 
@@ -136,13 +175,13 @@ useEffect(() => {
       })
       .catch(error => {
         console.error('Error clearing cart:', error);
-        alert('There was an error clearing your cart. Please try again.');
+        showCustomAlert('There was an error clearing your cart. Please try again.');
       });
   }
 
 const handleSubmitOrder = async () => {
   if (cartItems.length === 0) {
-    alert('Your cart is empty. Please add items before submitting an order.');
+    showCustomAlert('Your cart is empty. Please add items before submitting an order.');
     return;
   }
 
@@ -166,20 +205,20 @@ const handleSubmitOrder = async () => {
 
     if (!response.ok) {
       // Show the actual error message from the server
-      alert(result.error || 'Failed to submit order');
+      showCustomAlert(result.error || 'Failed to submit order');
       return;
     }
     
     if (result.success) {
-      alert('Your order has been submitted successfully! A confirmation email has been sent.');
+      showCustomAlert('Your order has been submitted successfully! A confirmation email has been sent.');
       // Clear cart after successful order
       handleClearCart();
     } else {
-      alert(`Error: ${result.error}`);
+      showCustomAlert(`Error: ${result.error}`);
     }
   } catch (error) {
     console.error('Error submitting order:', error);
-    alert('There was an error submitting your order. Please try again.');
+    showCustomAlert('There was an error submitting your order. Please try again.');
   }
 };
 
@@ -308,6 +347,7 @@ const handleSubmitOrder = async () => {
               </div>
             ))}
           </div>
+		
           
           <div className="border-t pt-4 flex justify-between items-center">
             <div>
@@ -321,6 +361,13 @@ const handleSubmitOrder = async () => {
 		>
 		  Submit Order
 		</button>
+		<CustomModal
+		      isOpen={showModal}
+		      onClose={() => setShowModal(false)}
+		      title={modalConfig.title}
+		      message={modalConfig.message}
+		      buttonText={modalConfig.buttonText}
+    		/>
           </div>
         </>
       )}
