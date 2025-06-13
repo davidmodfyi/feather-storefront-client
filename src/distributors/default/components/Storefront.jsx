@@ -363,19 +363,26 @@ const getDisplayPrice = (item) => {
     if (!script.active) continue;
     
     console.log('🔄 Processing script:', script.id);
-    
+    console.log('📝 Script content:', script.script_content);
+
     try {
-      // Create execution context that matches what AI generates
-      const scriptContext = {
-        customer: customer,
-        cart: {
-          items: Object.values(cart),
-          total: Object.values(cart).reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0),
-          subtotal: Object.values(cart).reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
-        },
-        products: [item], // Pass as array for AI-generated scripts
-        currentProduct: item
+      // Create a product copy with both unitPrice and price fields
+      const productWithPrice = {
+        ...item,
+        price: item.unitPrice  // Add the price field that the script expects
       };
+      
+      // Create products array that the script can modify
+      const products = [productWithPrice];
+      
+      // Create cart context
+      const cartContext = {
+        items: Object.values(cart),
+        total: Object.values(cart).reduce((sum, cartItem) => sum + (cartItem.unitPrice * cartItem.quantity), 0),
+        subtotal: Object.values(cart).reduce((sum, cartItem) => sum + (cartItem.unitPrice * cartItem.quantity), 0)
+      };
+      
+      console.log('📦 Products before script:', products);
       
       // Execute script with proper context
       const scriptFunction = new Function(
@@ -384,21 +391,19 @@ const getDisplayPrice = (item) => {
       );
       
       const result = scriptFunction(
-        scriptContext.customer, 
-        scriptContext.cart, 
-        scriptContext.products,
-        scriptContext.currentProduct
+        customer, 
+        cartContext, 
+        products,  // Pass the modifiable products array
+        productWithPrice
       );
       
       console.log('✅ Script result:', result);
+      console.log('📦 Products after script:', products);
       
       // Check if the script modified the products array
-      if (scriptContext.products && scriptContext.products.length > 0) {
-        const modifiedProduct = scriptContext.products[0];
-        if (modifiedProduct.price !== undefined) {
-          console.log('💰 Price modified via products array:', modifiedProduct.price);
-          modifiedPrice = modifiedProduct.price;
-        }
+      if (products && products.length > 0 && products[0].price !== undefined) {
+        console.log('💰 Price modified via products array from', item.unitPrice, 'to', products[0].price);
+        modifiedPrice = products[0].price;
       }
       
       // Also check for direct price modification
