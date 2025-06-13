@@ -824,7 +824,7 @@ app.get('/api/debug/scripts', (req, res) => {
     const query = 'SELECT * FROM logic_scripts ORDER BY id';
     console.log('📋 Executing query:', query);
     
-    db.all(query, [], (err, rows) => {
+    database.all(query, [], (err, rows) => {  // <- Changed from db.all to database.all
       if (err) {
         console.error('❌ Database error:', err);
         res.status(500).json({ 
