@@ -7,6 +7,7 @@ import BackofficeOptions from './components/BackofficeOptions';
 import Cart from './components/Cart';
 import OrderHistory from './components/OrderHistory';
 import Branding from './components/Branding';
+import TableBuilder from './components/TableBuilder';
 import { useNavigate } from 'react-router-dom';
 import AIChat from './components/AIChat';
 import LogicCustomizationChat from './components/LogicCustomizationChat';
@@ -316,6 +317,19 @@ function App({ distributorSlug }) {
                 <>
                   <Header brandName={brandName} />
                   <Branding brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+                </>
+              )
+          }
+        />
+        <Route
+          path="/backoffice/table-builder"
+          element={
+            userType === 'Customer' 
+              ? <Navigate to="/" replace /> 
+              : (
+                <>
+                  <Header brandName={brandName} />
+                  <TableBuilder brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
                 </>
               )
           }
