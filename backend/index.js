@@ -580,33 +580,63 @@ app.post('/api/claude-logic-chat', async (req, res) => {
 AVAILABLE CUSTOMER ATTRIBUTES: ${customerAttributes.join(', ')}
 
 AVAILABLE TRIGGER POINTS:
-- storefront_load: When customer first visits the store
-- quantity_change: When customer changes item quantities  
-- add_to_cart: When customer adds items to cart
+- storefront_load: When customer first visits the store (USE THIS FOR PRICING MODIFICATIONS)
 - submit: Before order is submitted
 
-CONTEXT OBJECTS AVAILABLE IN SCRIPTS:
-- customer: Object with all customer attributes (${customerAttributes.join(', ')})
-- cart: Object with {items: [{product_id, name, price, quantity}], total, subtotal}
-- products: Array of all available products
+CRITICAL: How the execution context works:
+The script receives these parameters that you can read and DIRECTLY MODIFY:
+- customer: Object with customer attributes (${customerAttributes.join(', ')})
+- cart: Object with {items: [], total: 0, subtotal: 0}
+- products: Array of product objects with {id, name, sku, unitPrice, price, category, etc.}
+- currentProduct: The specific product being processed (for storefront_load only)
 
-SCRIPT REQUIREMENTS:
-1. Return an object: {allow: true/false, message?: "popup text", modifyCart?: {}}
-2. Use only safe JavaScript - no external API calls, no dangerous operations
-3. Be precise and handle edge cases
-4. Always include clear error handling
+FOR PRICING MODIFICATIONS (storefront_load trigger):
+- The script is called once per product displayed
+- You receive a 'products' array with ONE product object
+- To modify prices: directly change products[0].price
+- The system reads the modified products[0].price value after your script runs
+- DO NOT return anything for pricing - just modify the products array directly
 
-IMPORTANT: When providing a complete script, format it EXACTLY like this:
+FOR BUSINESS LOGIC (submit trigger):
+- Return an object: {allow: true/false, message?: "popup text"}
+- If allow: false, the action is blocked and message is shown to user
 
+PRICING SCRIPT EXAMPLES:
+
+Example 1 - Simple discount:
 SCRIPT_START
-trigger_point: [trigger_point_key]
-description: [Brief description of what this script does]
+trigger_point: storefront_load
+description: Apply $200 discount to all products
 
-[Your JavaScript code here]
+try {
+  if (products && products.length > 0 && products[0].price) {
+    // Directly modify the price in the products array
+    products[0].price = Math.max(0, products[0].price - 200);
+  }
+} catch (error) {
+  console.error("Error applying discount:", error);
+}
 
 SCRIPT_END
 
-Example script format:
+Example 2 - Customer-specific pricing:
+SCRIPT_START
+trigger_point: storefront_load
+description: 20% surcharge for Pennsylvania customers
+
+try {
+  if (products && products.length > 0 && products[0].price) {
+    if (customer.state === 'PA') {
+      products[0].price = products[0].price * 1.20;
+    }
+  }
+} catch (error) {
+  console.error("Error applying surcharge:", error);
+}
+
+SCRIPT_END
+
+Example 3 - Business logic (submit only):
 SCRIPT_START
 trigger_point: submit
 description: Prevent orders under $100 minimum
@@ -621,13 +651,30 @@ return { allow: true };
 
 SCRIPT_END
 
+SCRIPT REQUIREMENTS:
+1. For pricing (storefront_load): Directly modify products[0].price, do not return anything
+2. For business logic (submit): Return {allow: true/false, message?: "text"}
+3. Use only safe JavaScript - no external API calls, no dangerous operations
+4. Always include try/catch for pricing scripts
+5. Check if objects exist before modifying them
+
+IMPORTANT: When providing a complete script, format it EXACTLY like this:
+
+SCRIPT_START
+trigger_point: [trigger_point_key]
+description: [Brief description of what this script does]
+
+[Your JavaScript code here]
+
+SCRIPT_END
+
 When user requests logic, follow this process:
 1. Understand the requirement clearly
-2. Ask clarifying questions if needed
-3. Determine the appropriate trigger point
-4. Generate the JavaScript code using the SCRIPT_START/SCRIPT_END format
-5. Provide a clear description and examples
-6. Ask for confirmation before finalizing
+2. Determine if it's pricing modification (use storefront_load) or business logic (use submit)
+3. For pricing: write code that modifies products[0].price directly
+4. For business logic: write code that returns {allow: true/false, message}
+5. Use the SCRIPT_START/SCRIPT_END format
+6. Always include error handling
 
 Be conversational and helpful. Explain your reasoning.`;
 
