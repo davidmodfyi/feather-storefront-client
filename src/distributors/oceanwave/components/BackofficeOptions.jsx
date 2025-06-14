@@ -13,7 +13,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
     { name: "Branding", path: "/backoffice/branding" },
     { name: "Storefront UI Customization", path: "/backoffice/ai-chat" },
     { name: "Storefront Logic Customization", path: "/backoffice/logic" },
-    { name: "Manual File Upload", path: "/backoffice/upload" },
+    { name: "Table Builder", path: "/backoffice/table-builder" },
     { name: "Custom Table", path: "/backoffice/table" },
     { name: "Logs", path: "/backoffice/logs" }
   ];
@@ -36,7 +36,8 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
               option.name === "Manage Customers" ? 'bg-blue-50' : 
               option.name === "Branding" ? 'bg-green-50' : 
               option.name === "Storefront UI Customization" ? 'bg-purple-50' : 
-              option.name === "Storefront Logic Customization" ? 'bg-orange-50' : ''
+              option.name === "Storefront Logic Customization" ? 'bg-orange-50' : 
+              option.name === "Table Builder" ? 'bg-cyan-50' : ''
             }`}
             onClick={() => {
               if (option.name === "Manage Customers") {
@@ -47,6 +48,8 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
                 navigate("/backoffice/ai-chat");
               } else if (option.name === "Storefront Logic Customization") {
                 navigate("/backoffice/logic");
+              } else if (option.name === "Table Builder") {
+                navigate("/backoffice/table-builder");
               } else {
                 alert(`${option.name} functionality is not implemented yet.`);
               }
@@ -72,6 +75,16 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
             {option.name === "Storefront Logic Customization" && (
               <div className="flex items-center gap-2">
                 <p className="text-sm text-gray-600">Configure directly with AI, powered by Claude</p>
+                <img 
+                  src="/claudelogo.png" 
+                  alt="Claude" 
+                  className="w-4 h-4 opacity-75" 
+                />
+              </div>
+            )}
+            {option.name === "Table Builder" && (
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-gray-600">Configure Master Data Attributes, powered by Claude</p>
                 <img 
                   src="/claudelogo.png" 
                   alt="Claude" 
