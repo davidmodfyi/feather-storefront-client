@@ -369,7 +369,7 @@ app.post('/api/logic-scripts', (req, res) => {
     `);
     
     const result = insertStmt.run(distributorId, trigger_point, script_content, description, nextOrder);
-    
+    pricingEngine.clearCache(); // Add this line
     res.json({ success: true, id: result.lastInsertRowid });
   } catch (error) {
     console.error('Error creating logic script:', error);
@@ -399,7 +399,7 @@ app.put('/api/logic-scripts/reorder', (req, res) => {
     for (const script of scripts) {
       updateStmt.run(script.sequence_order, script.id, distributorId);
     }
-    
+    pricingEngine.clearCache(); // Add this line
     res.json({ success: true });
   } catch (error) {
     console.error('Error reordering scripts:', error);
@@ -447,6 +447,7 @@ app.put('/api/logic-scripts/:id', (req, res) => {
     
     updateStmt.run(...updateValues);
     
+    pricingEngine.clearCache(); // Add this line
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating script:', error);
@@ -471,7 +472,8 @@ app.delete('/api/logic-scripts/:id', (req, res) => {
     `);
     
     deleteStmt.run(scriptId, distributorId);
-    
+
+    pricingEngine.clearCache(); // Add this line
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting script:', error);
