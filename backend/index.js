@@ -189,6 +189,60 @@ app.get('/api/diagnostic', (req, res) => {
   }
 });
 
+
+app.get('/api/table-builder/accounts', (req, res) => {
+  console.log('Table Builder accounts request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get basic accounts data (limit to first 20)
+    const accounts = db.prepare(`
+      SELECT * FROM accounts 
+      WHERE distributor_id = ? 
+      ORDER BY id 
+      LIMIT 20
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for accounts
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'accounts'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for these accounts
+    const accountIds = accounts.map(account => account.id);
+    
+    let customAttributes = [];
+    if (accountIds.length > 0) {
+      const placeholders = accountIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'accounts' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...accountIds);
+    }
+    
+    console.log(`Found ${accounts.length} accounts, ${customAttributes.length} custom attributes`);
+    
+    res.json({
+      accounts: accounts,
+      customAttributes: customAttributes,
+      attributeDefinitions: attributeDefinitions
+    });
+    
+  } catch (error) {
+    console.error('Error fetching table builder accounts data:', error);
+    res.status(500).json({ error: 'Failed to fetch accounts data' });
+  }
+});
+
 app.get('/api/add-header-logo-column', (req, res) => {
   try {
     // Check if column exists
