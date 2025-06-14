@@ -243,6 +243,60 @@ app.get('/api/table-builder/accounts', (req, res) => {
   }
 });
 
+// Table Builder API - Get products with custom attributes
+app.get('/api/table-builder/products', (req, res) => {
+  console.log('Table Builder products request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get basic products data (limit to first 20)
+    const products = db.prepare(`
+      SELECT * FROM products 
+      WHERE distributor_id = ? 
+      ORDER BY id 
+      LIMIT 20
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for products
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'products'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for these products
+    const productIds = products.map(product => product.id);
+    
+    let customAttributes = [];
+    if (productIds.length > 0) {
+      const placeholders = productIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'products' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...productIds);
+    }
+    
+    console.log(`Found ${products.length} products, ${customAttributes.length} custom attributes`);
+    
+    res.json({
+      products: products,
+      customAttributes: customAttributes,
+      attributeDefinitions: attributeDefinitions
+    });
+    
+  } catch (error) {
+    console.error('Error fetching table builder products data:', error);
+    res.status(500).json({ error: 'Failed to fetch products data' });
+  }
+});
+
 app.get('/api/add-header-logo-column', (req, res) => {
   try {
     // Check if column exists
