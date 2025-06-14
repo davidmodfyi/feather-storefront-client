@@ -20,36 +20,71 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const fetchTablesData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      // Fetch both accounts and products with custom attributes merged
-      const [accountsResponse, productsResponse] = await Promise.all([
-        fetch('/api/table-builder/accounts', { credentials: 'include' }),
-        fetch('/api/table-builder/products', { credentials: 'include' })
-      ]);
+      // Fetch accounts first (since products endpoint might not exist yet)
+      const accountsResponse = await fetch('/api/table-builder/accounts', { 
+        credentials: 'include' 
+      });
       
-      if (!accountsResponse.ok || !productsResponse.ok) {
-        throw new Error('Failed to fetch table data');
+      if (!accountsResponse.ok) {
+        throw new Error('Failed to fetch accounts data');
       }
       
       const accountsData = await accountsResponse.json();
-      const productsData = await productsResponse.json();
       
-      // Process the data to merge custom attributes
-      const processedAccounts = processDataWithCustomAttributes(accountsData.accounts, accountsData.customAttributes);
-      const processedProducts = processDataWithCustomAttributes(productsData.products, productsData.customAttributes);
+      // Process accounts data
+      const processedAccounts = processDataWithCustomAttributes(
+        accountsData.accounts || [], 
+        accountsData.customAttributes || []
+      );
       
-      setAccountsData(processedAccounts.slice(0, 20)); // Limit to first 20 rows
-      setProductsData(processedProducts.slice(0, 20)); // Limit to first 20 rows
+      setAccountsData(processedAccounts.slice(0, 20));
+      
+      // Try to fetch products (might fail if endpoint doesn't exist yet)
+      try {
+        const productsResponse = await fetch('/api/table-builder/products', { 
+          credentials: 'include' 
+        });
+        
+        if (productsResponse.ok) {
+          const productsData = await productsResponse.json();
+          const processedProducts = processDataWithCustomAttributes(
+            productsData.products || [], 
+            productsData.customAttributes || []
+          );
+          setProductsData(processedProducts.slice(0, 20));
+        } else {
+          console.log('Products endpoint not available yet');
+          setProductsData([]);
+        }
+      } catch (productsError) {
+        console.log('Products endpoint not available:', productsError.message);
+        setProductsData([]);
+      }
       
     } catch (error) {
       console.error('Error fetching table data:', error);
       setError(error.message);
+      setAccountsData([]);
+      setProductsData([]);
     } finally {
       setLoading(false);
     }
   };
 
   const processDataWithCustomAttributes = (items, customAttributes) => {
+    // Add safety checks
+    if (!Array.isArray(items)) {
+      console.warn('Items is not an array:', items);
+      return [];
+    }
+    
+    if (!Array.isArray(customAttributes)) {
+      console.warn('Custom attributes is not an array:', customAttributes);
+      customAttributes = [];
+    }
+    
     return items.map(item => {
       // Start with the basic item fields
       const mergedItem = { ...item };
@@ -163,7 +198,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Accounts Table</h2>
             <p className="text-sm text-gray-600 mt-1">
-              {accountsData.length} accounts with standard and custom attributes
+              {accountsData?.length || 0} accounts with standard and custom attributes
             </p>
           </div>
           <div className={`transform transition-transform duration-200 ${accountsExpanded ? 'rotate-180' : ''}`}>
@@ -223,7 +258,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Products Table</h2>
             <p className="text-sm text-gray-600 mt-1">
-              {productsData.length} products with standard and custom attributes
+              {productsData?.length || 0} products with standard and custom attributes
             </p>
           </div>
           <div className={`transform transition-transform duration-200 ${productsExpanded ? 'rotate-180' : ''}`}>
