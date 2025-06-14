@@ -45,7 +45,7 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type']
-};
+}; 
 
 
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
@@ -256,7 +256,7 @@ app.get('/api/branding/header-logo', (req, res) => {
   console.log('Header logo request');
   
   if (!req.session.distributor_id) {
-    return res.status(401).json({ error: 'Not authenticated' });
+    return res.status(401).json({ error: 'Not authenticated' }); 
   }
   
   try {
