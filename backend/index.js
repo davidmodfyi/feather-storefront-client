@@ -3091,16 +3091,18 @@ app.post('/api/submit-order', async (req, res) => {
     
     // Save order items
     const insertOrderItem = db.prepare(`
-      INSERT INTO order_items (order_id, product_id, quantity, unit_price)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO order_lines (order_id, product_id, quantity, unit_price, line_total)
+      VALUES (?, ?, ?, ?, ?)
     `);
     
     items.forEach(item => {
+      const lineTotal = item.quantity * item.unitPrice;
       insertOrderItem.run(
         orderId,
         item.id,
         item.quantity,
-        item.unitPrice
+        item.unitPrice,
+        lineTotal
       );
     });
     
@@ -3396,19 +3398,19 @@ app.get('/api/orders/:orderId/items', (req, res) => {
       return res.status(403).json({ error: 'Access denied to this order' });
     }
     
-    // Get order items with product details
-    const orderItems = db.prepare(`
-      SELECT oi.*, p.name, p.sku, p.image_url, p.description
-      FROM order_items oi
-      JOIN products p ON oi.product_id = p.id
-      WHERE oi.order_id = ?
+    // Get order lines with product details
+    const orderLines = db.prepare(`
+      SELECT ol.*, p.name, p.sku, p.image_url, p.description
+      FROM order_lines ol
+      JOIN products p ON ol.product_id = p.id
+      WHERE ol.order_id = ?
     `).all(orderId);
     
-    console.log(`Found ${orderItems.length} items for order ${orderId}`);
-    res.json(orderItems);
+    console.log(`Found ${orderLines.length} items for order ${orderId}`);
+    res.json(orderLines);
   } catch (error) {
-    console.error('Error fetching order items:', error);
-    res.status(500).json({ error: 'Error fetching order items' });
+    console.error('Error fetching order lines:', error);
+    res.status(500).json({ error: 'Error fetching order lines' });
   }
 });
 

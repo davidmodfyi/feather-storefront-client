@@ -141,9 +141,21 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
     fetchAllTablesData();
   }, []);
 
-  const getColumnNames = (data) => {
-    if (!data || data.length === 0) return [];
-    // Get columns from first item
+  const getColumnNames = (data, entityType) => {
+    // Define core column names for each entity type
+    const coreColumns = {
+      accounts: ['id', 'name', 'email', 'phone', 'address', 'city', 'state', 'zip'],
+      products: ['id', 'name', 'description', 'sku', 'unit_price', 'category'],
+      orders: ['id', 'account_id', 'status', 'total_amount', 'order_date'],
+      orderLines: ['id', 'order_id', 'product_id', 'quantity', 'unit_price', 'line_total']
+    };
+    
+    if (!data || data.length === 0) {
+      // Return core columns when no data exists
+      return coreColumns[entityType] || [];
+    }
+    
+    // Get columns from first item (includes both core and custom attributes)
     return Object.keys(data[0]);
   };
 
@@ -501,7 +513,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   <table className="min-w-full divide-y divide-blue-100">
                     <thead className="bg-blue-50">
                       <tr>
-                        {getColumnNames(accountsData).map(column => (
+                        {getColumnNames(accountsData, 'accounts').map(column => (
                           <th 
                             key={column}
                             scope="col" 
@@ -515,7 +527,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                     <tbody className="bg-white divide-y divide-blue-50">
                       {accountsData.map((account, index) => (
                         <tr key={account.id || index} className={`hover:bg-blue-25 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-blue-25/30'}`}>
-                          {getColumnNames(accountsData).map(column => (
+                          {getColumnNames(accountsData, 'accounts').map(column => (
                             <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {account[column] || <span className="text-gray-400">—</span>}
                             </td>
@@ -648,7 +660,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   <table className="min-w-full divide-y divide-emerald-100">
                     <thead className="bg-emerald-50">
                       <tr>
-                        {getColumnNames(productsData).map(column => (
+                        {getColumnNames(productsData, 'products').map(column => (
                           <th 
                             key={column}
                             scope="col" 
@@ -662,7 +674,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                     <tbody className="bg-white divide-y divide-emerald-50">
                       {productsData.map((product, index) => (
                         <tr key={product.id || index} className={`hover:bg-emerald-25 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-emerald-25/30'}`}>
-                          {getColumnNames(productsData).map(column => (
+                          {getColumnNames(productsData, 'products').map(column => (
                             <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {product[column] || <span className="text-gray-400">—</span>}
                             </td>
@@ -793,44 +805,46 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           {ordersExpanded && (
             <>
               <div className="overflow-x-auto">
-                {ordersData.length > 0 ? (
-                  <table className="min-w-full divide-y divide-orange-100">
-                    <thead className="bg-orange-50">
-                      <tr>
-                        {getColumnNames(ordersData).map(column => (
-                          <th 
-                            key={column}
-                            scope="col" 
-                            className="px-6 py-4 text-left text-xs font-semibold text-orange-800 uppercase tracking-wider"
-                          >
-                            {column.replace(/_/g, ' ')}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-orange-50">
-                      {ordersData.map((order, index) => (
+                <table className="min-w-full divide-y divide-orange-100">
+                  <thead className="bg-orange-50">
+                    <tr>
+                      {getColumnNames(ordersData, 'orders').map(column => (
+                        <th 
+                          key={column}
+                          scope="col" 
+                          className="px-6 py-4 text-left text-xs font-semibold text-orange-800 uppercase tracking-wider"
+                        >
+                          {column.replace(/_/g, ' ')}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-orange-50">
+                    {ordersData.length > 0 ? (
+                      ordersData.map((order, index) => (
                         <tr key={order.id || index} className={`hover:bg-orange-25 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-orange-25/30'}`}>
-                          {getColumnNames(ordersData).map(column => (
+                          {getColumnNames(ordersData, 'orders').map(column => (
                             <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {order[column] || <span className="text-gray-400">—</span>}
                             </td>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <p className="text-gray-500 text-lg font-medium">No orders found</p>
-                    <p className="text-gray-400 text-sm">Order data will appear here once available</p>
-                  </div>
-                )}
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={getColumnNames(ordersData, 'orders').length} className="px-6 py-16 text-center">
+                          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <p className="text-gray-500 text-lg font-medium">No orders found</p>
+                          <p className="text-gray-400 text-sm">Order data will appear here once available</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
               
               {/* Add Field Form for Orders */}
@@ -940,44 +954,46 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           {orderLinesExpanded && (
             <>
               <div className="overflow-x-auto">
-                {orderLinesData.length > 0 ? (
-                  <table className="min-w-full divide-y divide-purple-100">
-                    <thead className="bg-purple-50">
-                      <tr>
-                        {getColumnNames(orderLinesData).map(column => (
-                          <th 
-                            key={column}
-                            scope="col" 
-                            className="px-6 py-4 text-left text-xs font-semibold text-purple-800 uppercase tracking-wider"
-                          >
-                            {column.replace(/_/g, ' ')}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-purple-50">
-                      {orderLinesData.map((line, index) => (
+                <table className="min-w-full divide-y divide-purple-100">
+                  <thead className="bg-purple-50">
+                    <tr>
+                      {getColumnNames(orderLinesData, 'orderLines').map(column => (
+                        <th 
+                          key={column}
+                          scope="col" 
+                          className="px-6 py-4 text-left text-xs font-semibold text-purple-800 uppercase tracking-wider"
+                        >
+                          {column.replace(/_/g, ' ')}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-purple-50">
+                    {orderLinesData.length > 0 ? (
+                      orderLinesData.map((line, index) => (
                         <tr key={line.id || index} className={`hover:bg-purple-25 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-purple-25/30'}`}>
-                          {getColumnNames(orderLinesData).map(column => (
+                          {getColumnNames(orderLinesData, 'orderLines').map(column => (
                             <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {line[column] || <span className="text-gray-400">—</span>}
                             </td>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                      </svg>
-                    </div>
-                    <p className="text-gray-500 text-lg font-medium">No order lines found</p>
-                    <p className="text-gray-400 text-sm">Order line data will appear here once available</p>
-                  </div>
-                )}
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={getColumnNames(orderLinesData, 'orderLines').length} className="px-6 py-16 text-center">
+                          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                          </div>
+                          <p className="text-gray-500 text-lg font-medium">No order lines found</p>
+                          <p className="text-gray-400 text-sm">Order line data will appear here once available</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
               
               {/* Add Field Form for Order Lines */}
