@@ -190,11 +190,115 @@ app.get('/api/diagnostic', (req, res) => {
 });
 
 
+// Table Builder API - Get accounts with custom attributes
 app.get('/api/table-builder/accounts', (req, res) => {
   console.log('Table Builder accounts request');
   
   if (!req.session.distributor_id) {
-    return res.status(401).json({ error: 'Not authenticated' // Table Builder API - Add custom field
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get basic accounts data (limit to first 10)
+    const accounts = db.prepare(`
+      SELECT * FROM accounts 
+      WHERE distributor_id = ? 
+      ORDER BY id 
+      LIMIT 10
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for accounts
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'accounts'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for these accounts
+    const accountIds = accounts.map(account => account.id);
+    
+    let customAttributes = [];
+    if (accountIds.length > 0) {
+      const placeholders = accountIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'accounts' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...accountIds);
+    }
+    
+    console.log(`Found ${accounts.length} accounts, ${customAttributes.length} custom attributes`);
+    
+    res.json({
+      accounts: accounts,
+      customAttributes: customAttributes,
+      attributeDefinitions: attributeDefinitions
+    });
+    
+  } catch (error) {
+    console.error('Error fetching table builder accounts data:', error);
+    res.status(500).json({ error: 'Failed to fetch accounts data' });
+  }
+});
+
+// Table Builder API - Get products with custom attributes
+app.get('/api/table-builder/products', (req, res) => {
+  console.log('Table Builder products request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get basic products data (limit to first 10)
+    const products = db.prepare(`
+      SELECT * FROM products 
+      WHERE distributor_id = ? 
+      ORDER BY id 
+      LIMIT 10
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for products
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'products'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for these products
+    const productIds = products.map(product => product.id);
+    
+    let customAttributes = [];
+    if (productIds.length > 0) {
+      const placeholders = productIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'products' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...productIds);
+    }
+    
+    console.log(`Found ${products.length} products, ${customAttributes.length} custom attributes`);
+    
+    res.json({
+      products: products,
+      customAttributes: customAttributes,
+      attributeDefinitions: attributeDefinitions
+    });
+    
+  } catch (error) {
+    console.error('Error fetching table builder products data:', error);
+    res.status(500).json({ error: 'Failed to fetch products data' });
+  }
+});
+
+// Table Builder API - Add custom field
 app.post('/api/table-builder/add-field', (req, res) => {
   console.log('Add custom field request:', req.body);
   
@@ -249,107 +353,6 @@ app.post('/api/table-builder/add-field', (req, res) => {
   } catch (error) {
     console.error('Error adding custom field:', error);
     res.status(500).json({ error: 'Failed to add custom field' });
-  }
-});
-  }
-  
-  try {
-    const distributorId = req.session.distributor_id;
-    
-    // Get basic accounts data (limit to first 20)
-    const accounts = db.prepare(`
-      SELECT * FROM accounts 
-      WHERE distributor_id = ? 
-      ORDER BY id 
-      LIMIT 20
-    `).all(distributorId);
-    
-    // Get all custom attribute definitions for accounts
-    const attributeDefinitions = db.prepare(`
-      SELECT * FROM custom_attributes_definitions 
-      WHERE distributor_id = ? AND entity_type = 'accounts'
-      ORDER BY display_order
-    `).all(distributorId);
-    
-    // Get all custom attribute values for these accounts
-    const accountIds = accounts.map(account => account.id);
-    
-    let customAttributes = [];
-    if (accountIds.length > 0) {
-      const placeholders = accountIds.map(() => '?').join(',');
-      customAttributes = db.prepare(`
-        SELECT * FROM custom_attributes_values 
-        WHERE distributor_id = ? 
-        AND entity_type = 'accounts' 
-        AND entity_id IN (${placeholders})
-      `).all(distributorId, ...accountIds);
-    }
-    
-    console.log(`Found ${accounts.length} accounts, ${customAttributes.length} custom attributes`);
-    
-    res.json({
-      accounts: accounts,
-      customAttributes: customAttributes,
-      attributeDefinitions: attributeDefinitions
-    });
-    
-  } catch (error) {
-    console.error('Error fetching table builder accounts data:', error);
-    res.status(500).json({ error: 'Failed to fetch accounts data' });
-  }
-});
-
-// Table Builder API - Get products with custom attributes
-app.get('/api/table-builder/products', (req, res) => {
-  console.log('Table Builder products request');
-  
-  if (!req.session.distributor_id) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  
-  try {
-    const distributorId = req.session.distributor_id;
-    
-    // Get basic products data (limit to first 20)
-    const products = db.prepare(`
-      SELECT * FROM products 
-      WHERE distributor_id = ? 
-      ORDER BY id 
-      LIMIT 20
-    `).all(distributorId);
-    
-    // Get all custom attribute definitions for products
-    const attributeDefinitions = db.prepare(`
-      SELECT * FROM custom_attributes_definitions 
-      WHERE distributor_id = ? AND entity_type = 'products'
-      ORDER BY display_order
-    `).all(distributorId);
-    
-    // Get all custom attribute values for these products
-    const productIds = products.map(product => product.id);
-    
-    let customAttributes = [];
-    if (productIds.length > 0) {
-      const placeholders = productIds.map(() => '?').join(',');
-      customAttributes = db.prepare(`
-        SELECT * FROM custom_attributes_values 
-        WHERE distributor_id = ? 
-        AND entity_type = 'products' 
-        AND entity_id IN (${placeholders})
-      `).all(distributorId, ...productIds);
-    }
-    
-    console.log(`Found ${products.length} products, ${customAttributes.length} custom attributes`);
-    
-    res.json({
-      products: products,
-      customAttributes: customAttributes,
-      attributeDefinitions: attributeDefinitions
-    });
-    
-  } catch (error) {
-    console.error('Error fetching table builder products data:', error);
-    res.status(500).json({ error: 'Failed to fetch products data' });
   }
 });
 
