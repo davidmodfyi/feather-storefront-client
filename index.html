@@ -21,17 +21,13 @@
           console.log('URL search params:', window.location.search);
           console.log('Distributor slug from URL:', urlParams.get('dist'));
           console.log('Final distributor slug:', distributorSlug);
-          console.log('Will attempt to load:', `./src/distributors/${distributorSlug}/main.jsx`);
+          console.log('Loading unified frontend:', './src/main.jsx');
           
-          // Load the appropriate distributor's main.jsx
-          import(`./src/distributors/${distributorSlug}/main.jsx`).then(() => {
-            console.log(`✅ Successfully loaded distributor: ${distributorSlug}`);
+          // Load the unified main.jsx
+          import('./src/main.jsx').then(() => {
+            console.log(`✅ Successfully loaded unified frontend for distributor: ${distributorSlug}`);
           }).catch(error => {
-            console.error(`❌ Failed to load distributor ${distributorSlug}:`, error);
-            console.log('Falling back to default...');
-            // Fallback to default if specific distributor fails
-            window.FEATHER_DISTRIBUTOR = 'default';
-            import(`./src/distributors/default/main.jsx`);
+            console.error(`❌ Failed to load unified frontend:`, error);
           });
         </script>
   </body>
