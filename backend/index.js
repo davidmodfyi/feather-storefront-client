@@ -589,7 +589,7 @@ app.post('/api/table-builder/accounts/import', csvUpload.single('csvFile'), (req
     const transaction = db.transaction(() => {
       for (const row of importData) {
         // Separate core account fields from custom attributes
-        const coreFields = ['id', 'name', 'email', 'phone', 'address', 'city', 'state', 'zip', 'created_at', 'updated_at'];
+        const coreFields = ['id', 'name', 'email', 'phone', 'address', 'city', 'state', 'zip'];
         const coreData = {};
         const customData = {};
         
@@ -610,7 +610,7 @@ app.post('/api/table-builder/accounts/import', csvUpload.single('csvFile'), (req
             const updateValues = Object.keys(coreData).filter(k => k !== 'id').map(k => coreData[k]);
             
             if (updateFields) {
-              db.prepare(`UPDATE accounts SET ${updateFields}, updated_at = datetime('now') WHERE id = ? AND distributor_id = ?`)
+              db.prepare(`UPDATE accounts SET ${updateFields} WHERE id = ? AND distributor_id = ?`)
                 .run(...updateValues, coreData.id, distributorId);
               updated++;
             }
@@ -618,8 +618,8 @@ app.post('/api/table-builder/accounts/import', csvUpload.single('csvFile'), (req
         } else {
           // Insert new account
           const result = db.prepare(`
-            INSERT INTO accounts (distributor_id, name, email, phone, address, city, state, zip, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            INSERT INTO accounts (distributor_id, name, email, phone, address, city, state, zip)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
             distributorId,
             coreData.name || '',
@@ -657,8 +657,8 @@ app.post('/api/table-builder/accounts/import', csvUpload.single('csvFile'), (req
             // Insert/update custom attribute value
             db.prepare(`
               INSERT OR REPLACE INTO custom_attributes_values 
-              (distributor_id, entity_type, entity_id, attribute_name, value_text, created_at, updated_at)
-              VALUES (?, 'accounts', ?, ?, ?, datetime('now'), datetime('now'))
+              (distributor_id, entity_type, entity_id, attribute_name, value_text)
+              VALUES (?, 'accounts', ?, ?, ?)
             `).run(distributorId, coreData.id, attrName, attrValue);
           }
         }
@@ -709,7 +709,7 @@ app.post('/api/table-builder/products/import', csvUpload.single('csvFile'), (req
     const transaction = db.transaction(() => {
       for (const row of importData) {
         // Separate core product fields from custom attributes
-        const coreFields = ['id', 'name', 'description', 'sku', 'unit_price', 'category', 'created_at', 'updated_at'];
+        const coreFields = ['id', 'name', 'description', 'sku', 'unit_price', 'category'];
         const coreData = {};
         const customData = {};
         
@@ -730,7 +730,7 @@ app.post('/api/table-builder/products/import', csvUpload.single('csvFile'), (req
             const updateValues = Object.keys(coreData).filter(k => k !== 'id').map(k => coreData[k]);
             
             if (updateFields) {
-              db.prepare(`UPDATE products SET ${updateFields}, updated_at = datetime('now') WHERE id = ? AND distributor_id = ?`)
+              db.prepare(`UPDATE products SET ${updateFields} WHERE id = ? AND distributor_id = ?`)
                 .run(...updateValues, coreData.id, distributorId);
               updated++;
             }
@@ -738,8 +738,8 @@ app.post('/api/table-builder/products/import', csvUpload.single('csvFile'), (req
         } else {
           // Insert new product
           const result = db.prepare(`
-            INSERT INTO products (distributor_id, name, description, sku, unit_price, category, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            INSERT INTO products (distributor_id, name, description, sku, unit_price, category)
+            VALUES (?, ?, ?, ?, ?, ?)
           `).run(
             distributorId,
             coreData.name || '',
@@ -775,8 +775,8 @@ app.post('/api/table-builder/products/import', csvUpload.single('csvFile'), (req
             // Insert/update custom attribute value
             db.prepare(`
               INSERT OR REPLACE INTO custom_attributes_values 
-              (distributor_id, entity_type, entity_id, attribute_name, value_text, created_at, updated_at)
-              VALUES (?, 'products', ?, ?, ?, datetime('now'), datetime('now'))
+              (distributor_id, entity_type, entity_id, attribute_name, value_text)
+              VALUES (?, 'products', ?, ?, ?)
             `).run(distributorId, coreData.id, attrName, attrValue);
           }
         }
