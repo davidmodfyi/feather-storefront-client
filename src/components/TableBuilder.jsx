@@ -146,7 +146,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
     const coreColumns = {
       accounts: ['id', 'name', 'email', 'phone', 'address', 'city', 'state', 'zip'],
       products: ['id', 'name', 'description', 'sku', 'unit_price', 'category'],
-      orders: ['id', 'account_id', 'status', 'total_amount', 'order_date'],
+      orders: ['id', 'customer_name', 'status', 'total_amount', 'order_date'],
       orderItems: ['id', 'order_id', 'product_id', 'quantity', 'unit_price']
     };
     

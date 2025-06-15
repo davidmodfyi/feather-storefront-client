@@ -804,18 +804,21 @@ app.post('/api/table-builder/products/import', csvUpload.single('csvFile'), (req
 app.get('/api/table-builder/orders', (req, res) => {
   console.log('Table Builder orders request');
   
-  if (!req.session.distributor_id) {
+  if (!req.session.user_id) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
   try {
     const distributorId = req.session.distributor_id;
     
-    // Get basic orders data (limit to first 10)
+    // Get basic orders data (limit to first 10) - use same query as Order History for Admin users
     const orders = db.prepare(`
-      SELECT * FROM orders 
-      WHERE distributor_id = ? 
-      ORDER BY id 
+      SELECT o.*, a.name as customer_name 
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN accounts a ON o.account_id = a.id
+      WHERE u.distributor_id = ?
+      ORDER BY o.order_date DESC
       LIMIT 10
     `).all(distributorId);
     
@@ -912,18 +915,21 @@ app.get('/api/table-builder/order-items', (req, res) => {
 app.get('/api/table-builder/orders/export', (req, res) => {
   console.log('Export orders request');
   
-  if (!req.session.distributor_id) {
+  if (!req.session.user_id) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
   try {
     const distributorId = req.session.distributor_id;
     
-    // Get ALL orders data (no limit)
+    // Get ALL orders data (no limit) - use same query as Order History for consistency
     const orders = db.prepare(`
-      SELECT * FROM orders 
-      WHERE distributor_id = ? 
-      ORDER BY id
+      SELECT o.*, a.name as customer_name 
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN accounts a ON o.account_id = a.id
+      WHERE u.distributor_id = ?
+      ORDER BY o.order_date DESC
     `).all(distributorId);
     
     // Get all custom attribute definitions for orders
