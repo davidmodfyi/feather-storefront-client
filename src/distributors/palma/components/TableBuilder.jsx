@@ -9,6 +9,9 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const [error, setError] = useState(null);
   const [accountsExpanded, setAccountsExpanded] = useState(false);
   const [productsExpanded, setProductsExpanded] = useState(false);
+  const [newAccountField, setNewAccountField] = useState({ name: '', type: 'text' });
+  const [newProductField, setNewProductField] = useState({ name: '', type: 'text' });
+  const [addingField, setAddingField] = useState(false);
   
   // Set title
   document.title = brandName ? `${brandName} - Table Builder` : 'Table Builder - Feather';
@@ -27,7 +30,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
       if (accountsResponse.ok) {
         const accountsData = await accountsResponse.json();
         console.log('Accounts data received:', accountsData);
-        setAccountsData((accountsData.accounts || []).slice(0, 20));
+        setAccountsData((accountsData.accounts || []).slice(0, 10));
       }
       
       // Try to fetch products (might not exist yet)
@@ -39,7 +42,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         if (productsResponse.ok) {
           const productsData = await productsResponse.json();
           console.log('Products data received:', productsData);
-          setProductsData((productsData.products || []).slice(0, 20));
+          setProductsData((productsData.products || []).slice(0, 10));
         } else {
           console.log('Products endpoint returned:', productsResponse.status);
           setProductsData([]);
@@ -65,6 +68,50 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
     if (!data || data.length === 0) return [];
     // Get columns from first item
     return Object.keys(data[0]);
+  };
+
+  const addCustomField = async (entityType, fieldData) => {
+    try {
+      setAddingField(true);
+      
+      const response = await fetch('/api/table-builder/add-field', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          entity_type: entityType,
+          attribute_name: fieldData.name.toLowerCase().replace(/\s+/g, '_'),
+          attribute_label: fieldData.name,
+          data_type: fieldData.type,
+          validation_rules: '{}',
+          display_order: 999
+        })
+      });
+
+      if (response.ok) {
+        // Reset form
+        if (entityType === 'accounts') {
+          setNewAccountField({ name: '', type: 'text' });
+        } else {
+          setNewProductField({ name: '', type: 'text' });
+        }
+        
+        // Refresh data to show new field
+        fetchBothTablesData();
+        
+        alert('Field added successfully!');
+      } else {
+        const error = await response.json();
+        alert('Error adding field: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error adding field:', error);
+      alert('Error adding field: ' + error.message);
+    } finally {
+      setAddingField(false);
+    }
   };
 
   if (loading) {
@@ -123,7 +170,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Accounts Table</h2>
             <p className="text-sm text-gray-600 mt-1">
-              {accountsData.length} accounts (standard fields only for now)
+              {accountsData.length} accounts (first 10 rows)
             </p>
           </div>
           <div className={`transform transition-transform duration-200 ${accountsExpanded ? 'rotate-180' : ''}`}>
@@ -169,6 +216,86 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
             )}
           </div>
         )}
+        
+        {/* Add Field Form for Products */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Add Custom Field to Products</h3>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Field Name</label>
+              <input
+                type="text"
+                value={newProductField.name}
+                onChange={(e) => setNewProductField({...newProductField, name: e.target.value})}
+                placeholder="e.g., Shelf Life, Storage Temp"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={addingField}
+              />
+            </div>
+            <div className="w-32">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Field Type</label>
+              <select
+                value={newProductField.type}
+                onChange={(e) => setNewProductField({...newProductField, type: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={addingField}
+              >
+                <option value="text">Text</option>
+                <option value="number">Number</option>
+                <option value="boolean">Yes/No</option>
+                <option value="date">Date</option>
+                <option value="select">Select List</option>
+              </select>
+            </div>
+            <button
+              onClick={() => addCustomField('products', newProductField)}
+              disabled={!newProductField.name.trim() || addingField}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {addingField ? 'Adding...' : 'Add Field'}
+            </button>
+          </div>
+        </div>
+        
+        {/* Add Field Form for Accounts */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Add Custom Field to Accounts</h3>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Field Name</label>
+              <input
+                type="text"
+                value={newAccountField.name}
+                onChange={(e) => setNewAccountField({...newAccountField, name: e.target.value})}
+                placeholder="e.g., Contract ID, Street 2"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={addingField}
+              />
+            </div>
+            <div className="w-32">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Field Type</label>
+              <select
+                value={newAccountField.type}
+                onChange={(e) => setNewAccountField({...newAccountField, type: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={addingField}
+              >
+                <option value="text">Text</option>
+                <option value="number">Number</option>
+                <option value="boolean">Yes/No</option>
+                <option value="date">Date</option>
+                <option value="select">Select List</option>
+              </select>
+            </div>
+            <button
+              onClick={() => addCustomField('accounts', newAccountField)}
+              disabled={!newAccountField.name.trim() || addingField}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {addingField ? 'Adding...' : 'Add Field'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Products Table Section */}
@@ -180,7 +307,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Products Table</h2>
             <p className="text-sm text-gray-600 mt-1">
-              {productsData.length} products (standard fields only for now)
+              {productsData.length} products (first 10 rows)
             </p>
           </div>
           <div className={`transform transition-transform duration-200 ${productsExpanded ? 'rotate-180' : ''}`}>
