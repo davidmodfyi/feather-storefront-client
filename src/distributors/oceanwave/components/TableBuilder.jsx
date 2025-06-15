@@ -30,7 +30,14 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
       if (accountsResponse.ok) {
         const accountsData = await accountsResponse.json();
         console.log('Accounts data received:', accountsData);
-        setAccountsData((accountsData.accounts || []).slice(0, 10));
+        
+        // Process accounts with custom attributes merged
+        const processedAccounts = mergeCustomAttributes(
+          accountsData.accounts || [], 
+          accountsData.customAttributes || []
+        );
+        
+        setAccountsData(processedAccounts.slice(0, 10));
       }
       
       // Try to fetch products (might not exist yet)
@@ -42,7 +49,14 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         if (productsResponse.ok) {
           const productsData = await productsResponse.json();
           console.log('Products data received:', productsData);
-          setProductsData((productsData.products || []).slice(0, 10));
+          
+          // Process products with custom attributes merged
+          const processedProducts = mergeCustomAttributes(
+            productsData.products || [], 
+            productsData.customAttributes || []
+          );
+          
+          setProductsData(processedProducts.slice(0, 10));
         } else {
           console.log('Products endpoint returned:', productsResponse.status);
           setProductsData([]);
@@ -68,6 +82,43 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
     if (!data || data.length === 0) return [];
     // Get columns from first item
     return Object.keys(data[0]);
+  };
+
+  const mergeCustomAttributes = (items, customAttributes) => {
+    console.log('Merging custom attributes for', items.length, 'items with', customAttributes.length, 'custom attributes');
+    
+    if (!Array.isArray(items) || items.length === 0) {
+      return [];
+    }
+    
+    if (!Array.isArray(customAttributes)) {
+      console.warn('Custom attributes is not an array, using empty array');
+      customAttributes = [];
+    }
+    
+    return items.map(item => {
+      // Start with the basic item fields
+      const mergedItem = { ...item };
+      
+      // Add custom attributes for this item
+      const itemCustomAttrs = customAttributes.filter(
+        attr => attr.entity_id === item.id
+      );
+      
+      console.log(`Item ${item.id} has ${itemCustomAttrs.length} custom attributes`);
+      
+      itemCustomAttrs.forEach(attr => {
+        // Use the appropriate value based on data type
+        let value = attr.value_text || attr.value_number || attr.value_boolean;
+        if (attr.value_boolean !== null && attr.value_boolean !== undefined) {
+          value = attr.value_boolean ? 'Yes' : 'No';
+        }
+        mergedItem[attr.attribute_name] = value || '';
+        console.log(`Added custom attribute: ${attr.attribute_name} = ${value}`);
+      });
+      
+      return mergedItem;
+    });
   };
 
   const addCustomField = async (entityType, fieldData) => {
