@@ -855,7 +855,7 @@ app.get('/api/table-builder/orders', (req, res) => {
 });
 
 // Table Builder API - Get order lines with custom attributes
-app.get('/api/table-builder/order-lines', (req, res) => {
+app.get('/api/table-builder/order-items', (req, res) => {
   console.log('Table Builder order lines request');
   
   if (!req.session.distributor_id) {
@@ -867,7 +867,7 @@ app.get('/api/table-builder/order-lines', (req, res) => {
     
     // Get basic order lines data (limit to first 10)
     const orderLines = db.prepare(`
-      SELECT * FROM order_lines 
+      SELECT * FROM order_items 
       WHERE distributor_id = ? 
       ORDER BY id 
       LIMIT 10
@@ -876,7 +876,7 @@ app.get('/api/table-builder/order-lines', (req, res) => {
     // Get all custom attribute definitions for order lines
     const attributeDefinitions = db.prepare(`
       SELECT * FROM custom_attributes_definitions 
-      WHERE distributor_id = ? AND entity_type = 'order_lines'
+      WHERE distributor_id = ? AND entity_type = 'order_items'
       ORDER BY display_order
     `).all(distributorId);
     
@@ -889,7 +889,7 @@ app.get('/api/table-builder/order-lines', (req, res) => {
       customAttributes = db.prepare(`
         SELECT * FROM custom_attributes_values 
         WHERE distributor_id = ? 
-        AND entity_type = 'order_lines' 
+        AND entity_type = 'order_items' 
         AND entity_id IN (${placeholders})
       `).all(distributorId, ...orderLineIds);
     }
@@ -986,7 +986,7 @@ app.get('/api/table-builder/orders/export', (req, res) => {
 });
 
 // Table Builder API - Export full order lines data to CSV
-app.get('/api/table-builder/order-lines/export', (req, res) => {
+app.get('/api/table-builder/order-items/export', (req, res) => {
   console.log('Export order lines request');
   
   if (!req.session.distributor_id) {
@@ -998,7 +998,7 @@ app.get('/api/table-builder/order-lines/export', (req, res) => {
     
     // Get ALL order lines data (no limit)
     const orderLines = db.prepare(`
-      SELECT * FROM order_lines 
+      SELECT * FROM order_items 
       WHERE distributor_id = ? 
       ORDER BY id
     `).all(distributorId);
@@ -1006,7 +1006,7 @@ app.get('/api/table-builder/order-lines/export', (req, res) => {
     // Get all custom attribute definitions for order lines
     const attributeDefinitions = db.prepare(`
       SELECT * FROM custom_attributes_definitions 
-      WHERE distributor_id = ? AND entity_type = 'order_lines'
+      WHERE distributor_id = ? AND entity_type = 'order_items'
       ORDER BY display_order
     `).all(distributorId);
     
@@ -1019,7 +1019,7 @@ app.get('/api/table-builder/order-lines/export', (req, res) => {
       customAttributes = db.prepare(`
         SELECT * FROM custom_attributes_values 
         WHERE distributor_id = ? 
-        AND entity_type = 'order_lines' 
+        AND entity_type = 'order_items' 
         AND entity_id IN (${placeholders})
       `).all(distributorId, ...orderLineIds);
     }
@@ -1180,7 +1180,7 @@ app.post('/api/table-builder/orders/import', csvUpload.single('csvFile'), (req, 
 });
 
 // Table Builder API - Import order lines from CSV
-app.post('/api/table-builder/order-lines/import', csvUpload.single('csvFile'), (req, res) => {
+app.post('/api/table-builder/order-items/import', csvUpload.single('csvFile'), (req, res) => {
   console.log('Import order lines request');
   
   if (!req.session.distributor_id) {
@@ -1221,13 +1221,13 @@ app.post('/api/table-builder/order-lines/import', csvUpload.single('csvFile'), (
         // Insert/update core order line data
         if (coreData.id) {
           // Update existing order line
-          const existing = db.prepare('SELECT id FROM order_lines WHERE id = ? AND distributor_id = ?').get(coreData.id, distributorId);
+          const existing = db.prepare('SELECT id FROM order_items WHERE id = ? AND distributor_id = ?').get(coreData.id, distributorId);
           if (existing) {
             const updateFields = Object.keys(coreData).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
             const updateValues = Object.keys(coreData).filter(k => k !== 'id').map(k => coreData[k]);
             
             if (updateFields) {
-              db.prepare(`UPDATE order_lines SET ${updateFields} WHERE id = ? AND distributor_id = ?`)
+              db.prepare(`UPDATE order_items SET ${updateFields} WHERE id = ? AND distributor_id = ?`)
                 .run(...updateValues, coreData.id, distributorId);
               updated++;
             }
@@ -1235,7 +1235,7 @@ app.post('/api/table-builder/order-lines/import', csvUpload.single('csvFile'), (
         } else {
           // Insert new order line
           const result = db.prepare(`
-            INSERT INTO order_lines (distributor_id, order_id, product_id, quantity, unit_price, line_total)
+            INSERT INTO order_items (distributor_id, order_id, product_id, quantity, unit_price, line_total)
             VALUES (?, ?, ?, ?, ?, ?)
           `).run(
             distributorId,
@@ -1255,7 +1255,7 @@ app.post('/api/table-builder/order-lines/import', csvUpload.single('csvFile'), (
             // Get or create attribute definition
             let attrDef = db.prepare(`
               SELECT id, data_type FROM custom_attributes_definitions 
-              WHERE distributor_id = ? AND entity_type = 'order_lines' AND attribute_name = ?
+              WHERE distributor_id = ? AND entity_type = 'order_items' AND attribute_name = ?
             `).get(distributorId, attrName);
             
             if (!attrDef) {
@@ -1263,7 +1263,7 @@ app.post('/api/table-builder/order-lines/import', csvUpload.single('csvFile'), (
               const result = db.prepare(`
                 INSERT INTO custom_attributes_definitions 
                 (distributor_id, entity_type, attribute_name, attribute_label, data_type, display_order, is_active)
-                VALUES (?, 'order_lines', ?, ?, 'text', 999, 1)
+                VALUES (?, 'order_items', ?, ?, 'text', 999, 1)
               `).run(distributorId, attrName, attrName.replace(/_/g, ' '));
               
               attrDef = { id: result.lastInsertRowid, data_type: 'text' };
@@ -1273,7 +1273,7 @@ app.post('/api/table-builder/order-lines/import', csvUpload.single('csvFile'), (
             db.prepare(`
               INSERT OR REPLACE INTO custom_attributes_values 
               (distributor_id, entity_type, entity_id, attribute_name, value_text)
-              VALUES (?, 'order_lines', ?, ?, ?)
+              VALUES (?, 'order_items', ?, ?, ?)
             `).run(distributorId, coreData.id, attrName, attrValue);
           }
         }
@@ -3091,18 +3091,16 @@ app.post('/api/submit-order', async (req, res) => {
     
     // Save order items
     const insertOrderItem = db.prepare(`
-      INSERT INTO order_lines (order_id, product_id, quantity, unit_price, line_total)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO order_items (order_id, product_id, quantity, unit_price)
+      VALUES (?, ?, ?, ?)
     `);
     
     items.forEach(item => {
-      const lineTotal = item.quantity * item.unitPrice;
       insertOrderItem.run(
         orderId,
         item.id,
         item.quantity,
-        item.unitPrice,
-        lineTotal
+        item.unitPrice
       );
     });
     
@@ -3398,19 +3396,19 @@ app.get('/api/orders/:orderId/items', (req, res) => {
       return res.status(403).json({ error: 'Access denied to this order' });
     }
     
-    // Get order lines with product details
-    const orderLines = db.prepare(`
-      SELECT ol.*, p.name, p.sku, p.image_url, p.description
-      FROM order_lines ol
-      JOIN products p ON ol.product_id = p.id
-      WHERE ol.order_id = ?
+    // Get order items with product details
+    const orderItems = db.prepare(`
+      SELECT oi.*, p.name, p.sku, p.image_url, p.description
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.id
+      WHERE oi.order_id = ?
     `).all(orderId);
     
-    console.log(`Found ${orderLines.length} items for order ${orderId}`);
-    res.json(orderLines);
+    console.log(`Found ${orderItems.length} items for order ${orderId}`);
+    res.json(orderItems);
   } catch (error) {
-    console.error('Error fetching order lines:', error);
-    res.status(500).json({ error: 'Error fetching order lines' });
+    console.error('Error fetching order items:', error);
+    res.status(500).json({ error: 'Error fetching order items' });
   }
 });
 

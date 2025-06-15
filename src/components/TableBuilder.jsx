@@ -6,17 +6,17 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const [accountsData, setAccountsData] = useState([]);
   const [productsData, setProductsData] = useState([]);
   const [ordersData, setOrdersData] = useState([]);
-  const [orderLinesData, setOrderLinesData] = useState([]);
+  const [orderItemsData, setOrderItemsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [accountsExpanded, setAccountsExpanded] = useState(false);
   const [productsExpanded, setProductsExpanded] = useState(false);
   const [ordersExpanded, setOrdersExpanded] = useState(false);
-  const [orderLinesExpanded, setOrderLinesExpanded] = useState(false);
+  const [orderItemsExpanded, setOrderItemsExpanded] = useState(false);
   const [newAccountField, setNewAccountField] = useState({ name: '', type: 'text' });
   const [newProductField, setNewProductField] = useState({ name: '', type: 'text' });
   const [newOrderField, setNewOrderField] = useState({ name: '', type: 'text' });
-  const [newOrderLineField, setNewOrderLineField] = useState({ name: '', type: 'text' });
+  const [newOrderItemField, setNewOrderItemField] = useState({ name: '', type: 'text' });
   const [addingField, setAddingField] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null);
   
@@ -104,29 +104,29 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
 
       // Try to fetch order lines
       try {
-        const orderLinesResponse = await fetch('/api/table-builder/order-lines', {
+        const orderLinesResponse = await fetch('/api/table-builder/order-items', {
           credentials: 'include'
         });
         
         if (orderLinesResponse.ok) {
-          const orderLinesData = await orderLinesResponse.json();
-          console.log('Order lines data received:', orderLinesData);
+          const orderItemsData = await orderLinesResponse.json();
+          console.log('Order lines data received:', orderItemsData);
           
           // Process order lines with custom attributes merged
           const processedOrderLines = mergeCustomAttributesWithDefinitions(
-            orderLinesData.orderLines || [], 
-            orderLinesData.customAttributes || [],
-            orderLinesData.attributeDefinitions || []
+            orderItemsData.orderLines || [], 
+            orderItemsData.customAttributes || [],
+            orderItemsData.attributeDefinitions || []
           );
           
-          setOrderLinesData(processedOrderLines.slice(0, 10));
+          setOrderItemsData(processedOrderLines.slice(0, 10));
         } else {
           console.log('Order lines endpoint returned:', orderLinesResponse.status);
-          setOrderLinesData([]);
+          setOrderItemsData([]);
         }
       } catch (orderLinesError) {
         console.log('Order lines endpoint not available:', orderLinesError.message);
-        setOrderLinesData([]);
+        setOrderItemsData([]);
       }
       
     } catch (error) {
@@ -147,7 +147,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
       accounts: ['id', 'name', 'email', 'phone', 'address', 'city', 'state', 'zip'],
       products: ['id', 'name', 'description', 'sku', 'unit_price', 'category'],
       orders: ['id', 'account_id', 'status', 'total_amount', 'order_date'],
-      orderLines: ['id', 'order_id', 'product_id', 'quantity', 'unit_price', 'line_total']
+      orderItems: ['id', 'order_id', 'product_id', 'quantity', 'unit_price']
     };
     
     if (!data || data.length === 0) {
@@ -273,8 +273,8 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const exportToCSV = async (entityType) => {
     try {
       setLoading(true);
-      // Handle the order-lines special case for URL
-      const apiEntityType = entityType === 'order-lines' ? 'order-lines' : entityType;
+      // Handle the order-items special case for URL
+      const apiEntityType = entityType === 'order-items' ? 'order-items' : entityType;
       const response = await fetch(`/api/table-builder/${apiEntityType}/export`, {
         credentials: 'include'
       });
@@ -333,8 +333,8 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
       const formData = new FormData();
       formData.append('csvFile', file);
       
-      // Handle the order-lines special case for URL
-      const apiEntityType = entityType === 'order-lines' ? 'order-lines' : entityType;
+      // Handle the order-items special case for URL
+      const apiEntityType = entityType === 'order-items' ? 'order-items' : entityType;
       const response = await fetch(`/api/table-builder/${apiEntityType}/import`, {
         method: 'POST',
         credentials: 'include',
@@ -406,7 +406,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
             </h1>
           </div>
           <div className="px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full text-sm text-gray-600 border border-white/20">
-            {accountsData.length} accounts • {productsData.length} products • {ordersData.length} orders • {orderLinesData.length} lines
+            {accountsData.length} accounts • {productsData.length} products • {ordersData.length} orders • {orderItemsData.length} lines
           </div>
         </div>
         <div className="flex gap-2">
@@ -899,7 +899,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         <div className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
           <div 
             className="px-6 py-5 bg-gradient-to-r from-purple-600 to-purple-700 cursor-pointer hover:from-purple-700 hover:to-purple-800 transition-all duration-200 flex justify-between items-center"
-            onClick={() => setOrderLinesExpanded(!orderLinesExpanded)}
+            onClick={() => setOrderItemsExpanded(!orderItemsExpanded)}
           >
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -910,7 +910,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
               <div>
                 <h2 className="text-xl font-bold text-white">Order Fields (Lines)</h2>
                 <p className="text-purple-100 text-sm">
-                  {orderLinesData.length} order line items • Click to {orderLinesExpanded ? 'collapse' : 'expand'}
+                  {orderItemsData.length} order items • Click to {orderItemsExpanded ? 'collapse' : 'expand'}
                 </p>
               </div>
             </div>
@@ -919,7 +919,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    exportToCSV('order-lines');
+                    exportToCSV('order-items');
                   }}
                   className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
                   disabled={loading}
@@ -932,7 +932,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    triggerFileUpload('order-lines');
+                    triggerFileUpload('order-items');
                   }}
                   className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
                   disabled={loading}
@@ -943,7 +943,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   Upload from Excel
                 </button>
               </div>
-              <div className={`transform transition-transform duration-300 ${orderLinesExpanded ? 'rotate-180' : ''}`}>
+              <div className={`transform transition-transform duration-300 ${orderItemsExpanded ? 'rotate-180' : ''}`}>
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
@@ -951,13 +951,13 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
             </div>
           </div>
           
-          {orderLinesExpanded && (
+          {orderItemsExpanded && (
             <>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-purple-100">
                   <thead className="bg-purple-50">
                     <tr>
-                      {getColumnNames(orderLinesData, 'orderLines').map(column => (
+                      {getColumnNames(orderItemsData, 'orderItems').map(column => (
                         <th 
                           key={column}
                           scope="col" 
@@ -969,10 +969,10 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-purple-50">
-                    {orderLinesData.length > 0 ? (
-                      orderLinesData.map((line, index) => (
+                    {orderItemsData.length > 0 ? (
+                      orderItemsData.map((line, index) => (
                         <tr key={line.id || index} className={`hover:bg-purple-25 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-purple-25/30'}`}>
-                          {getColumnNames(orderLinesData, 'orderLines').map(column => (
+                          {getColumnNames(orderItemsData, 'orderItems').map(column => (
                             <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {line[column] || <span className="text-gray-400">—</span>}
                             </td>
@@ -981,14 +981,14 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={getColumnNames(orderLinesData, 'orderLines').length} className="px-6 py-16 text-center">
+                        <td colSpan={getColumnNames(orderItemsData, 'orderItems').length} className="px-6 py-16 text-center">
                           <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                             </svg>
                           </div>
-                          <p className="text-gray-500 text-lg font-medium">No order lines found</p>
-                          <p className="text-gray-400 text-sm">Order line data will appear here once available</p>
+                          <p className="text-gray-500 text-lg font-medium">No order items found</p>
+                          <p className="text-gray-400 text-sm">Order item data will appear here once available</p>
                         </td>
                       </tr>
                     )}
@@ -1002,15 +1002,15 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  <h3 className="text-sm font-semibold text-purple-800">Add Custom Field to Order Lines</h3>
+                  <h3 className="text-sm font-semibold text-purple-800">Add Custom Field to Order Items</h3>
                 </div>
                 <div className="flex gap-3 items-end">
                   <div className="flex-1">
                     <label className="block text-xs font-medium text-purple-700 mb-2">Field Name</label>
                     <input
                       type="text"
-                      value={newOrderLineField.name}
-                      onChange={(e) => setNewOrderLineField({...newOrderLineField, name: e.target.value})}
+                      value={newOrderItemField.name}
+                      onChange={(e) => setNewOrderItemField({...newOrderItemField, name: e.target.value})}
                       placeholder="e.g., Line Notes, Discount Percent"
                       className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
                       disabled={addingField}
@@ -1019,8 +1019,8 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   <div className="w-36">
                     <label className="block text-xs font-medium text-purple-700 mb-2">Field Type</label>
                     <select
-                      value={newOrderLineField.type}
-                      onChange={(e) => setNewOrderLineField({...newOrderLineField, type: e.target.value})}
+                      value={newOrderItemField.type}
+                      onChange={(e) => setNewOrderItemField({...newOrderItemField, type: e.target.value})}
                       className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
                       disabled={addingField}
                     >
@@ -1032,8 +1032,8 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                     </select>
                   </div>
                   <button
-                    onClick={() => addCustomField('order-lines', newOrderLineField)}
-                    disabled={!newOrderLineField.name.trim() || addingField}
+                    onClick={() => addCustomField('order-items', newOrderItemField)}
+                    disabled={!newOrderItemField.name.trim() || addingField}
                     className="px-6 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                   >
                     {addingField ? 'Adding...' : 'Add Field'}
