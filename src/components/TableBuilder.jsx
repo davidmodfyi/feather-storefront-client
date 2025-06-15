@@ -422,10 +422,11 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   Upload from Excel
                 </button>
               </div>
-            <div className={`transform transition-transform duration-300 ${accountsExpanded ? 'rotate-180' : ''}`}>
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <div className={`transform transition-transform duration-300 ${accountsExpanded ? 'rotate-180' : ''}`}>
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
           </div>
           
@@ -568,10 +569,11 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   Upload from Excel
                 </button>
               </div>
-            <div className={`transform transition-transform duration-300 ${productsExpanded ? 'rotate-180' : ''}`}>
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <div className={`transform transition-transform duration-300 ${productsExpanded ? 'rotate-180' : ''}`}>
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
           </div>
           
