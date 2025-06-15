@@ -12,6 +12,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const [newAccountField, setNewAccountField] = useState({ name: '', type: 'text' });
   const [newProductField, setNewProductField] = useState({ name: '', type: 'text' });
   const [addingField, setAddingField] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(null);
   
   // Set title
   document.title = brandName ? `${brandName} - Table Builder` : 'Table Builder - Feather';
@@ -32,9 +33,10 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         console.log('Accounts data received:', accountsData);
         
         // Process accounts with custom attributes merged
-        const processedAccounts = mergeCustomAttributes(
+        const processedAccounts = mergeCustomAttributesWithDefinitions(
           accountsData.accounts || [], 
-          accountsData.customAttributes || []
+          accountsData.customAttributes || [],
+          accountsData.attributeDefinitions || []
         );
         
         setAccountsData(processedAccounts.slice(0, 10));
@@ -51,9 +53,10 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           console.log('Products data received:', productsData);
           
           // Process products with custom attributes merged
-          const processedProducts = mergeCustomAttributes(
+          const processedProducts = mergeCustomAttributesWithDefinitions(
             productsData.products || [], 
-            productsData.customAttributes || []
+            productsData.customAttributes || [],
+            productsData.attributeDefinitions || []
           );
           
           setProductsData(processedProducts.slice(0, 10));
@@ -84,28 +87,36 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
     return Object.keys(data[0]);
   };
 
-  const mergeCustomAttributes = (items, customAttributes) => {
-    console.log('Merging custom attributes for', items.length, 'items with', customAttributes.length, 'custom attributes');
+  const mergeCustomAttributesWithDefinitions = (items, customAttributes, attributeDefinitions) => {
+    console.log('Merging with definitions:', items.length, 'items,', customAttributes.length, 'values,', attributeDefinitions.length, 'definitions');
     
     if (!Array.isArray(items) || items.length === 0) {
       return [];
     }
     
     if (!Array.isArray(customAttributes)) {
-      console.warn('Custom attributes is not an array, using empty array');
       customAttributes = [];
+    }
+    
+    if (!Array.isArray(attributeDefinitions)) {
+      attributeDefinitions = [];
     }
     
     return items.map(item => {
       // Start with the basic item fields
       const mergedItem = { ...item };
       
-      // Add custom attributes for this item
+      // First, add ALL defined custom attributes as empty fields
+      attributeDefinitions.forEach(definition => {
+        mergedItem[definition.attribute_name] = ''; // Default empty value
+      });
+      
+      // Then, fill in actual values where they exist
       const itemCustomAttrs = customAttributes.filter(
         attr => attr.entity_id === item.id
       );
       
-      console.log(`Item ${item.id} has ${itemCustomAttrs.length} custom attributes`);
+      console.log(`Item ${item.id} has ${itemCustomAttrs.length} custom values out of ${attributeDefinitions.length} possible fields`);
       
       itemCustomAttrs.forEach(attr => {
         // Use the appropriate value based on data type
@@ -114,7 +125,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           value = attr.value_boolean ? 'Yes' : 'No';
         }
         mergedItem[attr.attribute_name] = value || '';
-        console.log(`Added custom attribute: ${attr.attribute_name} = ${value}`);
+        console.log(`Set custom attribute: ${attr.attribute_name} = ${value}`);
       });
       
       return mergedItem;
@@ -165,6 +176,28 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
     }
   };
 
+  const debugCustomAttributes = async () => {
+    try {
+      console.log('Fetching debug info...');
+      const response = await fetch('/api/debug/custom-attributes', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setDebugInfo(data);
+        console.log('DEBUG INFO:', data);
+        alert('Debug info loaded - check console for details');
+      } else {
+        const error = await response.json();
+        alert('Debug error: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Debug error:', error);
+      alert('Debug error: ' + error.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -194,6 +227,12 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           </div>
         </div>
         <div className="flex gap-2">
+          <button 
+            onClick={debugCustomAttributes}
+            className="px-3 py-1 bg-yellow-500 text-white rounded text-sm"
+          >
+            Debug DB
+          </button>
           <button onClick={() => navigate('/backoffice')} className="px-3 py-1 bg-blue-500 text-white rounded">Back</button>
           <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
           <button onClick={onLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
