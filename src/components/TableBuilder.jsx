@@ -5,23 +5,29 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const navigate = useNavigate();
   const [accountsData, setAccountsData] = useState([]);
   const [productsData, setProductsData] = useState([]);
+  const [ordersData, setOrdersData] = useState([]);
+  const [orderLinesData, setOrderLinesData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [accountsExpanded, setAccountsExpanded] = useState(false);
   const [productsExpanded, setProductsExpanded] = useState(false);
+  const [ordersExpanded, setOrdersExpanded] = useState(false);
+  const [orderLinesExpanded, setOrderLinesExpanded] = useState(false);
   const [newAccountField, setNewAccountField] = useState({ name: '', type: 'text' });
   const [newProductField, setNewProductField] = useState({ name: '', type: 'text' });
+  const [newOrderField, setNewOrderField] = useState({ name: '', type: 'text' });
+  const [newOrderLineField, setNewOrderLineField] = useState({ name: '', type: 'text' });
   const [addingField, setAddingField] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null);
   
   // Set title
   document.title = brandName ? `${brandName} - Table Builder` : 'Table Builder - Feather';
 
-  const fetchBothTablesData = async () => {
+  const fetchAllTablesData = async () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching both tables data...');
+      console.log('Fetching all tables data...');
       
       // Fetch accounts
       const accountsResponse = await fetch('/api/table-builder/accounts', {
@@ -68,6 +74,60 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         console.log('Products endpoint not available:', productsError.message);
         setProductsData([]);
       }
+
+      // Try to fetch orders
+      try {
+        const ordersResponse = await fetch('/api/table-builder/orders', {
+          credentials: 'include'
+        });
+        
+        if (ordersResponse.ok) {
+          const ordersData = await ordersResponse.json();
+          console.log('Orders data received:', ordersData);
+          
+          // Process orders with custom attributes merged
+          const processedOrders = mergeCustomAttributesWithDefinitions(
+            ordersData.orders || [], 
+            ordersData.customAttributes || [],
+            ordersData.attributeDefinitions || []
+          );
+          
+          setOrdersData(processedOrders.slice(0, 10));
+        } else {
+          console.log('Orders endpoint returned:', ordersResponse.status);
+          setOrdersData([]);
+        }
+      } catch (ordersError) {
+        console.log('Orders endpoint not available:', ordersError.message);
+        setOrdersData([]);
+      }
+
+      // Try to fetch order lines
+      try {
+        const orderLinesResponse = await fetch('/api/table-builder/order-lines', {
+          credentials: 'include'
+        });
+        
+        if (orderLinesResponse.ok) {
+          const orderLinesData = await orderLinesResponse.json();
+          console.log('Order lines data received:', orderLinesData);
+          
+          // Process order lines with custom attributes merged
+          const processedOrderLines = mergeCustomAttributesWithDefinitions(
+            orderLinesData.orderLines || [], 
+            orderLinesData.customAttributes || [],
+            orderLinesData.attributeDefinitions || []
+          );
+          
+          setOrderLinesData(processedOrderLines.slice(0, 10));
+        } else {
+          console.log('Order lines endpoint returned:', orderLinesResponse.status);
+          setOrderLinesData([]);
+        }
+      } catch (orderLinesError) {
+        console.log('Order lines endpoint not available:', orderLinesError.message);
+        setOrderLinesData([]);
+      }
       
     } catch (error) {
       console.error('Fetch error:', error);
@@ -78,7 +138,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   };
 
   useEffect(() => {
-    fetchBothTablesData();
+    fetchAllTablesData();
   }, []);
 
   const getColumnNames = (data) => {
@@ -161,7 +221,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         }
         
         // Refresh data to show new field
-        fetchBothTablesData();
+        fetchAllTablesData();
         
         alert('Field added successfully!');
       } else {
@@ -201,7 +261,9 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const exportToCSV = async (entityType) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/table-builder/${entityType}/export`, {
+      // Handle the order-lines special case for URL
+      const apiEntityType = entityType === 'order-lines' ? 'order-lines' : entityType;
+      const response = await fetch(`/api/table-builder/${apiEntityType}/export`, {
         credentials: 'include'
       });
 
@@ -259,7 +321,9 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
       const formData = new FormData();
       formData.append('csvFile', file);
       
-      const response = await fetch(`/api/table-builder/${entityType}/import`, {
+      // Handle the order-lines special case for URL
+      const apiEntityType = entityType === 'order-lines' ? 'order-lines' : entityType;
+      const response = await fetch(`/api/table-builder/${apiEntityType}/import`, {
         method: 'POST',
         credentials: 'include',
         body: formData
@@ -270,7 +334,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         alert(`Import successful! ${result.imported || 0} records imported, ${result.updated || 0} records updated.`);
         
         // Refresh data to show imported records
-        fetchBothTablesData();
+        fetchAllTablesData();
       } else {
         const error = await response.json();
         alert('Import error: ' + (error.error || 'Unknown error'));
@@ -330,7 +394,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
             </h1>
           </div>
           <div className="px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full text-sm text-gray-600 border border-white/20">
-            {accountsData.length} accounts • {productsData.length} products
+            {accountsData.length} accounts • {productsData.length} products • {ordersData.length} orders • {orderLinesData.length} lines
           </div>
         </div>
         <div className="flex gap-2">
@@ -365,7 +429,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl shadow-sm">
           <p className="text-red-700 font-medium">Error: {error}</p>
           <button 
-            onClick={fetchBothTablesData}
+            onClick={fetchAllTablesData}
             className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium"
           >
             Retry
@@ -661,6 +725,300 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                     onClick={() => addCustomField('products', newProductField)}
                     disabled={!newProductField.name.trim() || addingField}
                     className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    {addingField ? 'Adding...' : 'Add Field'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Order Fields (Header) Section */}
+        <div className="bg-white rounded-2xl shadow-lg border border-orange-100 overflow-hidden">
+          <div 
+            className="px-6 py-5 bg-gradient-to-r from-orange-600 to-orange-700 cursor-pointer hover:from-orange-700 hover:to-orange-800 transition-all duration-200 flex justify-between items-center"
+            onClick={() => setOrdersExpanded(!ordersExpanded)}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Order Fields (Header)</h2>
+                <p className="text-orange-100 text-sm">
+                  {ordersData.length} order headers • Click to {ordersExpanded ? 'collapse' : 'expand'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    exportToCSV('orders');
+                  }}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                  disabled={loading}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export to Excel
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerFileUpload('orders');
+                  }}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                  disabled={loading}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                  </svg>
+                  Upload from Excel
+                </button>
+              </div>
+              <div className={`transform transition-transform duration-300 ${ordersExpanded ? 'rotate-180' : ''}`}>
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          {ordersExpanded && (
+            <>
+              <div className="overflow-x-auto">
+                {ordersData.length > 0 ? (
+                  <table className="min-w-full divide-y divide-orange-100">
+                    <thead className="bg-orange-50">
+                      <tr>
+                        {getColumnNames(ordersData).map(column => (
+                          <th 
+                            key={column}
+                            scope="col" 
+                            className="px-6 py-4 text-left text-xs font-semibold text-orange-800 uppercase tracking-wider"
+                          >
+                            {column.replace(/_/g, ' ')}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-orange-50">
+                      {ordersData.map((order, index) => (
+                        <tr key={order.id || index} className={`hover:bg-orange-25 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-orange-25/30'}`}>
+                          {getColumnNames(ordersData).map(column => (
+                            <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {order[column] || <span className="text-gray-400">—</span>}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 text-lg font-medium">No orders found</p>
+                    <p className="text-gray-400 text-sm">Order data will appear here once available</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Add Field Form for Orders */}
+              <div className="px-6 py-5 border-t border-orange-100 bg-gradient-to-r from-orange-50 to-orange-25">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <h3 className="text-sm font-semibold text-orange-800">Add Custom Field to Order Headers</h3>
+                </div>
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-orange-700 mb-2">Field Name</label>
+                    <input
+                      type="text"
+                      value={newOrderField.name}
+                      onChange={(e) => setNewOrderField({...newOrderField, name: e.target.value})}
+                      placeholder="e.g., Delivery Date, Purchase Order"
+                      className="w-full px-4 py-2.5 border border-orange-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                      disabled={addingField}
+                    />
+                  </div>
+                  <div className="w-36">
+                    <label className="block text-xs font-medium text-orange-700 mb-2">Field Type</label>
+                    <select
+                      value={newOrderField.type}
+                      onChange={(e) => setNewOrderField({...newOrderField, type: e.target.value})}
+                      className="w-full px-4 py-2.5 border border-orange-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                      disabled={addingField}
+                    >
+                      <option value="text">Text</option>
+                      <option value="number">Number</option>
+                      <option value="boolean">Yes/No</option>
+                      <option value="date">Date</option>
+                      <option value="select">Select List</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => addCustomField('orders', newOrderField)}
+                    disabled={!newOrderField.name.trim() || addingField}
+                    className="px-6 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    {addingField ? 'Adding...' : 'Add Field'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Order Fields (Lines) Section */}
+        <div className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
+          <div 
+            className="px-6 py-5 bg-gradient-to-r from-purple-600 to-purple-700 cursor-pointer hover:from-purple-700 hover:to-purple-800 transition-all duration-200 flex justify-between items-center"
+            onClick={() => setOrderLinesExpanded(!orderLinesExpanded)}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Order Fields (Lines)</h2>
+                <p className="text-purple-100 text-sm">
+                  {orderLinesData.length} order line items • Click to {orderLinesExpanded ? 'collapse' : 'expand'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    exportToCSV('order-lines');
+                  }}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                  disabled={loading}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export to Excel
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerFileUpload('order-lines');
+                  }}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                  disabled={loading}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                  </svg>
+                  Upload from Excel
+                </button>
+              </div>
+              <div className={`transform transition-transform duration-300 ${orderLinesExpanded ? 'rotate-180' : ''}`}>
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          {orderLinesExpanded && (
+            <>
+              <div className="overflow-x-auto">
+                {orderLinesData.length > 0 ? (
+                  <table className="min-w-full divide-y divide-purple-100">
+                    <thead className="bg-purple-50">
+                      <tr>
+                        {getColumnNames(orderLinesData).map(column => (
+                          <th 
+                            key={column}
+                            scope="col" 
+                            className="px-6 py-4 text-left text-xs font-semibold text-purple-800 uppercase tracking-wider"
+                          >
+                            {column.replace(/_/g, ' ')}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-purple-50">
+                      {orderLinesData.map((line, index) => (
+                        <tr key={line.id || index} className={`hover:bg-purple-25 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-purple-25/30'}`}>
+                          {getColumnNames(orderLinesData).map(column => (
+                            <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {line[column] || <span className="text-gray-400">—</span>}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 text-lg font-medium">No order lines found</p>
+                    <p className="text-gray-400 text-sm">Order line data will appear here once available</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Add Field Form for Order Lines */}
+              <div className="px-6 py-5 border-t border-purple-100 bg-gradient-to-r from-purple-50 to-purple-25">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <h3 className="text-sm font-semibold text-purple-800">Add Custom Field to Order Lines</h3>
+                </div>
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-purple-700 mb-2">Field Name</label>
+                    <input
+                      type="text"
+                      value={newOrderLineField.name}
+                      onChange={(e) => setNewOrderLineField({...newOrderLineField, name: e.target.value})}
+                      placeholder="e.g., Line Notes, Discount Percent"
+                      className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                      disabled={addingField}
+                    />
+                  </div>
+                  <div className="w-36">
+                    <label className="block text-xs font-medium text-purple-700 mb-2">Field Type</label>
+                    <select
+                      value={newOrderLineField.type}
+                      onChange={(e) => setNewOrderLineField({...newOrderLineField, type: e.target.value})}
+                      className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                      disabled={addingField}
+                    >
+                      <option value="text">Text</option>
+                      <option value="number">Number</option>
+                      <option value="boolean">Yes/No</option>
+                      <option value="date">Date</option>
+                      <option value="select">Select List</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => addCustomField('order-lines', newOrderLineField)}
+                    disabled={!newOrderLineField.name.trim() || addingField}
+                    className="px-6 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                   >
                     {addingField ? 'Adding...' : 'Add Field'}
                   </button>

@@ -800,6 +800,503 @@ app.post('/api/table-builder/products/import', csvUpload.single('csvFile'), (req
   }
 });
 
+// Table Builder API - Get orders with custom attributes
+app.get('/api/table-builder/orders', (req, res) => {
+  console.log('Table Builder orders request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get basic orders data (limit to first 10)
+    const orders = db.prepare(`
+      SELECT * FROM orders 
+      WHERE distributor_id = ? 
+      ORDER BY id 
+      LIMIT 10
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for orders
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'orders'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for these orders
+    const orderIds = orders.map(order => order.id);
+    
+    let customAttributes = [];
+    if (orderIds.length > 0) {
+      const placeholders = orderIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'orders' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...orderIds);
+    }
+    
+    console.log(`Found ${orders.length} orders, ${customAttributes.length} custom attributes`);
+    
+    res.json({
+      orders: orders,
+      customAttributes: customAttributes,
+      attributeDefinitions: attributeDefinitions
+    });
+    
+  } catch (error) {
+    console.error('Error fetching table builder orders data:', error);
+    res.status(500).json({ error: 'Failed to fetch orders data' });
+  }
+});
+
+// Table Builder API - Get order lines with custom attributes
+app.get('/api/table-builder/order-lines', (req, res) => {
+  console.log('Table Builder order lines request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get basic order lines data (limit to first 10)
+    const orderLines = db.prepare(`
+      SELECT * FROM order_lines 
+      WHERE distributor_id = ? 
+      ORDER BY id 
+      LIMIT 10
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for order lines
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'order_lines'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for these order lines
+    const orderLineIds = orderLines.map(line => line.id);
+    
+    let customAttributes = [];
+    if (orderLineIds.length > 0) {
+      const placeholders = orderLineIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'order_lines' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...orderLineIds);
+    }
+    
+    console.log(`Found ${orderLines.length} order lines, ${customAttributes.length} custom attributes`);
+    
+    res.json({
+      orderLines: orderLines,
+      customAttributes: customAttributes,
+      attributeDefinitions: attributeDefinitions
+    });
+    
+  } catch (error) {
+    console.error('Error fetching table builder order lines data:', error);
+    res.status(500).json({ error: 'Failed to fetch order lines data' });
+  }
+});
+
+// Table Builder API - Export full orders data to CSV
+app.get('/api/table-builder/orders/export', (req, res) => {
+  console.log('Export orders request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get ALL orders data (no limit)
+    const orders = db.prepare(`
+      SELECT * FROM orders 
+      WHERE distributor_id = ? 
+      ORDER BY id
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for orders
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'orders'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for all orders
+    const orderIds = orders.map(order => order.id);
+    
+    let customAttributes = [];
+    if (orderIds.length > 0) {
+      const placeholders = orderIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'orders' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...orderIds);
+    }
+    
+    // Merge data same as preview endpoint
+    const mergedData = orders.map(order => {
+      const mergedOrder = { ...order };
+      
+      // Add all defined custom attributes as empty fields
+      attributeDefinitions.forEach(definition => {
+        mergedOrder[definition.attribute_name] = '';
+      });
+      
+      // Fill in actual values where they exist
+      const orderCustomAttrs = customAttributes.filter(
+        attr => attr.entity_id === order.id
+      );
+      
+      orderCustomAttrs.forEach(attr => {
+        let value = attr.value_text || attr.value_number || attr.value_boolean;
+        if (attr.value_boolean !== null && attr.value_boolean !== undefined) {
+          value = attr.value_boolean ? 'Yes' : 'No';
+        }
+        mergedOrder[attr.attribute_name] = value || '';
+      });
+      
+      return mergedOrder;
+    });
+    
+    console.log(`Exporting ${mergedData.length} orders`);
+    
+    res.json({
+      data: mergedData,
+      exported_at: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error exporting orders data:', error);
+    res.status(500).json({ error: 'Failed to export orders data' });
+  }
+});
+
+// Table Builder API - Export full order lines data to CSV
+app.get('/api/table-builder/order-lines/export', (req, res) => {
+  console.log('Export order lines request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get ALL order lines data (no limit)
+    const orderLines = db.prepare(`
+      SELECT * FROM order_lines 
+      WHERE distributor_id = ? 
+      ORDER BY id
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for order lines
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'order_lines'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for all order lines
+    const orderLineIds = orderLines.map(line => line.id);
+    
+    let customAttributes = [];
+    if (orderLineIds.length > 0) {
+      const placeholders = orderLineIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'order_lines' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...orderLineIds);
+    }
+    
+    // Merge data same as preview endpoint
+    const mergedData = orderLines.map(line => {
+      const mergedLine = { ...line };
+      
+      // Add all defined custom attributes as empty fields
+      attributeDefinitions.forEach(definition => {
+        mergedLine[definition.attribute_name] = '';
+      });
+      
+      // Fill in actual values where they exist
+      const lineCustomAttrs = customAttributes.filter(
+        attr => attr.entity_id === line.id
+      );
+      
+      lineCustomAttrs.forEach(attr => {
+        let value = attr.value_text || attr.value_number || attr.value_boolean;
+        if (attr.value_boolean !== null && attr.value_boolean !== undefined) {
+          value = attr.value_boolean ? 'Yes' : 'No';
+        }
+        mergedLine[attr.attribute_name] = value || '';
+      });
+      
+      return mergedLine;
+    });
+    
+    console.log(`Exporting ${mergedData.length} order lines`);
+    
+    res.json({
+      data: mergedData,
+      exported_at: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error exporting order lines data:', error);
+    res.status(500).json({ error: 'Failed to export order lines data' });
+  }
+});
+
+// Table Builder API - Import orders from CSV
+app.post('/api/table-builder/orders/import', csvUpload.single('csvFile'), (req, res) => {
+  console.log('Import orders request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'No CSV file uploaded' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const csvText = req.file.buffer.toString('utf8');
+    const importData = parseCSV(csvText);
+    
+    if (importData.length === 0) {
+      return res.status(400).json({ error: 'CSV file is empty or invalid' });
+    }
+    
+    let imported = 0;
+    let updated = 0;
+    
+    const transaction = db.transaction(() => {
+      for (const row of importData) {
+        // Separate core order fields from custom attributes
+        const coreFields = ['id', 'account_id', 'status', 'total_amount', 'order_date'];
+        const coreData = {};
+        const customData = {};
+        
+        for (const [key, value] of Object.entries(row)) {
+          if (coreFields.includes(key)) {
+            coreData[key] = value;
+          } else {
+            customData[key] = value;
+          }
+        }
+        
+        // Insert/update core order data
+        if (coreData.id) {
+          // Update existing order
+          const existing = db.prepare('SELECT id FROM orders WHERE id = ? AND distributor_id = ?').get(coreData.id, distributorId);
+          if (existing) {
+            const updateFields = Object.keys(coreData).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+            const updateValues = Object.keys(coreData).filter(k => k !== 'id').map(k => coreData[k]);
+            
+            if (updateFields) {
+              db.prepare(`UPDATE orders SET ${updateFields} WHERE id = ? AND distributor_id = ?`)
+                .run(...updateValues, coreData.id, distributorId);
+              updated++;
+            }
+          }
+        } else {
+          // Insert new order
+          const result = db.prepare(`
+            INSERT INTO orders (distributor_id, account_id, status, total_amount, order_date)
+            VALUES (?, ?, ?, ?, ?)
+          `).run(
+            distributorId,
+            coreData.account_id || null,
+            coreData.status || 'draft',
+            parseFloat(coreData.total_amount) || 0,
+            coreData.order_date || new Date().toISOString()
+          );
+          coreData.id = result.lastInsertRowid;
+          imported++;
+        }
+        
+        // Handle custom attributes
+        for (const [attrName, attrValue] of Object.entries(customData)) {
+          if (attrValue) {
+            // Get or create attribute definition
+            let attrDef = db.prepare(`
+              SELECT id, data_type FROM custom_attributes_definitions 
+              WHERE distributor_id = ? AND entity_type = 'orders' AND attribute_name = ?
+            `).get(distributorId, attrName);
+            
+            if (!attrDef) {
+              // Create new attribute definition
+              const result = db.prepare(`
+                INSERT INTO custom_attributes_definitions 
+                (distributor_id, entity_type, attribute_name, attribute_label, data_type, display_order, is_active)
+                VALUES (?, 'orders', ?, ?, 'text', 999, 1)
+              `).run(distributorId, attrName, attrName.replace(/_/g, ' '));
+              
+              attrDef = { id: result.lastInsertRowid, data_type: 'text' };
+            }
+            
+            // Insert/update custom attribute value
+            db.prepare(`
+              INSERT OR REPLACE INTO custom_attributes_values 
+              (distributor_id, entity_type, entity_id, attribute_name, value_text)
+              VALUES (?, 'orders', ?, ?, ?)
+            `).run(distributorId, coreData.id, attrName, attrValue);
+          }
+        }
+      }
+    });
+    
+    transaction();
+    
+    console.log(`Import complete: ${imported} new orders, ${updated} updated`);
+    
+    res.json({
+      success: true,
+      imported,
+      updated,
+      total: importData.length
+    });
+    
+  } catch (error) {
+    console.error('Error importing orders:', error);
+    res.status(500).json({ error: 'Failed to import orders: ' + error.message });
+  }
+});
+
+// Table Builder API - Import order lines from CSV
+app.post('/api/table-builder/order-lines/import', csvUpload.single('csvFile'), (req, res) => {
+  console.log('Import order lines request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'No CSV file uploaded' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const csvText = req.file.buffer.toString('utf8');
+    const importData = parseCSV(csvText);
+    
+    if (importData.length === 0) {
+      return res.status(400).json({ error: 'CSV file is empty or invalid' });
+    }
+    
+    let imported = 0;
+    let updated = 0;
+    
+    const transaction = db.transaction(() => {
+      for (const row of importData) {
+        // Separate core order line fields from custom attributes
+        const coreFields = ['id', 'order_id', 'product_id', 'quantity', 'unit_price', 'line_total'];
+        const coreData = {};
+        const customData = {};
+        
+        for (const [key, value] of Object.entries(row)) {
+          if (coreFields.includes(key)) {
+            coreData[key] = value;
+          } else {
+            customData[key] = value;
+          }
+        }
+        
+        // Insert/update core order line data
+        if (coreData.id) {
+          // Update existing order line
+          const existing = db.prepare('SELECT id FROM order_lines WHERE id = ? AND distributor_id = ?').get(coreData.id, distributorId);
+          if (existing) {
+            const updateFields = Object.keys(coreData).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+            const updateValues = Object.keys(coreData).filter(k => k !== 'id').map(k => coreData[k]);
+            
+            if (updateFields) {
+              db.prepare(`UPDATE order_lines SET ${updateFields} WHERE id = ? AND distributor_id = ?`)
+                .run(...updateValues, coreData.id, distributorId);
+              updated++;
+            }
+          }
+        } else {
+          // Insert new order line
+          const result = db.prepare(`
+            INSERT INTO order_lines (distributor_id, order_id, product_id, quantity, unit_price, line_total)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `).run(
+            distributorId,
+            coreData.order_id || null,
+            coreData.product_id || null,
+            parseInt(coreData.quantity) || 1,
+            parseFloat(coreData.unit_price) || 0,
+            parseFloat(coreData.line_total) || 0
+          );
+          coreData.id = result.lastInsertRowid;
+          imported++;
+        }
+        
+        // Handle custom attributes
+        for (const [attrName, attrValue] of Object.entries(customData)) {
+          if (attrValue) {
+            // Get or create attribute definition
+            let attrDef = db.prepare(`
+              SELECT id, data_type FROM custom_attributes_definitions 
+              WHERE distributor_id = ? AND entity_type = 'order_lines' AND attribute_name = ?
+            `).get(distributorId, attrName);
+            
+            if (!attrDef) {
+              // Create new attribute definition
+              const result = db.prepare(`
+                INSERT INTO custom_attributes_definitions 
+                (distributor_id, entity_type, attribute_name, attribute_label, data_type, display_order, is_active)
+                VALUES (?, 'order_lines', ?, ?, 'text', 999, 1)
+              `).run(distributorId, attrName, attrName.replace(/_/g, ' '));
+              
+              attrDef = { id: result.lastInsertRowid, data_type: 'text' };
+            }
+            
+            // Insert/update custom attribute value
+            db.prepare(`
+              INSERT OR REPLACE INTO custom_attributes_values 
+              (distributor_id, entity_type, entity_id, attribute_name, value_text)
+              VALUES (?, 'order_lines', ?, ?, ?)
+            `).run(distributorId, coreData.id, attrName, attrValue);
+          }
+        }
+      }
+    });
+    
+    transaction();
+    
+    console.log(`Import complete: ${imported} new order lines, ${updated} updated`);
+    
+    res.json({
+      success: true,
+      imported,
+      updated,
+      total: importData.length
+    });
+    
+  } catch (error) {
+    console.error('Error importing order lines:', error);
+    res.status(500).json({ error: 'Failed to import order lines: ' + error.message });
+  }
+});
+
 // Debug endpoint - Add this to your index.js
 app.get('/api/debug/custom-attributes', (req, res) => {
   console.log('=== DEBUG: Custom Attributes ===');
