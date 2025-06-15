@@ -356,6 +356,79 @@ app.post('/api/table-builder/add-field', (req, res) => {
   }
 });
 
+// Debug endpoint - Add this to your index.js
+app.get('/api/debug/custom-attributes', (req, res) => {
+  console.log('=== DEBUG: Custom Attributes ===');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    console.log('Checking for distributor:', distributorId);
+    
+    // Get all custom attribute definitions for this distributor
+    const definitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ?
+      ORDER BY entity_type, display_order
+    `).all(distributorId);
+    
+    console.log('Found', definitions.length, 'custom attribute definitions');
+    
+    // Get all custom attribute values for this distributor  
+    const values = db.prepare(`
+      SELECT * FROM custom_attributes_values 
+      WHERE distributor_id = ?
+      ORDER BY entity_type, entity_id
+    `).all(distributorId);
+    
+    console.log('Found', values.length, 'custom attribute values');
+    
+    // Get table counts
+    const accountsCount = db.prepare(`
+      SELECT COUNT(*) as count FROM accounts WHERE distributor_id = ?
+    `).get(distributorId);
+    
+    const productsCount = db.prepare(`
+      SELECT COUNT(*) as count FROM products WHERE distributor_id = ?
+    `).get(distributorId);
+    
+    const debugInfo = {
+      distributor_id: distributorId,
+      tables: {
+        accounts_count: accountsCount.count,
+        products_count: productsCount.count,
+        custom_definitions_count: definitions.length,
+        custom_values_count: values.length
+      },
+      custom_attribute_definitions: definitions,
+      custom_attribute_values: values,
+      sample_accounts: db.prepare(`
+        SELECT * FROM accounts WHERE distributor_id = ? LIMIT 3
+      `).all(distributorId),
+      sample_products: db.prepare(`
+        SELECT * FROM products WHERE distributor_id = ? LIMIT 3
+      `).all(distributorId)
+    };
+    
+    console.log('=== DEBUG SUMMARY ===');
+    console.log('Distributor:', distributorId);
+    console.log('Accounts:', accountsCount.count);
+    console.log('Products:', productsCount.count);
+    console.log('Custom Definitions:', definitions.length);
+    console.log('Custom Values:', values.length);
+    console.log('========================');
+    
+    res.json(debugInfo);
+    
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
 app.get('/api/add-header-logo-column', (req, res) => {
   try {
     // Check if column exists
