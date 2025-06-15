@@ -194,7 +194,63 @@ app.get('/api/table-builder/accounts', (req, res) => {
   console.log('Table Builder accounts request');
   
   if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' // Table Builder API - Add custom field
+app.post('/api/table-builder/add-field', (req, res) => {
+  console.log('Add custom field request:', req.body);
+  
+  if (!req.session.distributor_id) {
     return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const { entity_type, attribute_name, attribute_label, data_type, validation_rules, display_order } = req.body;
+    
+    // Validate required fields
+    if (!entity_type || !attribute_name || !attribute_label || !data_type) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Check if attribute already exists
+    const existingAttr = db.prepare(`
+      SELECT id FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = ? AND attribute_name = ?
+    `).get(distributorId, entity_type, attribute_name);
+    
+    if (existingAttr) {
+      return res.status(400).json({ error: 'Field with this name already exists' });
+    }
+    
+    // Insert new custom attribute definition
+    const insertStmt = db.prepare(`
+      INSERT INTO custom_attributes_definitions 
+      (distributor_id, entity_type, attribute_name, attribute_label, data_type, validation_rules, display_order, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+    `);
+    
+    const result = insertStmt.run(
+      distributorId, 
+      entity_type, 
+      attribute_name, 
+      attribute_label, 
+      data_type, 
+      validation_rules || '{}', 
+      display_order || 999
+    );
+    
+    console.log(`Added custom field: ${attribute_label} (${attribute_name}) for ${entity_type}`);
+    
+    res.json({ 
+      success: true, 
+      id: result.lastInsertRowid,
+      message: `Custom field "${attribute_label}" added successfully`
+    });
+    
+  } catch (error) {
+    console.error('Error adding custom field:', error);
+    res.status(500).json({ error: 'Failed to add custom field' });
+  }
+});
   }
   
   try {
