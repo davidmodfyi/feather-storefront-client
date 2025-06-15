@@ -217,234 +217,300 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   }
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 p-6">
       {/* Header */}
-      <div className="flex justify-between mb-6">
+      <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">Table Builder</h1>
-          <div className="text-sm text-gray-600">
-            {accountsData.length} accounts, {productsData.length} products loaded
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+              Table Builder
+            </h1>
+          </div>
+          <div className="px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full text-sm text-gray-600 border border-white/20">
+            {accountsData.length} accounts • {productsData.length} products
           </div>
         </div>
         <div className="flex gap-2">
           <button 
             onClick={debugCustomAttributes}
-            className="px-3 py-1 bg-yellow-500 text-white rounded text-sm"
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
           >
             Debug DB
           </button>
-          <button onClick={() => navigate('/backoffice')} className="px-3 py-1 bg-blue-500 text-white rounded">Back</button>
-          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
-          <button onClick={onLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
+          <button 
+            onClick={() => navigate('/backoffice')} 
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            Back
+          </button>
+          <button 
+            onClick={onHome} 
+            className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            Home
+          </button>
+          <button 
+            onClick={onLogout} 
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            Logout
+          </button>
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
-          <p className="text-red-600">Error: {error}</p>
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl shadow-sm">
+          <p className="text-red-700 font-medium">Error: {error}</p>
           <button 
             onClick={fetchBothTablesData}
-            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium"
           >
             Retry
           </button>
         </div>
       )}
 
-      {/* Accounts Table Section */}
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div 
-          className="px-6 py-4 border-b border-gray-200 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
-          onClick={() => setAccountsExpanded(!accountsExpanded)}
-        >
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Accounts Table</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {accountsData.length} accounts (first 10 rows)
-            </p>
-          </div>
-          <div className={`transform transition-transform duration-200 ${accountsExpanded ? 'rotate-180' : ''}`}>
-            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-        
-        {accountsExpanded && (
-          <div className="overflow-x-auto">
-            {accountsData.length > 0 ? (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {getColumnNames(accountsData).map(column => (
-                      <th 
-                        key={column}
-                        scope="col" 
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        {column.replace(/_/g, ' ')}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {accountsData.map((account, index) => (
-                    <tr key={account.id || index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      {getColumnNames(accountsData).map(column => (
-                        <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {account[column] || ''}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No accounts found</p>
+      <div className="space-y-8">
+        {/* Accounts Table Section */}
+        <div className="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden">
+          <div 
+            className="px-6 py-5 bg-gradient-to-r from-blue-600 to-blue-700 cursor-pointer hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex justify-between items-center"
+            onClick={() => setAccountsExpanded(!accountsExpanded)}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
               </div>
-            )}
-          </div>
-        )}
-        
-        {/* Add Field Form for Products */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Add Custom Field to Products</h3>
-          <div className="flex gap-3 items-end">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Field Name</label>
-              <input
-                type="text"
-                value={newProductField.name}
-                onChange={(e) => setNewProductField({...newProductField, name: e.target.value})}
-                placeholder="e.g., Shelf Life, Storage Temp"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={addingField}
-              />
-            </div>
-            <div className="w-32">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Field Type</label>
-              <select
-                value={newProductField.type}
-                onChange={(e) => setNewProductField({...newProductField, type: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={addingField}
-              >
-                <option value="text">Text</option>
-                <option value="number">Number</option>
-                <option value="boolean">Yes/No</option>
-                <option value="date">Date</option>
-                <option value="select">Select List</option>
-              </select>
-            </div>
-            <button
-              onClick={() => addCustomField('products', newProductField)}
-              disabled={!newProductField.name.trim() || addingField}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {addingField ? 'Adding...' : 'Add Field'}
-            </button>
-          </div>
-        </div>
-        
-        {/* Add Field Form for Accounts */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Add Custom Field to Accounts</h3>
-          <div className="flex gap-3 items-end">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Field Name</label>
-              <input
-                type="text"
-                value={newAccountField.name}
-                onChange={(e) => setNewAccountField({...newAccountField, name: e.target.value})}
-                placeholder="e.g., Contract ID, Street 2"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={addingField}
-              />
-            </div>
-            <div className="w-32">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Field Type</label>
-              <select
-                value={newAccountField.type}
-                onChange={(e) => setNewAccountField({...newAccountField, type: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={addingField}
-              >
-                <option value="text">Text</option>
-                <option value="number">Number</option>
-                <option value="boolean">Yes/No</option>
-                <option value="date">Date</option>
-                <option value="select">Select List</option>
-              </select>
-            </div>
-            <button
-              onClick={() => addCustomField('accounts', newAccountField)}
-              disabled={!newAccountField.name.trim() || addingField}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {addingField ? 'Adding...' : 'Add Field'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Products Table Section */}
-      <div className="bg-white rounded-lg shadow">
-        <div 
-          className="px-6 py-4 border-b border-gray-200 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
-          onClick={() => setProductsExpanded(!productsExpanded)}
-        >
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Products Table</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {productsData.length} products (first 10 rows)
-            </p>
-          </div>
-          <div className={`transform transition-transform duration-200 ${productsExpanded ? 'rotate-180' : ''}`}>
-            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-        
-        {productsExpanded && (
-          <div className="overflow-x-auto">
-            {productsData.length > 0 ? (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {getColumnNames(productsData).map(column => (
-                      <th 
-                        key={column}
-                        scope="col" 
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        {column.replace(/_/g, ' ')}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {productsData.map((product, index) => (
-                    <tr key={product.id || index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      {getColumnNames(productsData).map(column => (
-                        <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {product[column] || ''}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">
-                  {productsData.length === 0 ? 'No products found or endpoint not available' : 'No products found'}
+              <div>
+                <h2 className="text-xl font-bold text-white">Accounts Database</h2>
+                <p className="text-blue-100 text-sm">
+                  {accountsData.length} customer accounts • Click to {accountsExpanded ? 'collapse' : 'expand'}
                 </p>
               </div>
-            )}
+            </div>
+            <div className={`transform transition-transform duration-300 ${accountsExpanded ? 'rotate-180' : ''}`}>
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
-        )}
+          
+          {accountsExpanded && (
+            <>
+              <div className="overflow-x-auto">
+                {accountsData.length > 0 ? (
+                  <table className="min-w-full divide-y divide-blue-100">
+                    <thead className="bg-blue-50">
+                      <tr>
+                        {getColumnNames(accountsData).map(column => (
+                          <th 
+                            key={column}
+                            scope="col" 
+                            className="px-6 py-4 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider"
+                          >
+                            {column.replace(/_/g, ' ')}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-blue-50">
+                      {accountsData.map((account, index) => (
+                        <tr key={account.id || index} className={`hover:bg-blue-25 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-blue-25/30'}`}>
+                          {getColumnNames(accountsData).map(column => (
+                            <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {account[column] || <span className="text-gray-400">—</span>}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 text-lg font-medium">No accounts found</p>
+                    <p className="text-gray-400 text-sm">Account data will appear here once available</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Add Field Form for Accounts */}
+              <div className="px-6 py-5 border-t border-blue-100 bg-gradient-to-r from-blue-50 to-blue-25">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <h3 className="text-sm font-semibold text-blue-800">Add Custom Field to Accounts</h3>
+                </div>
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-blue-700 mb-2">Field Name</label>
+                    <input
+                      type="text"
+                      value={newAccountField.name}
+                      onChange={(e) => setNewAccountField({...newAccountField, name: e.target.value})}
+                      placeholder="e.g., Contract ID, Street 2"
+                      className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      disabled={addingField}
+                    />
+                  </div>
+                  <div className="w-36">
+                    <label className="block text-xs font-medium text-blue-700 mb-2">Field Type</label>
+                    <select
+                      value={newAccountField.type}
+                      onChange={(e) => setNewAccountField({...newAccountField, type: e.target.value})}
+                      className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      disabled={addingField}
+                    >
+                      <option value="text">Text</option>
+                      <option value="number">Number</option>
+                      <option value="boolean">Yes/No</option>
+                      <option value="date">Date</option>
+                      <option value="select">Select List</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => addCustomField('accounts', newAccountField)}
+                    disabled={!newAccountField.name.trim() || addingField}
+                    className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    {addingField ? 'Adding...' : 'Add Field'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Products Table Section */}
+        <div className="bg-white rounded-2xl shadow-lg border border-emerald-100 overflow-hidden">
+          <div 
+            className="px-6 py-5 bg-gradient-to-r from-emerald-600 to-emerald-700 cursor-pointer hover:from-emerald-700 hover:to-emerald-800 transition-all duration-200 flex justify-between items-center"
+            onClick={() => setProductsExpanded(!productsExpanded)}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Products Catalog</h2>
+                <p className="text-emerald-100 text-sm">
+                  {productsData.length} product entries • Click to {productsExpanded ? 'collapse' : 'expand'}
+                </p>
+              </div>
+            </div>
+            <div className={`transform transition-transform duration-300 ${productsExpanded ? 'rotate-180' : ''}`}>
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+          
+          {productsExpanded && (
+            <>
+              <div className="overflow-x-auto">
+                {productsData.length > 0 ? (
+                  <table className="min-w-full divide-y divide-emerald-100">
+                    <thead className="bg-emerald-50">
+                      <tr>
+                        {getColumnNames(productsData).map(column => (
+                          <th 
+                            key={column}
+                            scope="col" 
+                            className="px-6 py-4 text-left text-xs font-semibold text-emerald-800 uppercase tracking-wider"
+                          >
+                            {column.replace(/_/g, ' ')}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-emerald-50">
+                      {productsData.map((product, index) => (
+                        <tr key={product.id || index} className={`hover:bg-emerald-25 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-emerald-25/30'}`}>
+                          {getColumnNames(productsData).map(column => (
+                            <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {product[column] || <span className="text-gray-400">—</span>}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 text-lg font-medium">No products found</p>
+                    <p className="text-gray-400 text-sm">
+                      {productsData.length === 0 ? 'Product data will appear here once available' : 'No products found'}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Add Field Form for Products */}
+              <div className="px-6 py-5 border-t border-emerald-100 bg-gradient-to-r from-emerald-50 to-emerald-25">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <h3 className="text-sm font-semibold text-emerald-800">Add Custom Field to Products</h3>
+                </div>
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-emerald-700 mb-2">Field Name</label>
+                    <input
+                      type="text"
+                      value={newProductField.name}
+                      onChange={(e) => setNewProductField({...newProductField, name: e.target.value})}
+                      placeholder="e.g., Shelf Life, Storage Temp"
+                      className="w-full px-4 py-2.5 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                      disabled={addingField}
+                    />
+                  </div>
+                  <div className="w-36">
+                    <label className="block text-xs font-medium text-emerald-700 mb-2">Field Type</label>
+                    <select
+                      value={newProductField.type}
+                      onChange={(e) => setNewProductField({...newProductField, type: e.target.value})}
+                      className="w-full px-4 py-2.5 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                      disabled={addingField}
+                    >
+                      <option value="text">Text</option>
+                      <option value="number">Number</option>
+                      <option value="boolean">Yes/No</option>
+                      <option value="date">Date</option>
+                      <option value="select">Select List</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => addCustomField('products', newProductField)}
+                    disabled={!newProductField.name.trim() || addingField}
+                    className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    {addingField ? 'Adding...' : 'Add Field'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
