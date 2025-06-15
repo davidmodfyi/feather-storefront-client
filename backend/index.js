@@ -356,6 +356,450 @@ app.post('/api/table-builder/add-field', (req, res) => {
   }
 });
 
+// Table Builder API - Export full accounts data to CSV
+app.get('/api/table-builder/accounts/export', (req, res) => {
+  console.log('Export accounts request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get ALL accounts data (no limit)
+    const accounts = db.prepare(`
+      SELECT * FROM accounts 
+      WHERE distributor_id = ? 
+      ORDER BY id
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for accounts
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'accounts'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for all accounts
+    const accountIds = accounts.map(account => account.id);
+    
+    let customAttributes = [];
+    if (accountIds.length > 0) {
+      const placeholders = accountIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'accounts' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...accountIds);
+    }
+    
+    // Merge data same as preview endpoint
+    const mergedData = accounts.map(account => {
+      const mergedAccount = { ...account };
+      
+      // Add all defined custom attributes as empty fields
+      attributeDefinitions.forEach(definition => {
+        mergedAccount[definition.attribute_name] = '';
+      });
+      
+      // Fill in actual values where they exist
+      const accountCustomAttrs = customAttributes.filter(
+        attr => attr.entity_id === account.id
+      );
+      
+      accountCustomAttrs.forEach(attr => {
+        let value = attr.value_text || attr.value_number || attr.value_boolean;
+        if (attr.value_boolean !== null && attr.value_boolean !== undefined) {
+          value = attr.value_boolean ? 'Yes' : 'No';
+        }
+        mergedAccount[attr.attribute_name] = value || '';
+      });
+      
+      return mergedAccount;
+    });
+    
+    console.log(`Exporting ${mergedData.length} accounts`);
+    
+    res.json({
+      data: mergedData,
+      exported_at: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error exporting accounts data:', error);
+    res.status(500).json({ error: 'Failed to export accounts data' });
+  }
+});
+
+// Table Builder API - Export full products data to CSV
+app.get('/api/table-builder/products/export', (req, res) => {
+  console.log('Export products request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get ALL products data (no limit)
+    const products = db.prepare(`
+      SELECT * FROM products 
+      WHERE distributor_id = ? 
+      ORDER BY id
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for products
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'products'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for all products
+    const productIds = products.map(product => product.id);
+    
+    let customAttributes = [];
+    if (productIds.length > 0) {
+      const placeholders = productIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'products' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...productIds);
+    }
+    
+    // Merge data same as preview endpoint
+    const mergedData = products.map(product => {
+      const mergedProduct = { ...product };
+      
+      // Add all defined custom attributes as empty fields
+      attributeDefinitions.forEach(definition => {
+        mergedProduct[definition.attribute_name] = '';
+      });
+      
+      // Fill in actual values where they exist
+      const productCustomAttrs = customAttributes.filter(
+        attr => attr.entity_id === product.id
+      );
+      
+      productCustomAttrs.forEach(attr => {
+        let value = attr.value_text || attr.value_number || attr.value_boolean;
+        if (attr.value_boolean !== null && attr.value_boolean !== undefined) {
+          value = attr.value_boolean ? 'Yes' : 'No';
+        }
+        mergedProduct[attr.attribute_name] = value || '';
+      });
+      
+      return mergedProduct;
+    });
+    
+    console.log(`Exporting ${mergedData.length} products`);
+    
+    res.json({
+      data: mergedData,
+      exported_at: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error exporting products data:', error);
+    res.status(500).json({ error: 'Failed to export products data' });
+  }
+});
+
+// Setup multer for CSV file uploads
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: function(req, file, cb) {
+    if (file.mimetype === 'text/csv' || 
+        file.mimetype === 'application/csv' ||
+        file.mimetype === 'application/vnd.ms-excel' ||
+        file.originalname.toLowerCase().endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  }
+});
+
+// Helper function to parse CSV
+function parseCSV(csvText) {
+  const lines = csvText.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  const rows = lines.slice(1).map(line => {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    values.push(current.trim());
+    
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    return row;
+  });
+  
+  return rows;
+}
+
+// Table Builder API - Import accounts from CSV
+app.post('/api/table-builder/accounts/import', csvUpload.single('csvFile'), (req, res) => {
+  console.log('Import accounts request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'No CSV file uploaded' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const csvText = req.file.buffer.toString('utf8');
+    const importData = parseCSV(csvText);
+    
+    if (importData.length === 0) {
+      return res.status(400).json({ error: 'CSV file is empty or invalid' });
+    }
+    
+    let imported = 0;
+    let updated = 0;
+    
+    const transaction = db.transaction(() => {
+      for (const row of importData) {
+        // Separate core account fields from custom attributes
+        const coreFields = ['id', 'name', 'email', 'phone', 'address', 'city', 'state', 'zip', 'created_at', 'updated_at'];
+        const coreData = {};
+        const customData = {};
+        
+        for (const [key, value] of Object.entries(row)) {
+          if (coreFields.includes(key)) {
+            coreData[key] = value;
+          } else {
+            customData[key] = value;
+          }
+        }
+        
+        // Insert/update core account data
+        if (coreData.id) {
+          // Update existing account
+          const existing = db.prepare('SELECT id FROM accounts WHERE id = ? AND distributor_id = ?').get(coreData.id, distributorId);
+          if (existing) {
+            const updateFields = Object.keys(coreData).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+            const updateValues = Object.keys(coreData).filter(k => k !== 'id').map(k => coreData[k]);
+            
+            if (updateFields) {
+              db.prepare(`UPDATE accounts SET ${updateFields}, updated_at = datetime('now') WHERE id = ? AND distributor_id = ?`)
+                .run(...updateValues, coreData.id, distributorId);
+              updated++;
+            }
+          }
+        } else {
+          // Insert new account
+          const result = db.prepare(`
+            INSERT INTO accounts (distributor_id, name, email, phone, address, city, state, zip, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+          `).run(
+            distributorId,
+            coreData.name || '',
+            coreData.email || '',
+            coreData.phone || '',
+            coreData.address || '',
+            coreData.city || '',
+            coreData.state || '',
+            coreData.zip || ''
+          );
+          coreData.id = result.lastInsertRowid;
+          imported++;
+        }
+        
+        // Handle custom attributes
+        for (const [attrName, attrValue] of Object.entries(customData)) {
+          if (attrValue) {
+            // Get or create attribute definition
+            let attrDef = db.prepare(`
+              SELECT id, data_type FROM custom_attributes_definitions 
+              WHERE distributor_id = ? AND entity_type = 'accounts' AND attribute_name = ?
+            `).get(distributorId, attrName);
+            
+            if (!attrDef) {
+              // Create new attribute definition
+              const result = db.prepare(`
+                INSERT INTO custom_attributes_definitions 
+                (distributor_id, entity_type, attribute_name, attribute_label, data_type, display_order, is_active)
+                VALUES (?, 'accounts', ?, ?, 'text', 999, 1)
+              `).run(distributorId, attrName, attrName.replace(/_/g, ' '));
+              
+              attrDef = { id: result.lastInsertRowid, data_type: 'text' };
+            }
+            
+            // Insert/update custom attribute value
+            db.prepare(`
+              INSERT OR REPLACE INTO custom_attributes_values 
+              (distributor_id, entity_type, entity_id, attribute_name, value_text, created_at, updated_at)
+              VALUES (?, 'accounts', ?, ?, ?, datetime('now'), datetime('now'))
+            `).run(distributorId, coreData.id, attrName, attrValue);
+          }
+        }
+      }
+    });
+    
+    transaction();
+    
+    console.log(`Import complete: ${imported} new accounts, ${updated} updated`);
+    
+    res.json({
+      success: true,
+      imported,
+      updated,
+      total: importData.length
+    });
+    
+  } catch (error) {
+    console.error('Error importing accounts:', error);
+    res.status(500).json({ error: 'Failed to import accounts: ' + error.message });
+  }
+});
+
+// Table Builder API - Import products from CSV
+app.post('/api/table-builder/products/import', csvUpload.single('csvFile'), (req, res) => {
+  console.log('Import products request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'No CSV file uploaded' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const csvText = req.file.buffer.toString('utf8');
+    const importData = parseCSV(csvText);
+    
+    if (importData.length === 0) {
+      return res.status(400).json({ error: 'CSV file is empty or invalid' });
+    }
+    
+    let imported = 0;
+    let updated = 0;
+    
+    const transaction = db.transaction(() => {
+      for (const row of importData) {
+        // Separate core product fields from custom attributes
+        const coreFields = ['id', 'name', 'description', 'sku', 'unit_price', 'category', 'created_at', 'updated_at'];
+        const coreData = {};
+        const customData = {};
+        
+        for (const [key, value] of Object.entries(row)) {
+          if (coreFields.includes(key)) {
+            coreData[key] = value;
+          } else {
+            customData[key] = value;
+          }
+        }
+        
+        // Insert/update core product data
+        if (coreData.id) {
+          // Update existing product
+          const existing = db.prepare('SELECT id FROM products WHERE id = ? AND distributor_id = ?').get(coreData.id, distributorId);
+          if (existing) {
+            const updateFields = Object.keys(coreData).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+            const updateValues = Object.keys(coreData).filter(k => k !== 'id').map(k => coreData[k]);
+            
+            if (updateFields) {
+              db.prepare(`UPDATE products SET ${updateFields}, updated_at = datetime('now') WHERE id = ? AND distributor_id = ?`)
+                .run(...updateValues, coreData.id, distributorId);
+              updated++;
+            }
+          }
+        } else {
+          // Insert new product
+          const result = db.prepare(`
+            INSERT INTO products (distributor_id, name, description, sku, unit_price, category, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+          `).run(
+            distributorId,
+            coreData.name || '',
+            coreData.description || '',
+            coreData.sku || '',
+            parseFloat(coreData.unit_price) || 0,
+            coreData.category || ''
+          );
+          coreData.id = result.lastInsertRowid;
+          imported++;
+        }
+        
+        // Handle custom attributes
+        for (const [attrName, attrValue] of Object.entries(customData)) {
+          if (attrValue) {
+            // Get or create attribute definition
+            let attrDef = db.prepare(`
+              SELECT id, data_type FROM custom_attributes_definitions 
+              WHERE distributor_id = ? AND entity_type = 'products' AND attribute_name = ?
+            `).get(distributorId, attrName);
+            
+            if (!attrDef) {
+              // Create new attribute definition
+              const result = db.prepare(`
+                INSERT INTO custom_attributes_definitions 
+                (distributor_id, entity_type, attribute_name, attribute_label, data_type, display_order, is_active)
+                VALUES (?, 'products', ?, ?, 'text', 999, 1)
+              `).run(distributorId, attrName, attrName.replace(/_/g, ' '));
+              
+              attrDef = { id: result.lastInsertRowid, data_type: 'text' };
+            }
+            
+            // Insert/update custom attribute value
+            db.prepare(`
+              INSERT OR REPLACE INTO custom_attributes_values 
+              (distributor_id, entity_type, entity_id, attribute_name, value_text, created_at, updated_at)
+              VALUES (?, 'products', ?, ?, ?, datetime('now'), datetime('now'))
+            `).run(distributorId, coreData.id, attrName, attrValue);
+          }
+        }
+      }
+    });
+    
+    transaction();
+    
+    console.log(`Import complete: ${imported} new products, ${updated} updated`);
+    
+    res.json({
+      success: true,
+      imported,
+      updated,
+      total: importData.length
+    });
+    
+  } catch (error) {
+    console.error('Error importing products:', error);
+    res.status(500).json({ error: 'Failed to import products: ' + error.message });
+  }
+});
+
 // Debug endpoint - Add this to your index.js
 app.get('/api/debug/custom-attributes', (req, res) => {
   console.log('=== DEBUG: Custom Attributes ===');

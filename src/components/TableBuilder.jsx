@@ -198,6 +198,104 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
     }
   };
 
+  const exportToCSV = async (entityType) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/table-builder/${entityType}/export`, {
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (!data.data || data.data.length === 0) {
+          alert(`No ${entityType} data to export`);
+          return;
+        }
+
+        // Convert to CSV
+        const headers = Object.keys(data.data[0]);
+        const csvContent = [
+          headers.join(','),
+          ...data.data.map(row => 
+            headers.map(header => {
+              const value = row[header] || '';
+              // Escape quotes and wrap in quotes if contains comma
+              const escaped = String(value).replace(/"/g, '""');
+              return escaped.includes(',') ? `"${escaped}"` : escaped;
+            }).join(',')
+          )
+        ].join('\n');
+
+        // Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${entityType}_export_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        alert(`${entityType} data exported successfully!`);
+      } else {
+        const error = await response.json();
+        alert('Export error: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Export error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (entityType, file) => {
+    if (!file) return;
+    
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('csvFile', file);
+      
+      const response = await fetch(`/api/table-builder/${entityType}/import`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Import successful! ${result.imported || 0} records imported, ${result.updated || 0} records updated.`);
+        
+        // Refresh data to show imported records
+        fetchBothTablesData();
+      } else {
+        const error = await response.json();
+        alert('Import error: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Import error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const triggerFileUpload = (entityType) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv,.xlsx,.xls';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        handleFileUpload(entityType, file);
+      }
+    };
+    input.click();
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -295,6 +393,35 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                 </p>
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    exportToCSV('accounts');
+                  }}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                  disabled={loading}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export to Excel
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerFileUpload('accounts');
+                  }}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                  disabled={loading}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                  </svg>
+                  Upload from Excel
+                </button>
+              </div>
             <div className={`transform transition-transform duration-300 ${accountsExpanded ? 'rotate-180' : ''}`}>
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -412,6 +539,35 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                 </p>
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    exportToCSV('products');
+                  }}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                  disabled={loading}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export to Excel
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerFileUpload('products');
+                  }}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                  disabled={loading}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                  </svg>
+                  Upload from Excel
+                </button>
+              </div>
             <div className={`transform transition-transform duration-300 ${productsExpanded ? 'rotate-180' : ''}`}>
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
