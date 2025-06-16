@@ -1954,6 +1954,392 @@ function determineTriggerPoint(response) {
   return 'storefront_load';
 }
 
+// ===== UNIFIED AI CHAT SYSTEM =====
+
+// Get conversations for a user
+app.get('/api/chat/conversations', (req, res) => {
+  if (!req.session.user_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+
+  try {
+    const conversations = db.prepare(`
+      SELECT * FROM chat_conversations 
+      WHERE distributor_id = ? AND is_archived = FALSE 
+      ORDER BY updated_at DESC
+    `).all(req.session.distributor_id);
+
+    res.json(conversations);
+  } catch (error) {
+    console.error('Error fetching conversations:', error);
+    res.status(500).json({ error: 'Failed to fetch conversations' });
+  }
+});
+
+// Get messages for a conversation
+app.get('/api/chat/conversations/:conversationId/messages', (req, res) => {
+  if (!req.session.user_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+
+  try {
+    const messages = db.prepare(`
+      SELECT * FROM chat_messages 
+      WHERE conversation_id = ? 
+      ORDER BY created_at ASC
+    `).all(req.params.conversationId);
+
+    res.json(messages);
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// Unified AI Chat endpoint
+app.post('/api/unified-chat', async (req, res) => {
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+
+  try {
+    const { message, conversationId } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // Get or create conversation
+    let conversation;
+    if (conversationId) {
+      conversation = db.prepare(`
+        SELECT * FROM chat_conversations WHERE id = ? AND distributor_id = ?
+      `).get(conversationId, req.session.distributor_id);
+    }
+
+    if (!conversation) {
+      // Create new conversation
+      const title = message.length > 50 ? message.substring(0, 50) + '...' : message;
+      const result = db.prepare(`
+        INSERT INTO chat_conversations (distributor_id, user_id, title)
+        VALUES (?, ?, ?)
+      `).run(req.session.distributor_id, req.session.user_id, title);
+      
+      conversation = { id: result.lastInsertRowid };
+    }
+
+    // Save user message
+    db.prepare(`
+      INSERT INTO chat_messages (conversation_id, role, content, message_type)
+      VALUES (?, ?, ?, ?)
+    `).run(conversation.id, 'user', message, 'user_request');
+
+    // Get conversation history for context
+    const recentMessages = db.prepare(`
+      SELECT role, content FROM chat_messages 
+      WHERE conversation_id = ? 
+      ORDER BY created_at DESC 
+      LIMIT 10
+    `).all(conversation.id);
+
+    // Get current system state for context
+    const [customerAttributes, dynamicFormFields, currentStyles, currentLogicScripts] = await Promise.all([
+      // Customer attributes
+      db.prepare(`
+        SELECT attribute_name, attribute_label, data_type 
+        FROM custom_attributes_definitions 
+        WHERE distributor_id = ? AND entity_type = 'accounts'
+      `).all(req.session.distributor_id),
+      
+      // Dynamic form fields
+      db.prepare(`
+        SELECT insertion_zone, content_data 
+        FROM dynamic_content 
+        WHERE distributor_id = ? AND content_type = 'form-field' AND active = 1
+      `).all(req.session.distributor_id),
+      
+      // Current styles (sample)
+      db.prepare(`
+        SELECT COUNT(*) as count FROM styles WHERE distributor_id = ?
+      `).get(req.session.distributor_id),
+      
+      // Current logic scripts
+      db.prepare(`
+        SELECT trigger_point, description FROM logic_scripts 
+        WHERE distributor_id = ? AND active = 1
+      `).all(req.session.distributor_id)
+    ]);
+
+    // Classify intent using Claude
+    const intentResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 200,
+        messages: [{
+          role: 'user',
+          content: `Analyze this storefront customization request and classify it:
+
+Request: "${message}"
+
+Conversation History:
+${recentMessages.slice().reverse().map(m => `${m.role}: ${m.content}`).join('\n').substring(0, 500)}
+
+Current System State:
+- Customer attributes: ${customerAttributes.map(a => a.attribute_name).join(', ')}
+- Dynamic form fields: ${dynamicFormFields.length} fields
+- Active logic scripts: ${currentLogicScripts.map(s => s.description).join(', ')}
+
+Classify as one of:
+1. "ui" - styling, visual changes, adding content/fields
+2. "logic" - business rules, validation, pricing
+3. "both" - requires both UI and logic changes
+
+Respond with ONLY the classification: ui, logic, or both`
+        }]
+      })
+    });
+
+    const intentData = await intentResponse.json();
+    const intent = intentData.content[0].text.trim().toLowerCase();
+
+    let uiResults = null;
+    let logicResults = null;
+    let combinedResponse = '';
+
+    // Execute UI operations if needed
+    if (intent === 'ui' || intent === 'both') {
+      console.log('Executing UI operations...');
+      
+      // Build context for UI AI
+      const orderCustomFields = db.prepare(`
+        SELECT attribute_name, attribute_label, data_type, validation_rules 
+        FROM custom_attributes_definitions 
+        WHERE distributor_id = ? AND entity_type = 'orders'
+      `).all(req.session.distributor_id);
+
+      // Use existing UI AI function
+      const aiResponse = await parseAIRequestWithClaude(message, orderCustomFields);
+      
+      // Process UI response (reuse existing logic)
+      let modifications = [];
+      let insertions = [];
+      
+      if (aiResponse && typeof aiResponse === 'object') {
+        if (aiResponse.type === 'content_insertion' && aiResponse.insertions) {
+          insertions = aiResponse.insertions;
+        } else if (aiResponse.type === 'style_modification' && aiResponse.modifications) {
+          modifications = aiResponse.modifications;
+        } else if (Array.isArray(aiResponse)) {
+          modifications = aiResponse;
+        }
+      }
+
+      // Save modifications and insertions (reuse existing logic)
+      if (modifications.length > 0) {
+        const changes = [];
+        for (const mod of modifications) {
+          const existingStyle = db.prepare(`
+            SELECT * FROM styles WHERE distributor_id = ? AND element_selector = ?
+          `).get(req.session.distributor_id, mod.selector);
+
+          if (existingStyle) {
+            const existingStyles = JSON.parse(existingStyle.styles || '{}');
+            const mergedStyles = { ...existingStyles, ...mod.styles };
+            
+            db.prepare(`
+              UPDATE styles SET styles = ?, updated_at = CURRENT_TIMESTAMP 
+              WHERE distributor_id = ? AND element_selector = ?
+            `).run(JSON.stringify(mergedStyles), req.session.distributor_id, mod.selector);
+          } else {
+            db.prepare(`
+              INSERT INTO styles (distributor_id, element_selector, styles)
+              VALUES (?, ?, ?)
+            `).run(req.session.distributor_id, mod.selector, JSON.stringify(mod.styles));
+          }
+          changes.push(`Modified ${mod.selector}`);
+        }
+        uiResults = { type: 'styles', changes };
+      }
+
+      if (insertions.length > 0) {
+        const changes = [];
+        for (const insertion of insertions) {
+          const result = db.prepare(`
+            INSERT INTO dynamic_content (distributor_id, insertion_zone, content_type, content_data)
+            VALUES (?, ?, ?, ?)
+          `).run(
+            req.session.distributor_id,
+            insertion.zone,
+            insertion.type,
+            JSON.stringify(insertion.data)
+          );
+          changes.push(`Added ${insertion.type} to ${insertion.zone}`);
+        }
+        uiResults = { type: 'content', changes };
+      }
+    }
+
+    // Execute Logic operations if needed
+    if (intent === 'logic' || intent === 'both') {
+      console.log('Executing Logic operations...');
+      
+      // Build context for Logic AI including dynamic form fields
+      const formFields = dynamicFormFields.map(field => {
+        const data = JSON.parse(field.content_data);
+        return {
+          zone: field.insertion_zone,
+          label: data.label,
+          fieldType: data.fieldType,
+          options: data.options
+        };
+      });
+
+      let formFieldsContext = '';
+      if (formFields.length > 0) {
+        formFieldsContext = `
+AVAILABLE DYNAMIC FORM FIELDS (added via UI customization):
+${formFields.map(field => `- cart.${field.label} or cart.${field.label.toLowerCase()} or cart.${field.label.toLowerCase().replace(/\s+/g, '_')} (${field.fieldType})`).join('\n')}`;
+      }
+
+      const systemPrompt = `You are an expert at creating JavaScript logic scripts for e-commerce storefronts. 
+
+AVAILABLE CUSTOMER ATTRIBUTES: ${customerAttributes.map(a => a.attribute_name).join(', ')}${formFieldsContext}
+
+AVAILABLE TRIGGER POINTS:
+- storefront_load: When customer first visits the store (USE THIS FOR PRICING MODIFICATIONS)
+- submit: Before order is submitted
+
+CRITICAL: How the execution context works:
+The script receives these parameters that you can read and DIRECTLY MODIFY:
+- customer: Object with customer attributes (${customerAttributes.map(a => a.attribute_name).join(', ')})
+- cart: Object with {items: [], total: 0, subtotal: 0} + dynamic form field values
+- products: Array of product objects with {id, name, sku, unitPrice, price, category, etc.}
+
+FOR BUSINESS LOGIC (submit trigger):
+- Return an object: {allow: true/false, message?: "popup text"}
+- If allow: false, the action is blocked and message is shown to user
+
+Example script:
+SCRIPT_START
+trigger_point: submit
+description: Make OrderType field mandatory
+
+if (!cart.OrderType || cart.OrderType === '') {
+  return {
+    allow: false,
+    message: "Please select an Order Type before submitting your order."
+  };
+}
+return { allow: true };
+
+SCRIPT_END
+
+SCRIPT REQUIREMENTS:
+1. For business logic (submit): Return {allow: true/false, message?: "text"}
+2. Use only safe JavaScript - no external API calls, no dangerous operations
+3. Always include try/catch for safety
+4. Check if objects exist before accessing them`;
+
+      // Call Claude for logic script generation
+      const logicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1500,
+          messages: [{
+            role: 'user',
+            content: `${systemPrompt}\n\nUser request: ${message}`
+          }]
+        })
+      });
+
+      const logicData = await logicResponse.json();
+      const claudeResponse = logicData.content[0].text;
+
+      // Extract script
+      const scriptMatch = claudeResponse.match(/SCRIPT_START\s*\ntrigger_point:\s*([^\n]+)\s*\ndescription:\s*([^\n]+)\s*\n([\s\S]*?)\nSCRIPT_END/);
+      
+      if (scriptMatch) {
+        const script = {
+          trigger_point: scriptMatch[1].trim(),
+          description: scriptMatch[2].trim(),
+          script_content: scriptMatch[3].trim()
+        };
+
+        // Save the script
+        db.prepare(`
+          INSERT INTO logic_scripts (distributor_id, trigger_point, description, script_content, active)
+          VALUES (?, ?, ?, ?, 1)
+        `).run(req.session.distributor_id, script.trigger_point, script.description, script.script_content);
+
+        logicResults = { type: 'script', description: script.description };
+      }
+
+      combinedResponse = claudeResponse;
+    }
+
+    // Build response message
+    let responseMessage = '';
+    if (intent === 'ui' && uiResults) {
+      responseMessage = `✅ I've applied your UI customizations:\n${uiResults.changes.join('\n')}\n\nThe changes should be visible after refreshing your storefront.`;
+    } else if (intent === 'logic' && logicResults) {
+      responseMessage = combinedResponse;
+    } else if (intent === 'both') {
+      const parts = [];
+      if (uiResults) {
+        parts.push(`✅ UI Changes Applied:\n${uiResults.changes.join('\n')}`);
+      }
+      if (logicResults) {
+        parts.push(`✅ Logic Script Created:\n${logicResults.description}`);
+      }
+      responseMessage = parts.join('\n\n') + '\n\nAll customizations are now active!';
+    } else {
+      responseMessage = "I wasn't able to process that request. Could you please rephrase or be more specific about what you'd like to customize?";
+    }
+
+    // Save assistant response
+    const metadata = JSON.stringify({
+      intent,
+      uiResults,
+      logicResults,
+      conversationId: conversation.id
+    });
+
+    db.prepare(`
+      INSERT INTO chat_messages (conversation_id, role, content, message_type, metadata)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(conversation.id, 'assistant', responseMessage, intent, metadata);
+
+    // Update conversation timestamp
+    db.prepare(`
+      UPDATE chat_conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(conversation.id);
+
+    res.json({
+      message: responseMessage,
+      conversationId: conversation.id,
+      intent,
+      uiResults,
+      logicResults
+    });
+
+  } catch (error) {
+    console.error('Unified chat error:', error);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
 // Delete header logo endpoint
 app.post('/api/branding/header-logo', upload.single('logo'), (req, res) => {
   console.log('Header logo upload request');
@@ -3022,8 +3408,57 @@ function initializeDynamicContentTable() {
   }
 }
 
-// Initialize the table on startup
+// Initialize chat history tables
+function initializeChatTables() {
+  try {
+    // Conversations table
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS chat_conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        distributor_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        title TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_archived BOOLEAN DEFAULT FALSE
+      )
+    `).run();
+
+    // Messages table
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id INTEGER NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        message_type TEXT,
+        metadata TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id)
+      )
+    `).run();
+
+    // Context table for tracking system changes
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS chat_context (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id INTEGER NOT NULL,
+        context_type TEXT NOT NULL,
+        context_data TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id)
+      )
+    `).run();
+
+    console.log('Chat history tables initialized');
+  } catch (error) {
+    console.error('Error initializing chat tables:', error);
+  }
+}
+
+// Initialize the tables on startup
 initializeDynamicContentTable();
+initializeChatTables();
 
 // Get dynamic content for a distributor
 app.get('/api/dynamic-content', (req, res) => {

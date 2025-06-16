@@ -9,8 +9,7 @@ import OrderHistory from './components/OrderHistory';
 import Branding from './components/Branding';
 import TableBuilder from './components/TableBuilder';
 import { useNavigate } from 'react-router-dom';
-import AIChat from './components/AIChat';
-import LogicCustomizationChat from './components/LogicCustomizationChat';
+import UnifiedAIChat from './components/UnifiedAIChat';
 import LogicScriptsManagement from './components/LogicScriptsManagement';
 
 // Header Component with Logo
@@ -249,13 +248,17 @@ function App({ distributorSlug }) {
           }
         />
         <Route 
-          path="/backoffice/logic" 
+          path="/backoffice/ai-assistant" 
           element={
-            <LogicCustomizationChat 
-              onLogout={handleLogout} 
-              onHome={handleHome} 
-              brandName={brandName} 
-            />
+            userType === 'Customer' 
+              ? <Navigate to="/" replace /> 
+              : (
+                <UnifiedAIChat 
+                  onLogout={handleLogout} 
+                  onHome={handleHome} 
+                  brandName={brandName} 
+                />
+              )
           } 
         />
         <Route 
@@ -334,19 +337,6 @@ function App({ distributorSlug }) {
               )
           }
         />
-        <Route
-            path="/backoffice/ai-chat"
-            element={
-              userType === 'Customer' 
-                ? <Navigate to="/" replace /> 
-                : (
-                  <>
-                    <Header brandName={brandName} />
-                    <AIChat brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
-                  </>
-                )
-            }
-          />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -11,8 +11,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
   const options = [
     { name: "Manage Customers", path: "/backoffice/customers" },
     { name: "Branding", path: "/backoffice/branding" },
-    { name: "Storefront UI Customization", path: "/backoffice/ai-chat" },
-    { name: "Storefront Logic Customization", path: "/backoffice/logic" },
+    { name: "AI Storefront Assistant", path: "/backoffice/ai-assistant" },
     { name: "Table Builder", path: "/backoffice/table-builder" },
     { name: "Custom Table", path: "/backoffice/table" },
     { name: "Logs", path: "/backoffice/logs" }
@@ -35,8 +34,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
             className={`border p-6 rounded shadow hover:shadow-md transition-shadow cursor-pointer ${
               option.name === "Manage Customers" ? 'bg-blue-50' : 
               option.name === "Branding" ? 'bg-green-50' : 
-              option.name === "Storefront UI Customization" ? 'bg-purple-50' : 
-              option.name === "Storefront Logic Customization" ? 'bg-orange-50' : 
+              option.name === "AI Storefront Assistant" ? 'bg-purple-50' : 
               option.name === "Table Builder" ? 'bg-cyan-50' : ''
             }`}
             onClick={() => {
@@ -44,10 +42,8 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
                 navigate("/backoffice/customers");
               } else if (option.name === "Branding") {
                 navigate("/backoffice/branding");
-              } else if (option.name === "Storefront UI Customization") {
-                navigate("/backoffice/ai-chat");
-              } else if (option.name === "Storefront Logic Customization") {
-                navigate("/backoffice/logic");
+              } else if (option.name === "AI Storefront Assistant") {
+                navigate("/backoffice/ai-assistant");
               } else if (option.name === "Table Builder") {
                 navigate("/backoffice/table-builder");
               } else {
