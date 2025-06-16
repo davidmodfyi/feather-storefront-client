@@ -1770,11 +1770,20 @@ app.post('/api/claude-logic-chat', async (req, res) => {
     return res.status(401).json({ error: 'Not authorized' });
   }
   try {
-    const { message, customerAttributes, triggerPoints } = req.body;
+    const { message, customerAttributes, dynamicFormFields, triggerPoints } = req.body;
+    
+    // Build dynamic form fields context
+    let formFieldsContext = '';
+    if (dynamicFormFields && dynamicFormFields.length > 0) {
+      formFieldsContext = `
+
+AVAILABLE DYNAMIC FORM FIELDS (added via UI customization):
+${dynamicFormFields.map(field => `- cart.${field.label} or cart.${field.label.toLowerCase()} or cart.${field.label.toLowerCase().replace(/\s+/g, '_')} (${field.fieldType})`).join('\n')}`;
+    }
     
     const systemPrompt = `You are an expert at creating JavaScript logic scripts for e-commerce storefronts. 
 
-AVAILABLE CUSTOMER ATTRIBUTES: ${customerAttributes.join(', ')}
+AVAILABLE CUSTOMER ATTRIBUTES: ${customerAttributes.join(', ')}${formFieldsContext}
 
 AVAILABLE TRIGGER POINTS:
 - storefront_load: When customer first visits the store (USE THIS FOR PRICING MODIFICATIONS)
@@ -1783,7 +1792,7 @@ AVAILABLE TRIGGER POINTS:
 CRITICAL: How the execution context works:
 The script receives these parameters that you can read and DIRECTLY MODIFY:
 - customer: Object with customer attributes (${customerAttributes.join(', ')})
-- cart: Object with {items: [], total: 0, subtotal: 0}
+- cart: Object with {items: [], total: 0, subtotal: 0} + dynamic form field values
 - products: Array of product objects with {id, name, sku, unitPrice, price, category, etc.}
 - currentProduct: The specific product being processed (for storefront_load only)
 
@@ -3291,7 +3300,9 @@ app.post('/api/submit-order', async (req, res) => {
   }
   
   try {
-    const { items } = req.body;
+    const { items, dynamicFormValues } = req.body;
+    
+    console.log('Order submission with dynamic form values:', dynamicFormValues);
     
     if (!items || items.length === 0) {
       return res.status(400).json({ error: 'No items in order' });
@@ -3432,13 +3443,30 @@ app.post('/api/submit-order', async (req, res) => {
     // ADD VALIDATION HERE - Check business rules before processing order
     console.log('Validating order submission for distributor:', distributorId, 'total:', orderTotal);
     
+    // Create enhanced cart object with dynamic form values
+    const enhancedCart = { 
+      items: enhancedItems,  // Now includes custom fields for each product
+      total: orderTotal, 
+      subtotal: orderTotal,
+      ...dynamicFormValues  // Add dynamic form values directly to cart object
+    };
+    
+    // Also add them with lowercase property names for convenience
+    if (dynamicFormValues) {
+      Object.entries(dynamicFormValues).forEach(([key, value]) => {
+        const lowerKey = key.toLowerCase();
+        enhancedCart[lowerKey] = value;
+        // Also add with common naming conventions
+        enhancedCart[lowerKey.replace(/\s+/g, '')] = value; // Remove spaces
+        enhancedCart[lowerKey.replace(/\s+/g, '_')] = value; // Replace spaces with underscores
+      });
+    }
+    
+    console.log('Enhanced cart for validation:', enhancedCart);
+
     const validation = pricingEngine.executeLogicScripts('submit', distributorId, {
       customer: enhancedUser,  // Now includes custom fields
-      cart: { 
-        items: enhancedItems,  // Now includes custom fields for each product
-        total: orderTotal, 
-        subtotal: orderTotal 
-      },
+      cart: enhancedCart,
       products: enhancedItems,  // Enhanced items with custom fields
       orderCustomFieldDefinitions: orderAttrDefs  // Available order-level custom fields
     });

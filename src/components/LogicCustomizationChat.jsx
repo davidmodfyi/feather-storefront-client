@@ -9,6 +9,7 @@ export default function LogicCustomizationChat({ onLogout, onHome, brandName }) 
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [customerAttributes, setCustomerAttributes] = useState([]);
+  const [dynamicFormFields, setDynamicFormFields] = useState([]);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -18,7 +19,35 @@ export default function LogicCustomizationChat({ onLogout, onHome, brandName }) 
       .then(data => setCustomerAttributes(data.attributes || []))
       .catch(console.error);
 
-    // Add initial welcome message
+    // Fetch dynamic form fields (from UI customization) for context
+    fetch('/api/dynamic-content', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        // Extract form fields from all zones
+        const formFields = [];
+        Object.entries(data).forEach(([zone, content]) => {
+          content.forEach(item => {
+            if (item.type === 'form-field') {
+              formFields.push({
+                zone: zone,
+                label: item.data.label,
+                fieldType: item.data.fieldType,
+                options: item.data.options
+              });
+            }
+          });
+        });
+        setDynamicFormFields(formFields);
+      })
+      .catch(console.error);
+
+    // Add initial welcome message with dynamic form fields context
+    const formFieldsText = dynamicFormFields.length > 0 
+      ? `\n\n**Available Form Fields (from UI customization):**\n${dynamicFormFields.map(field => 
+          `• **${field.label}** (${field.fieldType}) - Access via cart.${field.label.toLowerCase()} or cart.${field.label.toLowerCase().replace(/\s+/g, '_')}`
+        ).join('\n')}`
+      : '';
+
     setMessages([{
       role: 'assistant',
       content: `Hi! I'm here to help you set up custom logic for your storefront. I can help you create rules that run at different points in the customer journey:
@@ -27,13 +56,14 @@ export default function LogicCustomizationChat({ onLogout, onHome, brandName }) 
 • **Storefront Load** - When customers first visit your store
 • **Quantity Change** - When customers modify item quantities  
 • **Add to Cart** - When customers add items to their cart
-• **Submit Order** - Before orders are finalized
+• **Submit Order** - Before orders are finalized${formFieldsText}
 
 **Example requests:**
 • "Prevent customers on hold from placing orders"
 • "Add a 20% surcharge for Pennsylvania customers"
 • "Require minimum $100 order value"
 • "Block certain products for specific customer types"
+• "Make OrderType field mandatory before order submission"
 
 What kind of business logic would you like to set up?`
     }]);
@@ -67,6 +97,7 @@ What kind of business logic would you like to set up?`
         body: JSON.stringify({
           message: userMessage,
           customerAttributes: customerAttributes,
+          dynamicFormFields: dynamicFormFields,
           triggerPoints: triggerPoints.map(tp => tp.label)
         })
       });

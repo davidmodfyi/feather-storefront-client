@@ -8,6 +8,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   const [loading, setLoading] = useState(true);
   const [customStyles, setCustomStyles] = useState({});
   const [dynamicContent, setDynamicContent] = useState({});
+  const [dynamicFormValues, setDynamicFormValues] = useState({});
   const navigate = useNavigate();
 
  
@@ -168,12 +169,15 @@ const handleSubmitOrder = async () => {
   }
 
   try {
-    // Prepare order data
+    // Prepare order data with dynamic form values
+    console.log('Dynamic form values at submit:', dynamicFormValues);
+    
 	const orderData = { 
 	  items: cartItems, 
 	  total: subtotal,      // For the validation script
 	  subtotal: subtotal,   // In case something else needs it
-	  email: "david@mod.fyi" 
+	  email: "david@mod.fyi",
+	  dynamicFormValues: dynamicFormValues  // Include form field values
 	};
 
     // Submit order to backend
@@ -242,6 +246,11 @@ const handleSubmitOrder = async () => {
               <select 
                 style={content.data.inputStyle || {padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%'}}
                 name={content.data.label}
+                value={dynamicFormValues[content.data.label] || ''}
+                onChange={(e) => setDynamicFormValues(prev => ({
+                  ...prev,
+                  [content.data.label]: e.target.value
+                }))}
               >
                 <option value="">Select {content.data.label}</option>
                 {content.data.options && content.data.options.map((option, i) => (
@@ -258,6 +267,11 @@ const handleSubmitOrder = async () => {
                 type="text"
                 style={content.data.inputStyle || {padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%'}}
                 name={content.data.label}
+                value={dynamicFormValues[content.data.label] || ''}
+                onChange={(e) => setDynamicFormValues(prev => ({
+                  ...prev,
+                  [content.data.label]: e.target.value
+                }))}
                 placeholder={content.data.placeholder || `Enter ${content.data.label}`}
               />
             </div>
