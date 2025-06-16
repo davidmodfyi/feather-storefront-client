@@ -2155,7 +2155,8 @@ app.post('/api/ai-customize', async (req, res) => {
     WHERE distributor_id = ? AND entity_type = 'orders'
   `).all(req.session.distributor_id);
   
-  console.log('🔥 Found custom order fields:', orderCustomFields.map(f => f.attribute_name));
+  console.log('🔥 DEBUG: Found custom order fields:', orderCustomFields.map(f => f.attribute_name));
+  console.log('🔥 DEBUG: Full custom fields data:', JSON.stringify(orderCustomFields, null, 2));
   
   try {
     console.log(`🔥 Starting AI customization for ${distributorSlug}: ${message}`);
@@ -2171,16 +2172,29 @@ app.post('/api/ai-customize', async (req, res) => {
     let modifications = [];
     let insertions = [];
     
+    console.log('🔥 DEBUG: Processing AI response type:', typeof aiResponse);
+    console.log('🔥 DEBUG: AI response is array:', Array.isArray(aiResponse));
+    console.log('🔥 DEBUG: AI response has type property:', aiResponse && aiResponse.type);
+    
     if (Array.isArray(aiResponse)) {
-      // Old format - treat as styling modifications
+      console.log('🔥 DEBUG: Using old format - treating as styling modifications');
       modifications = aiResponse;
-    } else if (aiResponse.type === 'styling') {
+    } else if (aiResponse && aiResponse.type === 'styling') {
+      console.log('🔥 DEBUG: Using new styling format');
       modifications = aiResponse.modifications || [];
-    } else if (aiResponse.type === 'content') {
+      console.log('🔥 DEBUG: Extracted modifications:', modifications.length);
+    } else if (aiResponse && aiResponse.type === 'content') {
+      console.log('🔥 DEBUG: Using new content format');
       insertions = aiResponse.insertions || [];
+      console.log('🔥 DEBUG: Extracted insertions:', insertions.length);
+    } else {
+      console.log('🔥 DEBUG: Unknown response format:', aiResponse);
     }
     
+    console.log('🔥 DEBUG: Final counts - modifications:', modifications.length, 'insertions:', insertions.length);
+    
     if (modifications.length === 0 && insertions.length === 0) {
+      console.log('🔥 DEBUG: No modifications or insertions found, returning default response');
       return res.json({
         response: "I understand your request, but I couldn't determine specific changes to make. Could you be more specific about what visual or functional changes you'd like? For example:\n\n• 'Make the Add to Cart buttons blue with rounded corners'\n• 'Add a promotional banner at the top of the page'\n• 'Create a dark mode toggle in the header'",
         changes: []
@@ -2267,12 +2281,14 @@ async function parseAIRequestWithClaude(userRequest, orderCustomFields = []) {
             customFieldsContext += ` - Options: [${rules.options.join(', ')}]`;
           }
         } catch (e) {
-          // Ignore parsing errors
+          console.log('🔥 DEBUG: Error parsing validation_rules for field:', field.attribute_name, e);
         }
       }
       customFieldsContext += '\n';
     });
   }
+  
+  console.log('🔥 DEBUG: Custom fields context built:', customFieldsContext);
   
   // Enhanced system prompt with styling AND content insertion capabilities  
   const systemPrompt = `You are an AI assistant that helps customize storefront and cart appearance using CSS styling AND content insertion.${customFieldsContext}
@@ -2495,7 +2511,10 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
         content: systemPrompt
       }]
     };
-    console.log('🔥 Request body:', JSON.stringify(requestBody, null, 2));
+    console.log('🔥 DEBUG: System prompt being sent to Claude:');
+    console.log('🔥 DEBUG: Prompt length:', systemPrompt.length);
+    console.log('🔥 DEBUG: Prompt contains custom fields:', customFieldsContext.length > 0);
+    console.log('🔥 DEBUG: User request in prompt:', userRequest);
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -2517,27 +2536,22 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
     }
 
     const data = await response.json();
-    console.log('🔥 Response data:', JSON.stringify(data, null, 2));
+    console.log('🔥 DEBUG: Response data:', JSON.stringify(data, null, 2));
     const claudeResponse = data.content[0].text;
     
-    console.log('Received response from Claude AI');
+    console.log('🔥 DEBUG: Raw Claude response text:');
+    console.log('🔥 DEBUG: Response length:', claudeResponse.length);
+    console.log('🔥 DEBUG: Response content:', claudeResponse);
+    console.log('🔥 DEBUG: Response contains "type":', claudeResponse.includes('"type"'));
+    console.log('🔥 DEBUG: Response contains "content":', claudeResponse.includes('"content"'));
+    console.log('🔥 DEBUG: Response contains "insertions":', claudeResponse.includes('"insertions"'));
     
-    try {
-      const parsed = JSON.parse(claudeResponse);
-      console.log('Claude understanding:', parsed);
-      
-      if (parsed.modifications && Array.isArray(parsed.modifications)) {
-        console.log(`Generated ${parsed.modifications.length} modifications`);
-        return parsed.modifications;
-      } else {
-        console.log('No valid modifications found in Claude response');
-        return [];
-      }
-    } catch (parseError) {
-      console.error('Failed to parse Claude response as JSON:', parseError);
-      console.log('Raw Claude response:', claudeResponse);
-      return [];
-    }
+    // Use the parseClaudeResponse function instead of inline parsing
+    console.log('🔥 DEBUG: Calling parseClaudeResponse...');
+    const parsedResult = parseClaudeResponse(claudeResponse);
+    console.log('🔥 DEBUG: parseClaudeResponse returned:', JSON.stringify(parsedResult, null, 2));
+    
+    return parsedResult;
     
   } catch (error) {
     console.error('🔥 Error in parseAIRequestWithClaude:', error);
@@ -2635,31 +2649,43 @@ CRITICAL: Your find strings must match exactly what exists in the code files. Us
 
 // Parse Claude's response into modification objects
 function parseClaudeResponse(claudeResponse) {
+  console.log('🔥 DEBUG: parseClaudeResponse called with:', claudeResponse.substring(0, 200) + '...');
+  
   try {
     // Claude sometimes includes explanation before/after JSON, so extract just the JSON
+    console.log('🔥 DEBUG: Searching for JSON in response...');
     const jsonMatch = claudeResponse.match(/\{[\s\S]*\}/);
+    
     if (!jsonMatch) {
-      console.error('No valid JSON found in Claude response');
+      console.error('🔥 DEBUG: No valid JSON found in Claude response');
+      console.error('🔥 DEBUG: Full response was:', claudeResponse);
       return [];
     }
     
+    console.log('🔥 DEBUG: Found JSON match:', jsonMatch[0].substring(0, 200) + '...');
+    
     const parsed = JSON.parse(jsonMatch[0]);
-    console.log('Claude understanding:', parsed);
+    console.log('🔥 DEBUG: Successfully parsed JSON:', JSON.stringify(parsed, null, 2));
     
     // Handle new format with type field or old format with modifications
     if (parsed.type) {
+      console.log('🔥 DEBUG: New format detected with type:', parsed.type);
       // New format - return the entire parsed object
       return parsed;
     } else if (parsed.modifications) {
+      console.log('🔥 DEBUG: Old format detected with modifications array');
       // Old format - return just modifications for backwards compatibility
       return parsed.modifications;
     } else {
+      console.log('🔥 DEBUG: Very old format detected, returning entire parsed object');
       // Very old format - assume the parsed object is the modifications array
       return parsed;
     }
     
   } catch (error) {
-    console.error('Error parsing Claude response:', error);
+    console.error('🔥 DEBUG: Error parsing Claude response:', error);
+    console.error('🔥 DEBUG: Error message:', error.message);
+    console.error('🔥 DEBUG: Raw response that caused error:', claudeResponse);
     return [];
   }
 }
@@ -3081,6 +3107,35 @@ app.delete('/api/dynamic-content/:id', (req, res) => {
   } catch (error) {
     console.error('Error deleting dynamic content:', error);
     res.status(500).json({ error: 'Error deleting dynamic content' });
+  }
+});
+
+// ===== DEBUG ENDPOINT =====
+app.get('/api/debug/ai-custom-fields', (req, res) => {
+  console.log('🔥 DEBUG: Debug endpoint called');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    // Fetch available custom fields for context
+    const orderCustomFields = db.prepare(`
+      SELECT attribute_name, attribute_label, data_type, validation_rules 
+      FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'orders'
+    `).all(req.session.distributor_id);
+    
+    console.log('🔥 DEBUG: Found custom order fields:', orderCustomFields);
+    
+    res.json({
+      distributor_id: req.session.distributor_id,
+      custom_fields_found: orderCustomFields.length,
+      custom_fields: orderCustomFields
+    });
+  } catch (error) {
+    console.error('🔥 DEBUG: Error fetching custom fields:', error);
+    res.status(500).json({ error: 'Debug failed' });
   }
 });
 
