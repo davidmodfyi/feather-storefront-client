@@ -15,6 +15,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   const [customStyles, setCustomStyles] = useState({});
   const [logicScripts, setLogicScripts] = useState({});
   const [customer, setCustomer] = useState({});
+  const [dynamicContent, setDynamicContent] = useState({});
 
   // Function to execute logic scripts
   const executeLogicScripts = async (triggerPoint, context = {}) => {
@@ -117,6 +118,15 @@ export default function Storefront({ onLogout, onHome, brandName }) {
       .then(data => {
         console.log('Custom styles loaded:', data);
         setCustomStyles(data);
+      })
+      .catch(console.error);
+
+    // Fetch dynamic content
+    fetch('/api/dynamic-content', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        console.log('Dynamic content loaded:', data);
+        setDynamicContent(data);
       })
       .catch(console.error);
      
@@ -349,6 +359,49 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     return customStyles[elementSelector] || {};
   };
 
+  // Render dynamic content for a specific zone
+  const renderDynamicContent = (zoneName) => {
+    const zoneContent = dynamicContent[zoneName] || [];
+    
+    return zoneContent.map((content, index) => {
+      if (content.type === 'banner') {
+        return (
+          <div key={content.id || index} style={content.data} className="dynamic-banner">
+            {content.data.text}
+          </div>
+        );
+      } else if (content.type === 'message') {
+        return (
+          <div key={content.id || index} style={content.data} className="dynamic-message">
+            {content.data.text}
+          </div>
+        );
+      } else if (content.type === 'form-field') {
+        if (content.data.fieldType === 'dropdown') {
+          return (
+            <div key={content.id || index} style={content.data.containerStyle} className="dynamic-form-field">
+              <label style={content.data.labelStyle}>{content.data.label}</label>
+              <select style={content.data.inputStyle}>
+                {content.data.options && content.data.options.map((option, i) => (
+                  <option key={i} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          );
+        }
+      } else if (content.type === 'custom-html') {
+        return (
+          <div 
+            key={content.id || index} 
+            style={content.data.containerStyle}
+            dangerouslySetInnerHTML={{ __html: content.data.html }}
+          />
+        );
+      }
+      return null;
+    });
+  };
+
   // Apply price modifications from storefront_load scripts
 const getDisplayPrice = (item) => {
   console.log('🔍 Getting display price for:', item.sku, 'original price:', item.unitPrice);
@@ -423,6 +476,9 @@ const getDisplayPrice = (item) => {
 	
   return (
     <div className="p-6" style={getCustomStyle('page-background')}>
+      {/* Dynamic content zone: header-top */}
+      {renderDynamicContent('storefront-header-top')}
+      
       {/* Header with logo */}
       {headerLogo && (
         <div className="absolute top-2 left-2" style={{ maxWidth: '40px', maxHeight: '40px' }}>
@@ -447,6 +503,12 @@ const getDisplayPrice = (item) => {
           <button onClick={handleLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
         </div>
       </div>
+
+      {/* Dynamic content zone: header-bottom */}
+      {renderDynamicContent('storefront-header-bottom')}
+      
+      {/* Dynamic content zone: before-categories */}
+      {renderDynamicContent('storefront-before-categories')}
       
       <div className="flex gap-2 mb-6 flex-wrap" style={getCustomStyle('category-filter-container')}>
         <button 
@@ -468,6 +530,9 @@ const getDisplayPrice = (item) => {
         ))}
       </div>
 
+      {/* Dynamic content zone: after-categories */}
+      {renderDynamicContent('storefront-after-categories')}
+
       <div className="mb-6">
         <input
           type="text"
@@ -479,13 +544,24 @@ const getDisplayPrice = (item) => {
         />
       </div>
       
-      {loading ? (
-        <div className="text-center py-8">
-          <p>Loading products...</p>
+      {/* Dynamic content zone: before-products */}
+      {renderDynamicContent('storefront-before-products')}
+
+      <div className="flex gap-6">
+        {/* Left sidebar zone */}
+        <div className="flex-shrink-0">
+          {renderDynamicContent('storefront-sidebar-left')}
         </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" style={getCustomStyle('product-grid')}>
-          {filteredItems.map(item => {
+
+        {/* Main products area */}
+        <div className="flex-1">
+          {loading ? (
+            <div className="text-center py-8">
+              <p>Loading products...</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" style={getCustomStyle('product-grid')}>
+              {filteredItems.map(item => {
             const displayPrice = getDisplayPrice(item);
             return (
               <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow" style={getCustomStyle('product-card')}>
@@ -551,8 +627,18 @@ const getDisplayPrice = (item) => {
               </div>
             );
           })}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Right sidebar zone */}
+        <div className="flex-shrink-0">
+          {renderDynamicContent('storefront-sidebar-right')}
+        </div>
+      </div>
+      
+      {/* Dynamic content zone: after-products */}
+      {renderDynamicContent('storefront-after-products')}
       
       {/* Product Detail Modal */}
       {selectedItem && (

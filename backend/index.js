@@ -2155,28 +2155,54 @@ app.post('/api/ai-customize', async (req, res) => {
     
     // Use Claude AI to parse the request and generate modifications
     console.log('🔥 Calling parseAIRequestWithClaude...');
-    const modifications = await parseAIRequestWithClaude(message);
-    console.log('🔥 Modifications received:', JSON.stringify(modifications, null, 2));
+    const aiResponse = await parseAIRequestWithClaude(message);
+    console.log('🔥 AI Response received:', JSON.stringify(aiResponse, null, 2));
     
-    if (modifications.length === 0) {
+    // Handle both old format (array) and new format (object with type)
+    let modifications = [];
+    let insertions = [];
+    
+    if (Array.isArray(aiResponse)) {
+      // Old format - treat as styling modifications
+      modifications = aiResponse;
+    } else if (aiResponse.type === 'styling') {
+      modifications = aiResponse.modifications || [];
+    } else if (aiResponse.type === 'content') {
+      insertions = aiResponse.insertions || [];
+    }
+    
+    if (modifications.length === 0 && insertions.length === 0) {
       return res.json({
-        response: "I understand your request, but I couldn't determine specific code changes to make. Could you be more specific about what visual or functional changes you'd like? For example:\n\n• 'Make the Add to Cart buttons blue with rounded corners'\n• 'Add a promotional banner at the top of the page'\n• 'Create a dark mode toggle in the header'",
+        response: "I understand your request, but I couldn't determine specific changes to make. Could you be more specific about what visual or functional changes you'd like? For example:\n\n• 'Make the Add to Cart buttons blue with rounded corners'\n• 'Add a promotional banner at the top of the page'\n• 'Create a dark mode toggle in the header'",
         changes: []
       });
     }
     
-    // Apply the modifications
+    // Apply styling modifications and content insertions
     const appliedChanges = [];
     const errors = [];
     
+    // Apply styling modifications
     for (const mod of modifications) {
       try {
         await applyModification(mod, req.session.distributor_id);
         appliedChanges.push(mod.description);
-        console.log(`Applied: ${mod.description}`);
+        console.log(`Applied styling: ${mod.description}`);
       } catch (error) {
-        console.error(`Failed to apply modification: ${mod.description}`, error);
+        console.error(`Failed to apply styling modification: ${mod.description}`, error);
         errors.push(`Failed: ${mod.description} - ${error.message}`);
+      }
+    }
+    
+    // Apply content insertions
+    for (const insertion of insertions) {
+      try {
+        await applyContentInsertion(insertion, req.session.distributor_id);
+        appliedChanges.push(insertion.description);
+        console.log(`Applied content insertion: ${insertion.description}`);
+      } catch (error) {
+        console.error(`Failed to apply content insertion: ${insertion.description}`, error);
+        errors.push(`Failed: ${insertion.description} - ${error.message}`);
       }
     }
     
@@ -2218,10 +2244,16 @@ async function parseAIRequestWithClaude(userRequest) {
   console.log('🔥 ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
   console.log('🔥 Processing AI customization request with Claude...');
   
-  // Enhanced system prompt with all available elements and advanced styling capabilities
-  const systemPrompt = `You are an AI assistant that helps customize storefront appearance using CSS styling.
+  // Enhanced system prompt with styling AND content insertion capabilities  
+  const systemPrompt = `You are an AI assistant that helps customize storefront and cart appearance using CSS styling AND content insertion.
+
+CAPABILITIES:
+1. STYLING - Modify existing elements with CSS
+2. CONTENT INSERTION - Add new elements to specific zones
 
 AVAILABLE ELEMENTS TO STYLE:
+
+STOREFRONT ELEMENTS:
 - "add-to-cart-button" - add to cart buttons throughout the store
 - "product-card" - individual product display cards  
 - "header-nav" - top navigation area
@@ -2232,6 +2264,66 @@ AVAILABLE ELEMENTS TO STYLE:
 - "page-background" - main page background
 - "product-grid" - container holding all products
 - "quantity-controls" - quantity selector interface
+
+CART ELEMENTS:
+- "cart-page-background" - cart page background
+- "cart-header-nav" - cart page header navigation
+- "cart-page-title" - "My Cart" title text
+- "cart-home-button" - home button on cart page
+- "cart-continue-shopping-button" - continue shopping button
+- "cart-logout-button" - logout button on cart page
+- "cart-loading-container" - loading message container
+- "cart-loading-text" - loading message text
+- "cart-empty-container" - empty cart message container
+- "cart-empty-text" - empty cart message text
+- "cart-browse-products-button" - browse products button
+- "cart-summary-container" - cart summary section
+- "cart-summary-title" - "Cart Summary" title
+- "cart-summary-text" - item count text
+- "cart-clear-button" - clear cart button
+- "cart-items-container" - container for all cart items
+- "cart-item-card" - individual cart item cards
+- "cart-item-image-container" - product image container
+- "cart-item-image" - product images in cart
+- "cart-item-details" - product details section
+- "cart-item-name" - product name in cart
+- "cart-item-sku" - product SKU in cart
+- "cart-item-price" - product price in cart
+- "cart-item-description" - product description in cart
+- "cart-item-controls" - quantity and action controls
+- "cart-quantity-controls" - quantity adjustment section
+- "cart-quantity-label" - "Quantity:" label
+- "cart-quantity-button" - +/- quantity buttons
+- "cart-quantity-input" - quantity input field
+- "cart-item-actions" - update/remove button section
+- "cart-update-button" - update quantity button
+- "cart-remove-button" - remove item button
+- "cart-item-total" - line total price
+- "cart-total-container" - final total section
+- "cart-subtotal" - subtotal amount text
+- "cart-submit-order-button" - submit order button
+
+AVAILABLE CONTENT INSERTION ZONES:
+
+STOREFRONT ZONES:
+- "storefront-header-top" - Above the main header
+- "storefront-header-bottom" - Below the main header  
+- "storefront-before-categories" - Before category buttons
+- "storefront-after-categories" - After category buttons
+- "storefront-before-products" - Before product grid
+- "storefront-after-products" - After product grid
+- "storefront-sidebar-left" - Left sidebar area
+- "storefront-sidebar-right" - Right sidebar area
+
+CART ZONES:
+- "cart-header-top" - Above cart header
+- "cart-header-bottom" - Below cart header
+- "cart-before-items" - Before cart items list
+- "cart-after-items" - After cart items list
+- "cart-before-total" - Before total section
+- "cart-after-total" - After total section
+- "cart-sidebar-left" - Left sidebar on cart
+- "cart-sidebar-right" - Right sidebar on cart
 
 STYLING CAPABILITIES:
 You can apply ANY CSS properties including:
@@ -2256,44 +2348,81 @@ ADVANCED LAYOUT CHANGES:
 - To create dropdowns: position: 'relative' with child elements having position: 'absolute'
 
 EXAMPLES:
+
+STOREFRONT EXAMPLES:
 - "Make buttons black" → category-buttons: {backgroundColor: '#000000'}
 - "Hide the search bar" → search-bar: {display: 'none'}
 - "Center the category buttons" → category-filter-container: {justifyContent: 'center'}
 - "Make product cards bigger" → product-card: {transform: 'scale(1.1)'}
 - "Arrange category buttons vertically" → category-filter-container: {flexDirection: 'column', alignItems: 'flex-start'}
 
-Parse the user request and return a JSON object with modifications array. Each modification should have:
-- elementSelector: the exact element name from the list above
-- cssProperties: object with CSS property names as keys and values as strings
-- description: human-readable description of the change
+CART EXAMPLES:
+- "Make the cart submit button green" → cart-submit-order-button: {backgroundColor: '#10B981'}
+- "Change cart item cards to blue" → cart-item-card: {backgroundColor: '#EBF8FF', borderColor: '#3B82F6'}
+- "Hide the clear cart button" → cart-clear-button: {display: 'none'}
+- "Make cart page title larger" → cart-page-title: {fontSize: '3rem', fontWeight: 'bold'}
+- "Change cart background to gray" → cart-page-background: {backgroundColor: '#F3F4F6'}
+- "Make remove buttons red" → cart-remove-button: {backgroundColor: '#DC2626'}
+- "Style cart quantity controls" → cart-quantity-button: {backgroundColor: '#6B7280', color: 'white'}
+
+MULTI-SCREEN EXAMPLES:
+- "Make all buttons blue" → affects both add-to-cart-button AND cart-submit-order-button
+- "Change page backgrounds" → affects both page-background AND cart-page-background
+
+CONTENT INSERTION EXAMPLES:
+- "Add a banner above the products" → INSERT into storefront-before-products zone
+- "Add a promotional message in cart" → INSERT into cart-header-bottom zone  
+- "Add a help section to the right of products" → INSERT into storefront-sidebar-right zone
+- "Add custom order field dropdown to cart" → INSERT into cart-after-items zone
+
+CONTENT INSERTION TYPES:
+- "banner" - promotional banners with text/images
+- "message" - informational text blocks
+- "form-field" - input fields, dropdowns, checkboxes
+- "custom-html" - any custom HTML content
+
+Parse the user request and determine if it requires STYLING or CONTENT INSERTION:
+
+STYLING REQUEST - modify existing elements:
+Return: {"type": "styling", "modifications": [...]}
+
+CONTENT INSERTION REQUEST - add new content:
+Return: {"type": "content", "insertions": [...]}
 
 USER REQUEST: "${userRequest}"
 
-Analyze this request and provide a JSON response with CSS modifications. For each modification:
-1. "elementSelector" - CSS class name for the element (e.g., "add-to-cart-button")  
-2. "cssProperties" - object with CSS properties to apply
-3. "description" - human-readable description
-
-Common color mappings:
-- brown: #8B4513 or #A0522D
-- blue: #3B82F6 or #1D4ED8  
-- green: #10B981 or #059669
-- red: #EF4444 or #DC2626
-
-RETURN ONLY VALID JSON:
+STYLING FORMAT:
 {
+  "type": "styling",
   "modifications": [
     {
       "elementSelector": "add-to-cart-button",
-      "cssProperties": {
-        "backgroundColor": "#8B4513",
-        "color": "white",
-        "border": "none"
-      },
-      "description": "Changed add to cart buttons to brown"
+      "cssProperties": {"backgroundColor": "#8B4513"},
+      "description": "Changed buttons to brown"
     }
   ]
-}`;
+}
+
+CONTENT INSERTION FORMAT:
+{
+  "type": "content", 
+  "insertions": [
+    {
+      "insertionZone": "storefront-before-products",
+      "contentType": "banner",
+      "contentData": {
+        "text": "Special Sale - 20% Off!",
+        "backgroundColor": "#10B981", 
+        "color": "white",
+        "textAlign": "center",
+        "padding": "1rem"
+      },
+      "description": "Added promotional banner above products"
+    }
+  ]
+}
+
+RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
 
   try {
     console.log('🔥 About to make Claude API call...');
@@ -2459,7 +2588,17 @@ function parseClaudeResponse(claudeResponse) {
     const parsed = JSON.parse(jsonMatch[0]);
     console.log('Claude understanding:', parsed);
     
-    return parsed.modifications || [];
+    // Handle new format with type field or old format with modifications
+    if (parsed.type) {
+      // New format - return the entire parsed object
+      return parsed;
+    } else if (parsed.modifications) {
+      // Old format - return just modifications for backwards compatibility
+      return parsed.modifications;
+    } else {
+      // Very old format - assume the parsed object is the modifications array
+      return parsed;
+    }
     
   } catch (error) {
     console.error('Error parsing Claude response:', error);
@@ -2484,6 +2623,27 @@ async function applyModification(modification, distributorId) {
     
   } catch (error) {
     console.error(`Failed to save style for ${modification.elementSelector}:`, error);
+    throw error;
+  }
+}
+
+// Apply content insertion to database
+async function applyContentInsertion(insertion, distributorId) {
+  try {
+    // Store the content insertion in the database
+    db.prepare(`
+      INSERT INTO dynamic_content (distributor_id, insertion_zone, content_type, content_data, display_order)
+      VALUES (?, ?, ?, ?, 0)
+    `).run(
+      distributorId,
+      insertion.insertionZone,
+      insertion.contentType,
+      JSON.stringify(insertion.contentData)
+    );
+    
+    console.log(`Successfully applied content insertion: ${insertion.description}`);
+  } catch (error) {
+    console.error(`Error applying content insertion: ${insertion.description}`, error);
     throw error;
   }
 }
@@ -2744,6 +2904,128 @@ app.post('/api/styles', (req, res) => {
   }
 });
 
+// ===== NEW: DYNAMIC CONTENT INSERTION ENDPOINTS =====
+
+// Initialize dynamic content table (run once on startup)
+function initializeDynamicContentTable() {
+  try {
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS dynamic_content (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        distributor_id INTEGER NOT NULL,
+        insertion_zone TEXT NOT NULL,
+        content_type TEXT NOT NULL DEFAULT 'html',
+        content_data TEXT NOT NULL,
+        display_order INTEGER DEFAULT 0,
+        active BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (distributor_id) REFERENCES distributors(id)
+      )
+    `).run();
+    console.log('Dynamic content table initialized');
+  } catch (error) {
+    console.error('Error initializing dynamic content table:', error);
+  }
+}
+
+// Initialize the table on startup
+initializeDynamicContentTable();
+
+// Get dynamic content for a distributor
+app.get('/api/dynamic-content', (req, res) => {
+  console.log('Dynamic content request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const content = db.prepare(`
+      SELECT * FROM dynamic_content 
+      WHERE distributor_id = ? AND active = 1 
+      ORDER BY insertion_zone, display_order
+    `).all(req.session.distributor_id);
+    
+    // Group by insertion zone
+    const contentByZone = {};
+    content.forEach(item => {
+      if (!contentByZone[item.insertion_zone]) {
+        contentByZone[item.insertion_zone] = [];
+      }
+      contentByZone[item.insertion_zone].push({
+        id: item.id,
+        type: item.content_type,
+        data: JSON.parse(item.content_data),
+        order: item.display_order
+      });
+    });
+    
+    res.json(contentByZone);
+  } catch (error) {
+    console.error('Error fetching dynamic content:', error);
+    res.status(500).json({ error: 'Error fetching dynamic content' });
+  }
+});
+
+// Add or update dynamic content
+app.post('/api/dynamic-content', (req, res) => {
+  console.log('Add dynamic content request');
+  
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+  
+  const { insertionZone, contentType, contentData, displayOrder } = req.body;
+  
+  if (!insertionZone || !contentType || !contentData) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  try {
+    const result = db.prepare(`
+      INSERT INTO dynamic_content (distributor_id, insertion_zone, content_type, content_data, display_order)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      req.session.distributor_id,
+      insertionZone,
+      contentType,
+      JSON.stringify(contentData),
+      displayOrder || 0
+    );
+    
+    console.log(`Added dynamic content to ${insertionZone} for distributor ${req.session.distributor_id}`);
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (error) {
+    console.error('Error adding dynamic content:', error);
+    res.status(500).json({ error: 'Error adding dynamic content' });
+  }
+});
+
+// Delete dynamic content
+app.delete('/api/dynamic-content/:id', (req, res) => {
+  console.log('Delete dynamic content request');
+  
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+  
+  const { id } = req.params;
+  
+  try {
+    db.prepare(`
+      DELETE FROM dynamic_content 
+      WHERE id = ? AND distributor_id = ?
+    `).run(id, req.session.distributor_id);
+    
+    console.log(`Deleted dynamic content ${id} for distributor ${req.session.distributor_id}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting dynamic content:', error);
+    res.status(500).json({ error: 'Error deleting dynamic content' });
+  }
+});
+
 
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
@@ -2913,14 +3195,120 @@ app.post('/api/submit-order', async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    const distributorId = user.distributor_id || 1;
+
+    // ===== NEW: FETCH ALL CUSTOM FIELDS FOR ORDER SCOPE =====
     
-    // Generate CSV content
+    // 1. Fetch custom attribute definitions for this distributor
+    const accountAttrDefs = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'accounts'
+    `).all(distributorId);
+    
+    const productAttrDefs = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'products'
+    `).all(distributorId);
+    
+    const orderAttrDefs = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'orders'
+    `).all(distributorId);
+
+    // 2. Fetch custom attribute values for the customer's account
+    let accountCustomFields = {};
+    if (user.account_id && accountAttrDefs.length > 0) {
+      const accountCustomValues = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? AND entity_type = 'accounts' AND entity_id = ?
+      `).all(distributorId, user.account_id);
+      
+      // Merge definitions with values
+      accountAttrDefs.forEach(def => {
+        const value = accountCustomValues.find(val => val.attribute_name === def.attribute_name);
+        if (value) {
+          accountCustomFields[def.attribute_name] = value.value_text || value.value_number || value.value_boolean;
+        } else {
+          accountCustomFields[def.attribute_name] = null; // Field exists but no value set
+        }
+      });
+    }
+
+    // 3. Fetch custom attribute values for each product in the order
+    const enhancedItems = items.map(item => {
+      let productCustomFields = {};
+      if (productAttrDefs.length > 0) {
+        const productCustomValues = db.prepare(`
+          SELECT * FROM custom_attributes_values 
+          WHERE distributor_id = ? AND entity_type = 'products' AND entity_id = ?
+        `).all(distributorId, item.id);
+        
+        productAttrDefs.forEach(def => {
+          const value = productCustomValues.find(val => val.attribute_name === def.attribute_name);
+          if (value) {
+            productCustomFields[def.attribute_name] = value.value_text || value.value_number || value.value_boolean;
+          } else {
+            productCustomFields[def.attribute_name] = null;
+          }
+        });
+      }
+      
+      return {
+        ...item,
+        customFields: productCustomFields
+      };
+    });
+
+    // 4. Enhance user object with custom fields
+    const enhancedUser = {
+      ...user,
+      customFields: accountCustomFields
+    };
+
+    console.log('Enhanced order data with custom fields:', {
+      userCustomFields: Object.keys(accountCustomFields).length,
+      itemsWithCustomFields: enhancedItems.length,
+      availableOrderFields: orderAttrDefs.length
+    });
+    
+    // Generate CSV content with custom fields
     const orderDate = new Date().toISOString().split('T')[0];
-    let csvContent = 'Order Date,Customer ID,Customer Name,Customer Email,Product SKU,Product Name,Quantity,Unit Price,Total\n';
     
-    items.forEach(item => {
+    // Build CSV header with custom fields
+    let csvHeader = 'Order Date,Customer ID,Customer Name,Customer Email,Product SKU,Product Name,Quantity,Unit Price,Total';
+    
+    // Add account custom field headers
+    accountAttrDefs.forEach(def => {
+      csvHeader += `,Account ${def.attribute_label || def.attribute_name}`;
+    });
+    
+    // Add product custom field headers  
+    productAttrDefs.forEach(def => {
+      csvHeader += `,Product ${def.attribute_label || def.attribute_name}`;
+    });
+    
+    csvHeader += '\n';
+    let csvContent = csvHeader;
+    
+    enhancedItems.forEach(item => {
       const lineTotal = item.quantity * item.unitPrice;
-      csvContent += `${orderDate},${user.account_id || 'N/A'},${user.customer_name || user.username},${user.username},${item.sku},"${item.name}",${item.quantity},${item.unitPrice.toFixed(2)},${lineTotal.toFixed(2)}\n`;
+      let csvLine = `${orderDate},${user.account_id || 'N/A'},${enhancedUser.customer_name || enhancedUser.username},${enhancedUser.username},${item.sku},"${item.name}",${item.quantity},${item.unitPrice.toFixed(2)},${lineTotal.toFixed(2)}`;
+      
+      // Add account custom field values
+      accountAttrDefs.forEach(def => {
+        const value = accountCustomFields[def.attribute_name] || '';
+        csvLine += `,"${String(value).replace(/"/g, '""')}"`;
+      });
+      
+      // Add product custom field values
+      productAttrDefs.forEach(def => {
+        const value = (item.customFields && item.customFields[def.attribute_name]) || '';
+        csvLine += `,"${String(value).replace(/"/g, '""')}"`;
+      });
+      
+      csvLine += '\n';
+      csvContent += csvLine;
     });
     
     // Calculate order total
@@ -2929,18 +3317,17 @@ app.post('/api/submit-order', async (req, res) => {
     }, 0);
     
     // ADD VALIDATION HERE - Check business rules before processing order
-    const distributorId = user.distributor_id || 1; // Use default distributor if none set
-    
     console.log('Validating order submission for distributor:', distributorId, 'total:', orderTotal);
     
     const validation = pricingEngine.executeLogicScripts('submit', distributorId, {
-      customer: user,
+      customer: enhancedUser,  // Now includes custom fields
       cart: { 
-        items: items, 
+        items: enhancedItems,  // Now includes custom fields for each product
         total: orderTotal, 
         subtotal: orderTotal 
       },
-      products: items
+      products: enhancedItems,  // Enhanced items with custom fields
+      orderCustomFieldDefinitions: orderAttrDefs  // Available order-level custom fields
     });
     
     if (!validation.allowed) {
@@ -2975,7 +3362,7 @@ app.post('/api/submit-order', async (req, res) => {
       VALUES (?, ?, ?, ?)
     `);
     
-    items.forEach(item => {
+    enhancedItems.forEach(item => {
       insertOrderItem.run(
         orderId,
         item.id,
@@ -2983,6 +3370,94 @@ app.post('/api/submit-order', async (req, res) => {
         item.unitPrice
       );
     });
+
+    // ===== NEW: SAVE CUSTOM ATTRIBUTES FOR THIS ORDER =====
+    
+    // Save account custom attributes as order context (for reference)
+    if (Object.keys(accountCustomFields).length > 0) {
+      const insertCustomValue = db.prepare(`
+        INSERT INTO custom_attributes_values 
+        (distributor_id, entity_type, entity_id, attribute_name, value_text, value_number, value_boolean)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      Object.entries(accountCustomFields).forEach(([attrName, value]) => {
+        if (value !== null) {
+          const def = accountAttrDefs.find(d => d.attribute_name === attrName);
+          if (def) {
+            let valueText = null, valueNumber = null, valueBoolean = null;
+            
+            if (def.data_type === 'number') {
+              valueNumber = parseFloat(value) || null;
+            } else if (def.data_type === 'boolean') {
+              valueBoolean = Boolean(value);
+            } else {
+              valueText = String(value);
+            }
+            
+            // Store as order context with a special entity_type
+            try {
+              insertCustomValue.run(
+                distributorId,
+                'order_account_context', // Special type to indicate this is account data saved with order
+                orderId,
+                `account_${attrName}`,
+                valueText,
+                valueNumber,
+                valueBoolean
+              );
+            } catch (err) {
+              console.error('Error saving account custom field for order:', err);
+            }
+          }
+        }
+      });
+    }
+
+    // Save product custom attributes as order context (for reference)
+    enhancedItems.forEach((item, index) => {
+      if (Object.keys(item.customFields || {}).length > 0) {
+        const insertCustomValue = db.prepare(`
+          INSERT INTO custom_attributes_values 
+          (distributor_id, entity_type, entity_id, attribute_name, value_text, value_number, value_boolean)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        Object.entries(item.customFields).forEach(([attrName, value]) => {
+          if (value !== null) {
+            const def = productAttrDefs.find(d => d.attribute_name === attrName);
+            if (def) {
+              let valueText = null, valueNumber = null, valueBoolean = null;
+              
+              if (def.data_type === 'number') {
+                valueNumber = parseFloat(value) || null;
+              } else if (def.data_type === 'boolean') {
+                valueBoolean = Boolean(value);
+              } else {
+                valueText = String(value);
+              }
+              
+              // Store as order context with a special entity_type
+              try {
+                insertCustomValue.run(
+                  distributorId,
+                  'order_product_context', // Special type to indicate this is product data saved with order
+                  orderId,
+                  `product_${item.id}_${attrName}`,
+                  valueText,
+                  valueNumber,
+                  valueBoolean
+                );
+              } catch (err) {
+                console.error('Error saving product custom field for order:', err);
+              }
+            }
+          }
+        });
+      }
+    });
+
+    console.log(`Order ${orderId} created with custom field context preserved`);
     
     // Create a temporary file for the CSV
     const fs = require('fs');
