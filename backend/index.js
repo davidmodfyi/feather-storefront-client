@@ -859,20 +859,24 @@ app.get('/api/table-builder/orders', (req, res) => {
 
 // Table Builder API - Get order lines with custom attributes
 app.get('/api/table-builder/order-items', (req, res) => {
-  console.log('Table Builder order lines request');
+  console.log('Table Builder order items request');
   
-  if (!req.session.distributor_id) {
+  if (!req.session.user_id) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
   try {
     const distributorId = req.session.distributor_id;
     
-    // Get basic order lines data (limit to first 10)
-    const orderLines = db.prepare(`
-      SELECT * FROM order_items 
-      WHERE distributor_id = ? 
-      ORDER BY id 
+    // Get basic order items data (limit to first 10) - join with orders and products like the working endpoint
+    const orderItems = db.prepare(`
+      SELECT oi.*, p.name, p.sku, p.image_url, p.description, o.order_date
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN products p ON oi.product_id = p.id
+      JOIN users u ON o.user_id = u.id
+      WHERE u.distributor_id = ?
+      ORDER BY oi.id DESC
       LIMIT 10
     `).all(distributorId);
     
@@ -883,24 +887,24 @@ app.get('/api/table-builder/order-items', (req, res) => {
       ORDER BY display_order
     `).all(distributorId);
     
-    // Get all custom attribute values for these order lines
-    const orderLineIds = orderLines.map(line => line.id);
+    // Get all custom attribute values for these order items
+    const orderItemIds = orderItems.map(item => item.id);
     
     let customAttributes = [];
-    if (orderLineIds.length > 0) {
-      const placeholders = orderLineIds.map(() => '?').join(',');
+    if (orderItemIds.length > 0) {
+      const placeholders = orderItemIds.map(() => '?').join(',');
       customAttributes = db.prepare(`
         SELECT * FROM custom_attributes_values 
         WHERE distributor_id = ? 
         AND entity_type = 'order_items' 
         AND entity_id IN (${placeholders})
-      `).all(distributorId, ...orderLineIds);
+      `).all(distributorId, ...orderItemIds);
     }
     
-    console.log(`Found ${orderLines.length} order lines, ${customAttributes.length} custom attributes`);
+    console.log(`Found ${orderItems.length} order items, ${customAttributes.length} custom attributes`);
     
     res.json({
-      orderLines: orderLines,
+      orderItems: orderItems,
       customAttributes: customAttributes,
       attributeDefinitions: attributeDefinitions
     });
@@ -993,20 +997,24 @@ app.get('/api/table-builder/orders/export', (req, res) => {
 
 // Table Builder API - Export full order lines data to CSV
 app.get('/api/table-builder/order-items/export', (req, res) => {
-  console.log('Export order lines request');
+  console.log('Export order items request');
   
-  if (!req.session.distributor_id) {
+  if (!req.session.user_id) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
   try {
     const distributorId = req.session.distributor_id;
     
-    // Get ALL order lines data (no limit)
-    const orderLines = db.prepare(`
-      SELECT * FROM order_items 
-      WHERE distributor_id = ? 
-      ORDER BY id
+    // Get ALL order items data (no limit)
+    const orderItems = db.prepare(`
+      SELECT oi.*, p.name, p.sku, p.image_url, p.description, o.order_date
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN products p ON oi.product_id = p.id
+      JOIN users u ON o.user_id = u.id
+      WHERE u.distributor_id = ?
+      ORDER BY oi.id DESC
     `).all(distributorId);
     
     // Get all custom attribute definitions for order lines

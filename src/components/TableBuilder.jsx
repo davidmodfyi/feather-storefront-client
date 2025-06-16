@@ -112,14 +112,14 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           const orderItemsData = await orderLinesResponse.json();
           console.log('Order lines data received:', orderItemsData);
           
-          // Process order lines with custom attributes merged
-          const processedOrderLines = mergeCustomAttributesWithDefinitions(
-            orderItemsData.orderLines || [], 
+          // Process order items with custom attributes merged
+          const processedOrderItems = mergeCustomAttributesWithDefinitions(
+            orderItemsData.orderItems || [], 
             orderItemsData.customAttributes || [],
             orderItemsData.attributeDefinitions || []
           );
           
-          setOrderItemsData(processedOrderLines.slice(0, 10));
+          setOrderItemsData(processedOrderItems.slice(0, 10));
         } else {
           console.log('Order lines endpoint returned:', orderLinesResponse.status);
           setOrderItemsData([]);
@@ -147,7 +147,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
       accounts: ['id', 'name', 'email', 'phone', 'address', 'city', 'state', 'zip'],
       products: ['id', 'name', 'description', 'sku', 'unit_price', 'category'],
       orders: ['id', 'customer_name', 'status', 'total_amount', 'order_date'],
-      orderItems: ['id', 'order_id', 'product_id', 'quantity', 'unit_price']
+      orderItems: ['id', 'order_id', 'name', 'sku', 'quantity', 'unit_price']
     };
     
     if (!data || data.length === 0) {
