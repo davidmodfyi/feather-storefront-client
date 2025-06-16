@@ -237,13 +237,29 @@ const handleSubmitOrder = async () => {
       } else if (content.type === 'form-field') {
         if (content.data.fieldType === 'dropdown') {
           return (
-            <div key={content.id || index} style={content.data.containerStyle} className="dynamic-form-field">
-              <label style={content.data.labelStyle}>{content.data.label}</label>
-              <select style={content.data.inputStyle}>
+            <div key={content.id || index} style={content.data.containerStyle || {marginBottom: '1rem'}} className="dynamic-form-field">
+              <label style={content.data.labelStyle || {fontWeight: 'bold', marginBottom: '0.5rem', display: 'block'}}>{content.data.label}</label>
+              <select 
+                style={content.data.inputStyle || {padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%'}}
+                name={content.data.label}
+              >
+                <option value="">Select {content.data.label}</option>
                 {content.data.options && content.data.options.map((option, i) => (
                   <option key={i} value={option}>{option}</option>
                 ))}
               </select>
+            </div>
+          );
+        } else if (content.data.fieldType === 'text') {
+          return (
+            <div key={content.id || index} style={content.data.containerStyle || {marginBottom: '1rem'}} className="dynamic-form-field">
+              <label style={content.data.labelStyle || {fontWeight: 'bold', marginBottom: '0.5rem', display: 'block'}}>{content.data.label}</label>
+              <input 
+                type="text"
+                style={content.data.inputStyle || {padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%'}}
+                name={content.data.label}
+                placeholder={content.data.placeholder || `Enter ${content.data.label}`}
+              />
             </div>
           );
         }

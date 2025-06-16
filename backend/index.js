@@ -2148,6 +2148,15 @@ app.post('/api/ai-customize', async (req, res) => {
     return res.status(400).json({ error: 'Message and distributor slug are required' });
   }
   
+  // Fetch available custom fields for context
+  const orderCustomFields = db.prepare(`
+    SELECT attribute_name, attribute_label, data_type, validation_rules 
+    FROM custom_attributes_definitions 
+    WHERE distributor_id = ? AND entity_type = 'orders'
+  `).all(req.session.distributor_id);
+  
+  console.log('🔥 Found custom order fields:', orderCustomFields.map(f => f.attribute_name));
+  
   try {
     console.log(`🔥 Starting AI customization for ${distributorSlug}: ${message}`);
     
@@ -2155,7 +2164,7 @@ app.post('/api/ai-customize', async (req, res) => {
     
     // Use Claude AI to parse the request and generate modifications
     console.log('🔥 Calling parseAIRequestWithClaude...');
-    const aiResponse = await parseAIRequestWithClaude(message);
+    const aiResponse = await parseAIRequestWithClaude(message, orderCustomFields);
     console.log('🔥 AI Response received:', JSON.stringify(aiResponse, null, 2));
     
     // Handle both old format (array) and new format (object with type)
@@ -2238,14 +2247,35 @@ app.post('/api/ai-customize', async (req, res) => {
 });
 
 // Claude AI-powered request parser
-async function parseAIRequestWithClaude(userRequest) {
+async function parseAIRequestWithClaude(userRequest, orderCustomFields = []) {
   console.log('🔥 parseAIRequestWithClaude called');
   console.log('🔥 userRequest:', userRequest);
+  console.log('🔥 orderCustomFields:', orderCustomFields);
   console.log('🔥 ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
   console.log('🔥 Processing AI customization request with Claude...');
   
+  // Build custom fields context
+  let customFieldsContext = '';
+  if (orderCustomFields.length > 0) {
+    customFieldsContext = '\n\nAVAILABLE CUSTOM ORDER FIELDS:\n';
+    orderCustomFields.forEach(field => {
+      customFieldsContext += `- "${field.attribute_name}" (${field.data_type})`;
+      if (field.validation_rules) {
+        try {
+          const rules = JSON.parse(field.validation_rules);
+          if (rules.options) {
+            customFieldsContext += ` - Options: [${rules.options.join(', ')}]`;
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      }
+      customFieldsContext += '\n';
+    });
+  }
+  
   // Enhanced system prompt with styling AND content insertion capabilities  
-  const systemPrompt = `You are an AI assistant that helps customize storefront and cart appearance using CSS styling AND content insertion.
+  const systemPrompt = `You are an AI assistant that helps customize storefront and cart appearance using CSS styling AND content insertion.${customFieldsContext}
 
 CAPABILITIES:
 1. STYLING - Modify existing elements with CSS
@@ -2374,6 +2404,9 @@ CONTENT INSERTION EXAMPLES:
 - "Add a promotional message in cart" → INSERT into cart-header-bottom zone  
 - "Add a help section to the right of products" → INSERT into storefront-sidebar-right zone
 - "Add custom order field dropdown to cart" → INSERT into cart-after-items zone
+- "Add [FieldName] field to cart" → INSERT form-field into appropriate cart zone
+- "Add OrderType to the bottom of cart" → INSERT form-field into cart-before-total zone
+- "I added a new custom order header field [Name]. Add it to [location]" → INSERT form-field
 
 CONTENT INSERTION TYPES:
 - "banner" - promotional banners with text/images
@@ -2381,12 +2414,17 @@ CONTENT INSERTION TYPES:
 - "form-field" - input fields, dropdowns, checkboxes
 - "custom-html" - any custom HTML content
 
+IMPORTANT: Custom field requests are ALWAYS content insertion requests:
+- Keywords like "add field", "custom field", "OrderType", "field to cart" = CONTENT INSERTION
+- Requests mentioning Table Builder custom fields = CONTENT INSERTION  
+- "Add [FieldName] to [location]" = CONTENT INSERTION
+
 Parse the user request and determine if it requires STYLING or CONTENT INSERTION:
 
 STYLING REQUEST - modify existing elements:
 Return: {"type": "styling", "modifications": [...]}
 
-CONTENT INSERTION REQUEST - add new content:
+CONTENT INSERTION REQUEST - add new content (including custom fields):
 Return: {"type": "content", "insertions": [...]}
 
 USER REQUEST: "${userRequest}"
@@ -2418,6 +2456,26 @@ CONTENT INSERTION FORMAT:
         "padding": "1rem"
       },
       "description": "Added promotional banner above products"
+    }
+  ]
+}
+
+CUSTOM FIELD INSERTION FORMAT:
+{
+  "type": "content",
+  "insertions": [
+    {
+      "insertionZone": "cart-before-total",
+      "contentType": "form-field", 
+      "contentData": {
+        "fieldType": "dropdown",
+        "label": "OrderType",
+        "options": ["Standard", "Rush", "Bulk"],
+        "containerStyle": {"marginBottom": "1rem"},
+        "labelStyle": {"fontWeight": "bold", "marginBottom": "0.5rem"},
+        "inputStyle": {"padding": "0.5rem", "border": "1px solid #ccc", "borderRadius": "4px"}
+      },
+      "description": "Added OrderType dropdown field to cart"
     }
   ]
 }
