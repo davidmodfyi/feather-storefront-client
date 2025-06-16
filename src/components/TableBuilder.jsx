@@ -13,10 +13,10 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const [productsExpanded, setProductsExpanded] = useState(false);
   const [ordersExpanded, setOrdersExpanded] = useState(false);
   const [orderItemsExpanded, setOrderItemsExpanded] = useState(false);
-  const [newAccountField, setNewAccountField] = useState({ name: '', type: 'text' });
-  const [newProductField, setNewProductField] = useState({ name: '', type: 'text' });
-  const [newOrderField, setNewOrderField] = useState({ name: '', type: 'text' });
-  const [newOrderItemField, setNewOrderItemField] = useState({ name: '', type: 'text' });
+  const [newAccountField, setNewAccountField] = useState({ name: '', type: 'text', options: '' });
+  const [newProductField, setNewProductField] = useState({ name: '', type: 'text', options: '' });
+  const [newOrderField, setNewOrderField] = useState({ name: '', type: 'text', options: '' });
+  const [newOrderItemField, setNewOrderItemField] = useState({ name: '', type: 'text', options: '' });
   const [addingField, setAddingField] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null);
   
@@ -208,6 +208,16 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
     try {
       setAddingField(true);
       
+      // Prepare validation_rules based on field type
+      let validationRules = {};
+      if (fieldData.type === 'dropdown' && fieldData.options) {
+        const optionsArray = fieldData.options.split(',').map(option => option.trim()).filter(option => option.length > 0);
+        validationRules = {
+          type: 'dropdown',
+          options: optionsArray
+        };
+      }
+      
       const response = await fetch('/api/table-builder/add-field', {
         method: 'POST',
         headers: {
@@ -219,7 +229,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           attribute_name: fieldData.name.toLowerCase().replace(/\s+/g, '_'),
           attribute_label: fieldData.name,
           data_type: fieldData.type,
-          validation_rules: '{}',
+          validation_rules: JSON.stringify(validationRules),
           display_order: 999
         })
       });
@@ -227,9 +237,13 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
       if (response.ok) {
         // Reset form
         if (entityType === 'accounts') {
-          setNewAccountField({ name: '', type: 'text' });
-        } else {
-          setNewProductField({ name: '', type: 'text' });
+          setNewAccountField({ name: '', type: 'text', options: '' });
+        } else if (entityType === 'products') {
+          setNewProductField({ name: '', type: 'text', options: '' });
+        } else if (entityType === 'orders') {
+          setNewOrderField({ name: '', type: 'text', options: '' });
+        } else if (entityType === 'order-items') {
+          setNewOrderItemField({ name: '', type: 'text', options: '' });
         }
         
         // Refresh data to show new field
@@ -557,40 +571,58 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   </svg>
                   <h3 className="text-sm font-semibold text-blue-800">Add Custom Field to Accounts</h3>
                 </div>
-                <div className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-blue-700 mb-2">Field Name</label>
-                    <input
-                      type="text"
-                      value={newAccountField.name}
-                      onChange={(e) => setNewAccountField({...newAccountField, name: e.target.value})}
-                      placeholder="e.g., Contract ID, Street 2"
-                      className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                      disabled={addingField}
-                    />
+                <div className="space-y-3">
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-blue-700 mb-2">Field Name</label>
+                      <input
+                        type="text"
+                        value={newAccountField.name}
+                        onChange={(e) => setNewAccountField({...newAccountField, name: e.target.value})}
+                        placeholder="e.g., Contract ID, Street 2"
+                        className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      />
+                    </div>
+                    <div className="w-36">
+                      <label className="block text-xs font-medium text-blue-700 mb-2">Field Type</label>
+                      <select
+                        value={newAccountField.type}
+                        onChange={(e) => setNewAccountField({...newAccountField, type: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      >
+                        <option value="text">Text</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Yes/No</option>
+                        <option value="date">Date</option>
+                        <option value="dropdown">Dropdown</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="w-36">
-                    <label className="block text-xs font-medium text-blue-700 mb-2">Field Type</label>
-                    <select
-                      value={newAccountField.type}
-                      onChange={(e) => setNewAccountField({...newAccountField, type: e.target.value})}
-                      className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                      disabled={addingField}
+                  {newAccountField.type === 'dropdown' && (
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-2">Dropdown Options</label>
+                      <input
+                        type="text"
+                        value={newAccountField.options}
+                        onChange={(e) => setNewAccountField({...newAccountField, options: e.target.value})}
+                        placeholder="Enter options separated by commas, e.g., Option 1, Option 2, Option 3"
+                        className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      />
+                      <p className="text-xs text-blue-600 mt-1">Separate options with commas</p>
+                    </div>
+                  )}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => addCustomField('accounts', newAccountField)}
+                      disabled={!newAccountField.name.trim() || addingField || (newAccountField.type === 'dropdown' && !newAccountField.options.trim())}
+                      className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                     >
-                      <option value="text">Text</option>
-                      <option value="number">Number</option>
-                      <option value="boolean">Yes/No</option>
-                      <option value="date">Date</option>
-                      <option value="select">Select List</option>
-                    </select>
+                      {addingField ? 'Adding...' : 'Add Field'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => addCustomField('accounts', newAccountField)}
-                    disabled={!newAccountField.name.trim() || addingField}
-                    className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
-                  >
-                    {addingField ? 'Adding...' : 'Add Field'}
-                  </button>
                 </div>
               </div>
             </>
@@ -706,40 +738,58 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   </svg>
                   <h3 className="text-sm font-semibold text-emerald-800">Add Custom Field to Products</h3>
                 </div>
-                <div className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-emerald-700 mb-2">Field Name</label>
-                    <input
-                      type="text"
-                      value={newProductField.name}
-                      onChange={(e) => setNewProductField({...newProductField, name: e.target.value})}
-                      placeholder="e.g., Shelf Life, Storage Temp"
-                      className="w-full px-4 py-2.5 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
-                      disabled={addingField}
-                    />
+                <div className="space-y-3">
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-emerald-700 mb-2">Field Name</label>
+                      <input
+                        type="text"
+                        value={newProductField.name}
+                        onChange={(e) => setNewProductField({...newProductField, name: e.target.value})}
+                        placeholder="e.g., Shelf Life, Storage Temp"
+                        className="w-full px-4 py-2.5 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      />
+                    </div>
+                    <div className="w-36">
+                      <label className="block text-xs font-medium text-emerald-700 mb-2">Field Type</label>
+                      <select
+                        value={newProductField.type}
+                        onChange={(e) => setNewProductField({...newProductField, type: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      >
+                        <option value="text">Text</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Yes/No</option>
+                        <option value="date">Date</option>
+                        <option value="dropdown">Dropdown</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="w-36">
-                    <label className="block text-xs font-medium text-emerald-700 mb-2">Field Type</label>
-                    <select
-                      value={newProductField.type}
-                      onChange={(e) => setNewProductField({...newProductField, type: e.target.value})}
-                      className="w-full px-4 py-2.5 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
-                      disabled={addingField}
+                  {newProductField.type === 'dropdown' && (
+                    <div>
+                      <label className="block text-xs font-medium text-emerald-700 mb-2">Dropdown Options</label>
+                      <input
+                        type="text"
+                        value={newProductField.options}
+                        onChange={(e) => setNewProductField({...newProductField, options: e.target.value})}
+                        placeholder="Enter options separated by commas, e.g., Option 1, Option 2, Option 3"
+                        className="w-full px-4 py-2.5 border border-emerald-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      />
+                      <p className="text-xs text-emerald-600 mt-1">Separate options with commas</p>
+                    </div>
+                  )}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => addCustomField('products', newProductField)}
+                      disabled={!newProductField.name.trim() || addingField || (newProductField.type === 'dropdown' && !newProductField.options.trim())}
+                      className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                     >
-                      <option value="text">Text</option>
-                      <option value="number">Number</option>
-                      <option value="boolean">Yes/No</option>
-                      <option value="date">Date</option>
-                      <option value="select">Select List</option>
-                    </select>
+                      {addingField ? 'Adding...' : 'Add Field'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => addCustomField('products', newProductField)}
-                    disabled={!newProductField.name.trim() || addingField}
-                    className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
-                  >
-                    {addingField ? 'Adding...' : 'Add Field'}
-                  </button>
                 </div>
               </div>
             </>
@@ -855,40 +905,58 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   </svg>
                   <h3 className="text-sm font-semibold text-orange-800">Add Custom Field to Order Headers</h3>
                 </div>
-                <div className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-orange-700 mb-2">Field Name</label>
-                    <input
-                      type="text"
-                      value={newOrderField.name}
-                      onChange={(e) => setNewOrderField({...newOrderField, name: e.target.value})}
-                      placeholder="e.g., Delivery Date, Purchase Order"
-                      className="w-full px-4 py-2.5 border border-orange-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
-                      disabled={addingField}
-                    />
+                <div className="space-y-3">
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-orange-700 mb-2">Field Name</label>
+                      <input
+                        type="text"
+                        value={newOrderField.name}
+                        onChange={(e) => setNewOrderField({...newOrderField, name: e.target.value})}
+                        placeholder="e.g., Delivery Date, Purchase Order"
+                        className="w-full px-4 py-2.5 border border-orange-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      />
+                    </div>
+                    <div className="w-36">
+                      <label className="block text-xs font-medium text-orange-700 mb-2">Field Type</label>
+                      <select
+                        value={newOrderField.type}
+                        onChange={(e) => setNewOrderField({...newOrderField, type: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-orange-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      >
+                        <option value="text">Text</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Yes/No</option>
+                        <option value="date">Date</option>
+                        <option value="dropdown">Dropdown</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="w-36">
-                    <label className="block text-xs font-medium text-orange-700 mb-2">Field Type</label>
-                    <select
-                      value={newOrderField.type}
-                      onChange={(e) => setNewOrderField({...newOrderField, type: e.target.value})}
-                      className="w-full px-4 py-2.5 border border-orange-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
-                      disabled={addingField}
+                  {newOrderField.type === 'dropdown' && (
+                    <div>
+                      <label className="block text-xs font-medium text-orange-700 mb-2">Dropdown Options</label>
+                      <input
+                        type="text"
+                        value={newOrderField.options}
+                        onChange={(e) => setNewOrderField({...newOrderField, options: e.target.value})}
+                        placeholder="Enter options separated by commas, e.g., Option 1, Option 2, Option 3"
+                        className="w-full px-4 py-2.5 border border-orange-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      />
+                      <p className="text-xs text-orange-600 mt-1">Separate options with commas</p>
+                    </div>
+                  )}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => addCustomField('orders', newOrderField)}
+                      disabled={!newOrderField.name.trim() || addingField || (newOrderField.type === 'dropdown' && !newOrderField.options.trim())}
+                      className="px-6 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                     >
-                      <option value="text">Text</option>
-                      <option value="number">Number</option>
-                      <option value="boolean">Yes/No</option>
-                      <option value="date">Date</option>
-                      <option value="select">Select List</option>
-                    </select>
+                      {addingField ? 'Adding...' : 'Add Field'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => addCustomField('orders', newOrderField)}
-                    disabled={!newOrderField.name.trim() || addingField}
-                    className="px-6 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
-                  >
-                    {addingField ? 'Adding...' : 'Add Field'}
-                  </button>
                 </div>
               </div>
             </>
@@ -1004,40 +1072,58 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   </svg>
                   <h3 className="text-sm font-semibold text-purple-800">Add Custom Field to Order Items</h3>
                 </div>
-                <div className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-purple-700 mb-2">Field Name</label>
-                    <input
-                      type="text"
-                      value={newOrderItemField.name}
-                      onChange={(e) => setNewOrderItemField({...newOrderItemField, name: e.target.value})}
-                      placeholder="e.g., Line Notes, Discount Percent"
-                      className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
-                      disabled={addingField}
-                    />
+                <div className="space-y-3">
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-purple-700 mb-2">Field Name</label>
+                      <input
+                        type="text"
+                        value={newOrderItemField.name}
+                        onChange={(e) => setNewOrderItemField({...newOrderItemField, name: e.target.value})}
+                        placeholder="e.g., Line Notes, Discount Percent"
+                        className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      />
+                    </div>
+                    <div className="w-36">
+                      <label className="block text-xs font-medium text-purple-700 mb-2">Field Type</label>
+                      <select
+                        value={newOrderItemField.type}
+                        onChange={(e) => setNewOrderItemField({...newOrderItemField, type: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      >
+                        <option value="text">Text</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Yes/No</option>
+                        <option value="date">Date</option>
+                        <option value="dropdown">Dropdown</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="w-36">
-                    <label className="block text-xs font-medium text-purple-700 mb-2">Field Type</label>
-                    <select
-                      value={newOrderItemField.type}
-                      onChange={(e) => setNewOrderItemField({...newOrderItemField, type: e.target.value})}
-                      className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
-                      disabled={addingField}
+                  {newOrderItemField.type === 'dropdown' && (
+                    <div>
+                      <label className="block text-xs font-medium text-purple-700 mb-2">Dropdown Options</label>
+                      <input
+                        type="text"
+                        value={newOrderItemField.options}
+                        onChange={(e) => setNewOrderItemField({...newOrderItemField, options: e.target.value})}
+                        placeholder="Enter options separated by commas, e.g., Option 1, Option 2, Option 3"
+                        className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                        disabled={addingField}
+                      />
+                      <p className="text-xs text-purple-600 mt-1">Separate options with commas</p>
+                    </div>
+                  )}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => addCustomField('order-items', newOrderItemField)}
+                      disabled={!newOrderItemField.name.trim() || addingField || (newOrderItemField.type === 'dropdown' && !newOrderItemField.options.trim())}
+                      className="px-6 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                     >
-                      <option value="text">Text</option>
-                      <option value="number">Number</option>
-                      <option value="boolean">Yes/No</option>
-                      <option value="date">Date</option>
-                      <option value="select">Select List</option>
-                    </select>
+                      {addingField ? 'Adding...' : 'Add Field'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => addCustomField('order-items', newOrderItemField)}
-                    disabled={!newOrderItemField.name.trim() || addingField}
-                    className="px-6 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
-                  >
-                    {addingField ? 'Adding...' : 'Add Field'}
-                  </button>
                 </div>
               </div>
             </>
