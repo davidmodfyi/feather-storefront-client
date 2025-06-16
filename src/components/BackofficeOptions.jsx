@@ -12,9 +12,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
     { name: "Manage Customers", path: "/backoffice/customers" },
     { name: "Branding", path: "/backoffice/branding" },
     { name: "AI Storefront Assistant", path: "/backoffice/ai-assistant" },
-    { name: "Table Builder", path: "/backoffice/table-builder" },
-    { name: "Custom Table", path: "/backoffice/table" },
-    { name: "Logs", path: "/backoffice/logs" }
+    { name: "Table Builder", path: "/backoffice/table-builder" }
   ];
 
   return (
@@ -56,21 +54,11 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
               <p className="text-sm text-gray-600">View and manage your customer accounts</p>
             )}
             {option.name === "Branding" && (
-              <p className="text-sm text-gray-600">Customize your logo and appearance (Def)</p>
+              <p className="text-sm text-gray-600">Customize your logo and appearance</p>
             )}
-            {option.name === "Storefront UI Customization" && (
+            {option.name === "AI Storefront Assistant" && (
               <div className="flex items-center gap-2">
-                <p className="text-sm text-gray-600">Configure directly with AI, powered by Claude</p>
-                <img 
-                  src="/claudelogo.png" 
-                  alt="Claude" 
-                  className="w-4 h-4 opacity-75" 
-                />
-              </div>
-            )}
-            {option.name === "Storefront Logic Customization" && (
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-gray-600">Configure directly with AI, powered by Claude</p>
+                <p className="text-sm text-gray-600">Unified AI for styling, logic, and content - powered by Claude</p>
                 <img 
                   src="/claudelogo.png" 
                   alt="Claude" 
