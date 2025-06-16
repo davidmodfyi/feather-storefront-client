@@ -2126,31 +2126,48 @@ app.get('/api/diagnose-filesystem', (req, res) => {
 });
 
 app.post('/api/ai-customize', async (req, res) => {
-  console.log('AI Customization request received');
+  console.log('🔥 AI Customization request received');
+  console.log('🔥 Request body:', JSON.stringify(req.body, null, 2));
+  console.log('🔥 Session info:', {
+    distributor_id: req.session.distributor_id,
+    userType: req.session.userType,
+    user_id: req.session.user_id
+  });
   
   if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    console.log('🔥 Authorization failed - not admin or no distributor_id');
     return res.status(401).json({ error: 'Not authorized' });
   }
   
   const { message, distributorSlug } = req.body;
+  console.log('🔥 Extracted message:', message);
+  console.log('🔥 Extracted distributorSlug:', distributorSlug);
   
   if (!message || !distributorSlug) {
+    console.log('🔥 Missing required fields - message or distributorSlug');
     return res.status(400).json({ error: 'Message and distributor slug are required' });
   }
   
   try {
-    console.log(`AI customization request for ${distributorSlug}: ${message}`);
+    console.log(`🔥 Starting AI customization for ${distributorSlug}: ${message}`);
     
     // Define the distributor's source directory
     const distributorDir = __dirname + '/../src/distributors/' + distributorSlug;
+    console.log('🔥 Distributor directory path:', distributorDir);
     
     // Check if distributor directory exists
-    if (!await directoryExists(distributorDir)) {
+    console.log('🔥 Checking if directory exists...');
+    const dirExists = await directoryExists(distributorDir);
+    console.log('🔥 Directory exists:', dirExists);
+    if (!dirExists) {
+      console.log('🔥 Directory not found, returning 404');
       return res.status(404).json({ error: 'Distributor directory not found' });
     }
     
     // Use Claude AI to parse the request and generate modifications
+    console.log('🔥 Calling parseAIRequestWithClaude...');
     const modifications = await parseAIRequestWithClaude(message, distributorDir);
+    console.log('🔥 Modifications received:', JSON.stringify(modifications, null, 2));
     
     if (modifications.length === 0) {
       return res.json({
@@ -2194,7 +2211,10 @@ app.post('/api/ai-customize', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('AI customization error:', error);
+    console.error('🔥 AI customization error caught:', error);
+    console.error('🔥 Error stack:', error.stack);
+    console.error('🔥 Error message:', error.message);
+    console.error('🔥 Error name:', error.name);
     res.status(500).json({ 
       error: 'Error processing customization request',
       response: "I encountered an error while processing your request. Please try again or contact support."
@@ -2204,7 +2224,11 @@ app.post('/api/ai-customize', async (req, res) => {
 
 // Claude AI-powered request parser
 async function parseAIRequestWithClaude(userRequest, distributorDir) {
-  console.log('Processing AI customization request with Claude...');
+  console.log('🔥 parseAIRequestWithClaude called');
+  console.log('🔥 userRequest:', userRequest);
+  console.log('🔥 distributorDir:', distributorDir);
+  console.log('🔥 ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
+  console.log('🔥 Processing AI customization request with Claude...');
   
   // Enhanced system prompt with all available elements and advanced styling capabilities
   const systemPrompt = `You are an AI assistant that helps customize storefront appearance. 
@@ -2280,6 +2304,20 @@ Return ONLY a valid JSON object in this format:
 }`;
 
   try {
+    console.log('🔥 About to make Claude API call...');
+    console.log('🔥 API Key length:', process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.length : 'undefined');
+    console.log('🔥 System prompt length:', systemPrompt.length);
+    
+    const requestBody = {
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: systemPrompt
+      }]
+    };
+    console.log('🔥 Request body:', JSON.stringify(requestBody, null, 2));
+    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -2287,21 +2325,20 @@ Return ONLY a valid JSON object in this format:
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: systemPrompt
-        }]
-      })
+      body: JSON.stringify(requestBody)
     });
 
+    console.log('🔥 Response received. Status:', response.status);
+    console.log('🔥 Response headers:', Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
-      throw new Error(`Claude API error: ${response.status}`);
+      const errorText = await response.text();
+      console.log('🔥 Error response body:', errorText);
+      throw new Error(`Claude API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('🔥 Response data:', JSON.stringify(data, null, 2));
     const claudeResponse = data.content[0].text;
     
     console.log('Received response from Claude AI');
@@ -2324,7 +2361,14 @@ Return ONLY a valid JSON object in this format:
     }
     
   } catch (error) {
-    console.error('Error calling Claude API:', error);
+    console.error('🔥 Error in parseAIRequestWithClaude:', error);
+    console.error('🔥 Error name:', error.name);
+    console.error('🔥 Error message:', error.message);
+    console.error('🔥 Error stack:', error.stack);
+    console.error('🔥 Error type:', typeof error);
+    console.error('🔥 Is TypeError:', error instanceof TypeError);
+    console.error('🔥 Is ReferenceError:', error instanceof ReferenceError);
+    console.error('🔥 Is SyntaxError:', error instanceof SyntaxError);
     return [];
   }
 }
