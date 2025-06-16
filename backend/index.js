@@ -2151,22 +2151,11 @@ app.post('/api/ai-customize', async (req, res) => {
   try {
     console.log(`🔥 Starting AI customization for ${distributorSlug}: ${message}`);
     
-    // Define the distributor's source directory
-    const distributorDir = __dirname + '/../src/distributors/' + distributorSlug;
-    console.log('🔥 Distributor directory path:', distributorDir);
-    
-    // Check if distributor directory exists
-    console.log('🔥 Checking if directory exists...');
-    const dirExists = await directoryExists(distributorDir);
-    console.log('🔥 Directory exists:', dirExists);
-    if (!dirExists) {
-      console.log('🔥 Directory not found, returning 404');
-      return res.status(404).json({ error: 'Distributor directory not found' });
-    }
+    console.log('🔥 Using unified frontend with database-driven styling');
     
     // Use Claude AI to parse the request and generate modifications
     console.log('🔥 Calling parseAIRequestWithClaude...');
-    const modifications = await parseAIRequestWithClaude(message, distributorDir);
+    const modifications = await parseAIRequestWithClaude(message);
     console.log('🔥 Modifications received:', JSON.stringify(modifications, null, 2));
     
     if (modifications.length === 0) {
@@ -2223,35 +2212,26 @@ app.post('/api/ai-customize', async (req, res) => {
 });
 
 // Claude AI-powered request parser
-async function parseAIRequestWithClaude(userRequest, distributorDir) {
+async function parseAIRequestWithClaude(userRequest) {
   console.log('🔥 parseAIRequestWithClaude called');
   console.log('🔥 userRequest:', userRequest);
-  console.log('🔥 distributorDir:', distributorDir);
   console.log('🔥 ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
   console.log('🔥 Processing AI customization request with Claude...');
   
   // Enhanced system prompt with all available elements and advanced styling capabilities
-  const systemPrompt = `You are an AI assistant that helps customize storefront appearance. 
+  const systemPrompt = `You are an AI assistant that helps customize storefront appearance using CSS styling.
 
 AVAILABLE ELEMENTS TO STYLE:
-- "page-background" - main page container
-- "header-nav" - top navigation area with title and buttons
-- "category-filter-container" - container holding all category buttons
-- "category-buttons" - individual category filter buttons (All, Olive Oils, etc.)
-- "search-bar" - search input field
-- "product-grid" - grid container holding all products
-- "product-card" - individual product cards
-- "product-image" - product images
-- "product-title" - product names/titles
-- "product-sku" - SKU text
-- "product-price" - price text
-- "product-description" - product descriptions
-- "quantity-controls" - quantity selector container
-- "quantity-button" - +/- quantity buttons
-- "quantity-input" - quantity number input
-- "add-to-cart-button" - add to cart buttons
-- "modal-overlay" - product detail modal background
-- "modal-content" - product detail modal content
+- "add-to-cart-button" - add to cart buttons throughout the store
+- "product-card" - individual product display cards  
+- "header-nav" - top navigation area
+- "search-bar" - product search input
+- "category-buttons" - category filter buttons
+- "product-price" - price display text
+- "product-title" - product name text
+- "page-background" - main page background
+- "product-grid" - container holding all products
+- "quantity-controls" - quantity selector interface
 
 STYLING CAPABILITIES:
 You can apply ANY CSS properties including:
@@ -2287,20 +2267,32 @@ Parse the user request and return a JSON object with modifications array. Each m
 - cssProperties: object with CSS property names as keys and values as strings
 - description: human-readable description of the change
 
-User request: "${userRequest}"
+USER REQUEST: "${userRequest}"
 
-Return ONLY a valid JSON object in this format:
+Analyze this request and provide a JSON response with CSS modifications. For each modification:
+1. "elementSelector" - CSS class name for the element (e.g., "add-to-cart-button")  
+2. "cssProperties" - object with CSS properties to apply
+3. "description" - human-readable description
+
+Common color mappings:
+- brown: #8B4513 or #A0522D
+- blue: #3B82F6 or #1D4ED8  
+- green: #10B981 or #059669
+- red: #EF4444 or #DC2626
+
+RETURN ONLY VALID JSON:
 {
   "modifications": [
     {
-      "elementSelector": "element-name",
+      "elementSelector": "add-to-cart-button",
       "cssProperties": {
-        "cssProperty": "value"
+        "backgroundColor": "#8B4513",
+        "color": "white",
+        "border": "none"
       },
-      "description": "Description of change"
+      "description": "Changed add to cart buttons to brown"
     }
-  ],
-  "summary": "Brief summary of all changes"
+  ]
 }`;
 
   try {
