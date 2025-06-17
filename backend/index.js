@@ -3473,7 +3473,34 @@ function initializeChatTables() {
       )
     `).run();
 
-    console.log('Chat history tables initialized');
+    // Styles table for UI customizations
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS styles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        distributor_id INTEGER NOT NULL,
+        element_selector TEXT NOT NULL,
+        styles TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(distributor_id, element_selector)
+      )
+    `).run();
+
+    // Logic scripts table for business rules
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS logic_scripts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        distributor_id INTEGER NOT NULL,
+        trigger_point TEXT NOT NULL,
+        description TEXT NOT NULL,
+        script_content TEXT NOT NULL,
+        active BOOLEAN DEFAULT TRUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+
+    console.log('Chat history, styles, and logic scripts tables initialized');
   } catch (error) {
     console.error('Error initializing chat tables:', error);
   }
