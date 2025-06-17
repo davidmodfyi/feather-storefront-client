@@ -1998,12 +1998,21 @@ app.get('/api/chat/conversations/:conversationId/messages', (req, res) => {
 
 // Unified AI Chat endpoint
 app.post('/api/unified-chat', async (req, res) => {
+  console.log('🚀 Unified chat request received');
+  console.log('🚀 Session info:', {
+    distributor_id: req.session.distributor_id,
+    userType: req.session.userType,
+    user_id: req.session.user_id
+  });
+  
   if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    console.log('🚀 Authorization failed');
     return res.status(401).json({ error: 'Not authorized' });
   }
 
   try {
     const { message, conversationId } = req.body;
+    console.log('🚀 Request body:', { message, conversationId });
     
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
@@ -2011,21 +2020,29 @@ app.post('/api/unified-chat', async (req, res) => {
 
     // Get or create conversation
     let conversation;
-    if (conversationId) {
-      conversation = db.prepare(`
-        SELECT * FROM chat_conversations WHERE id = ? AND distributor_id = ?
-      `).get(conversationId, req.session.distributor_id);
-    }
+    try {
+      if (conversationId) {
+        console.log('🚀 Looking for existing conversation:', conversationId);
+        conversation = db.prepare(`
+          SELECT * FROM chat_conversations WHERE id = ? AND distributor_id = ?
+        `).get(conversationId, req.session.distributor_id);
+      }
 
-    if (!conversation) {
-      // Create new conversation
-      const title = message.length > 50 ? message.substring(0, 50) + '...' : message;
-      const result = db.prepare(`
-        INSERT INTO chat_conversations (distributor_id, user_id, title)
-        VALUES (?, ?, ?)
-      `).run(req.session.distributor_id, req.session.user_id, title);
-      
-      conversation = { id: result.lastInsertRowid };
+      if (!conversation) {
+        console.log('🚀 Creating new conversation');
+        // Create new conversation
+        const title = message.length > 50 ? message.substring(0, 50) + '...' : message;
+        const result = db.prepare(`
+          INSERT INTO chat_conversations (distributor_id, user_id, title)
+          VALUES (?, ?, ?)
+        `).run(req.session.distributor_id, req.session.user_id, title);
+        
+        conversation = { id: result.lastInsertRowid };
+        console.log('🚀 Created conversation with ID:', conversation.id);
+      }
+    } catch (dbError) {
+      console.error('🚀 Database error in conversation handling:', dbError);
+      throw dbError;
     }
 
     // Save user message
@@ -2336,7 +2353,13 @@ SCRIPT REQUIREMENTS:
 
   } catch (error) {
     console.error('Unified chat error:', error);
-    res.status(500).json({ error: 'Failed to process request' });
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno
+    });
+    res.status(500).json({ error: 'Failed to process request', details: error.message });
   }
 });
 
