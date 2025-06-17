@@ -18,7 +18,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
   return (
     <div className="p-6">
       <div className="flex justify-between mb-4 ml-20">
-        <h1 className="text-2xl font-bold">Backoffice</h1>
+        <h1 className="text-2xl font-bold">Backoffice Dashboard</h1>
         <div className="flex gap-2">
           <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
           <button onClick={onLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
