@@ -140,8 +140,11 @@ What would you like to customize today?`,
     try {
       let response, data;
       
+      console.log(`Intent detected: ${intent} for message: "${userMessage}"`);
+      
       if (intent === 'logic') {
         // Use logic customization API
+        console.log('Sending to /api/claude-logic-chat');
         response = await fetch('/api/claude-logic-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -156,6 +159,7 @@ What would you like to customize today?`,
 
         if (!response.ok) throw new Error('Failed to get logic response');
         data = await response.json();
+        console.log('Logic API response:', data);
         
         // Add AI response
         const aiMessage = {
@@ -199,6 +203,7 @@ What would you like to customize today?`,
         
       } else {
         // Use UI customization API
+        console.log('Sending to /api/ai-customize');
         response = await fetch('/api/ai-customize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -211,6 +216,7 @@ What would you like to customize today?`,
 
         if (!response.ok) throw new Error('Failed to get UI response');
         data = await response.json();
+        console.log('UI API response:', data);
 
         const aiMessage = {
           id: Date.now() + 1,
