@@ -163,10 +163,15 @@ useEffect(() => {
   }
 
 const handleSubmitOrder = async () => {
+  console.log('🚀 ORDER SUBMISSION STARTED');
+  
   if (cartItems.length === 0) {
     alert('Your cart is empty. Please add items before submitting an order.');
     return;
   }
+
+  console.log('📝 Current dynamicFormValues:', dynamicFormValues);
+  console.log('📋 Current dynamicContent:', dynamicContent);
 
   // Validate required dynamic form fields
   const requiredFields = [];
@@ -178,9 +183,12 @@ const handleSubmitOrder = async () => {
     });
   });
 
+  console.log('📋 Found required fields:', requiredFields);
+
   // Check if any required fields are empty
   for (const fieldLabel of requiredFields) {
     if (!dynamicFormValues[fieldLabel] || dynamicFormValues[fieldLabel].trim() === '') {
+      console.log(`❌ VALIDATION FAILED: ${fieldLabel} is empty`);
       alert(`Please select/enter a value for ${fieldLabel} before submitting your order.`);
       return;
     }
@@ -192,10 +200,18 @@ const handleSubmitOrder = async () => {
     content.some(item => item.type === 'form-field' && item.data.label.toLowerCase().includes('ordertype'))
   );
   
+  console.log('🔍 OrderType field exists:', hasOrderType);
+  if (hasOrderType) {
+    console.log('📝 OrderType value:', dynamicFormValues['OrderType']);
+  }
+  
   if (hasOrderType && (!dynamicFormValues['OrderType'] || dynamicFormValues['OrderType'].trim() === '')) {
+    console.log('❌ ORDERTYPE VALIDATION FAILED: Field is empty');
     alert('Please select an OrderType before submitting your order.');
     return;
   }
+
+  console.log('✅ ALL FRONTEND VALIDATION PASSED');
 
   try {
     // Prepare order data with dynamic form values

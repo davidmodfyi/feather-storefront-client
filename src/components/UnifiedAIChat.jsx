@@ -189,7 +189,10 @@ What would you like to customize today?`,
     try {
       let response, data;
       
-      if (intent === 'logic') {
+      console.log(`🔍 DIAGNOSIS: Intent detected as "${intent}" for message: "${userMessage}"`);
+      
+      if (intent === 'logic' || intent === 'both') {
+        console.log('🎯 ROUTING: Sending to LOGIC API (/api/claude-logic-chat)');
         // Use logic customization API
         response = await fetch('/api/claude-logic-chat', {
           method: 'POST',
@@ -206,6 +209,7 @@ What would you like to customize today?`,
 
         if (!response.ok) throw new Error('Failed to get logic response');
         data = await response.json();
+        console.log('📋 LOGIC API RESPONSE:', data);
         
         // Add AI response
         const aiMessage = {
@@ -220,6 +224,7 @@ What would you like to customize today?`,
         
         // If a script was generated, save it and show success
         if (data.script) {
+          console.log('💾 SAVING LOGIC SCRIPT:', data.script);
           try {
             const saveResponse = await fetch('/api/logic-scripts', {
               method: 'POST',
@@ -229,6 +234,7 @@ What would you like to customize today?`,
             });
 
             if (saveResponse.ok) {
+              console.log('✅ LOGIC SCRIPT SAVED SUCCESSFULLY');
               setMessages(prev => [...prev, { 
                 id: Date.now() + 2,
                 role: 'assistant', 
@@ -248,11 +254,14 @@ What would you like to customize today?`,
               }, 1000);
             }
           } catch (saveError) {
-            console.error('Error saving script:', saveError);
+            console.error('❌ ERROR SAVING LOGIC SCRIPT:', saveError);
           }
+        } else {
+          console.log('⚠️ NO LOGIC SCRIPT WAS GENERATED');
         }
         
       } else {
+        console.log('🎯 ROUTING: Sending to UI API (/api/ai-customize)');
         // Use UI customization API
         response = await fetch('/api/ai-customize', {
           method: 'POST',
