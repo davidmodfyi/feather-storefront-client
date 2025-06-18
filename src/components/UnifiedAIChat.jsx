@@ -5,103 +5,132 @@ export default function UnifiedAIChat({ onLogout, onHome, brandName }) {
   document.title = brandName ? `${brandName} - AI Storefront Assistant` : 'AI Storefront Assistant - Feather';
   
   const navigate = useNavigate();
-  const [conversations, setConversations] = useState([]);
-  const [currentConversationId, setCurrentConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [distributorSlug, setDistributorSlug] = useState('');
+  const [customerAttributes, setCustomerAttributes] = useState([]);
+  const [dynamicFormFields, setDynamicFormFields] = useState([]);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    // Fetch conversations on load
-    fetchConversations();
-  }, []);
+    // Get distributor info
+    fetch('/api/me', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        setDistributorSlug(data.distributorSlug || 'default');
+      })
+      .catch(console.error);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // Fetch customer attributes for logic context
+    fetch('/api/customer-attributes', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => setCustomerAttributes(data.attributes || []))
+      .catch(console.error);
 
-  const fetchConversations = async () => {
-    try {
-      const response = await fetch('/api/chat/conversations', { credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-        setConversations(data);
-        
-        // Auto-select most recent conversation
-        if (data.length > 0 && !currentConversationId) {
-          setCurrentConversationId(data[0].id);
-          fetchMessages(data[0].id);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-    }
-  };
+    // Fetch dynamic form fields for logic context
+    fetch('/api/dynamic-content', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        const formFields = [];
+        Object.entries(data).forEach(([zone, content]) => {
+          content.forEach(item => {
+            if (item.type === 'form-field') {
+              formFields.push({
+                zone: zone,
+                label: item.data.label,
+                fieldType: item.data.fieldType,
+                options: item.data.options
+              });
+            }
+          });
+        });
+        setDynamicFormFields(formFields);
+      })
+      .catch(console.error);
 
-  const fetchMessages = async (conversationId) => {
-    try {
-      const response = await fetch(`/api/chat/conversations/${conversationId}/messages`, { 
-        credentials: 'include' 
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data);
-      }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  };
-
-  const createNewConversation = () => {
-    setCurrentConversationId(null);
-    setMessages([]);
-    
-    // Add welcome message for new conversation
+    // Add welcome message
     setMessages([{
+      id: 1,
       role: 'assistant',
-      content: `Hi! I'm your unified AI storefront assistant. I can help you with:
+      content: `Hi! I'm your unified AI storefront assistant for ${brandName}. I can help you with:
 
 🎨 **Visual Customization**
-• Change colors, fonts, layouts
+• Change colors, fonts, layouts (e.g., "Make the Add to Cart buttons brown")
 • Add banners, messages, and custom content
 • Style buttons, cards, and other elements
 
 ⚙️ **Business Logic**
 • Create validation rules and order requirements
-• Set up pricing modifications
+• Set up pricing modifications (e.g., "Add 20% surcharge for Pennsylvania customers")
 • Configure customer-specific restrictions
+• Make fields mandatory before order submission
 
 🚀 **Complex Requests** 
 • "Add OrderType dropdown and make it mandatory"
 • "Create a VIP customer discount and highlight it"
 • "Add shipping options with validation rules"
 
-I remember our previous conversations, so you can reference past work like "make that field we added yesterday required" or "apply the same styling to the cart page."
-
 What would you like to customize today?`,
-      created_at: new Date().toISOString(),
+      timestamp: new Date(),
       message_type: 'welcome'
     }]);
-  };
+  }, [brandName]);
 
-  const selectConversation = (conversationId) => {
-    setCurrentConversationId(conversationId);
-    fetchMessages(conversationId);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Simple intent detection based on keywords
+  const detectIntent = (message) => {
+    const lowerMessage = message.toLowerCase();
+    
+    // Business logic keywords
+    const logicKeywords = [
+      'validation', 'validate', 'prevent', 'block', 'require', 'mandatory', 'minimum', 'maximum',
+      'surcharge', 'discount', 'pricing', 'price', 'rule', 'restriction', 'logic', 'business',
+      'customer type', 'hold', 'pennsylvania', 'california', 'state', 'order value', 'trigger',
+      'script', 'function', 'ordertype', 'shipping', 'tax'
+    ];
+    
+    // UI/Visual keywords
+    const uiKeywords = [
+      'color', 'button', 'style', 'background', 'font', 'size', 'layout', 'appearance',
+      'brown', 'blue', 'green', 'red', 'shadow', 'border', 'rounded', 'header', 'cart',
+      'banner', 'message', 'content', 'dropdown', 'field', 'form', 'input'
+    ];
+    
+    const logicMatches = logicKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
+    const uiMatches = uiKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
+    
+    // If it mentions making something mandatory/required with visual elements, it's likely both
+    if ((lowerMessage.includes('mandatory') || lowerMessage.includes('required')) && 
+        (lowerMessage.includes('dropdown') || lowerMessage.includes('field'))) {
+      return 'both';
+    }
+    
+    // If logic keywords dominate, it's logic
+    if (logicMatches > uiMatches && logicMatches > 0) {
+      return 'logic';
+    }
+    
+    // Default to UI for styling requests or when UI keywords dominate
+    return 'ui';
   };
 
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
 
     const userMessage = inputValue.trim();
+    const intent = detectIntent(userMessage);
     setInputValue('');
     
     // Add user message to UI immediately
     const newUserMessage = {
+      id: Date.now(),
       role: 'user',
       content: userMessage,
-      created_at: new Date().toISOString(),
+      timestamp: new Date(),
       message_type: 'user_request'
     };
     
@@ -109,49 +138,106 @@ What would you like to customize today?`,
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/unified-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          message: userMessage,
-          conversationId: currentConversationId
-        })
-      });
+      let response, data;
+      
+      if (intent === 'logic') {
+        // Use logic customization API
+        response = await fetch('/api/claude-logic-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            message: userMessage,
+            customerAttributes: customerAttributes,
+            dynamicFormFields: dynamicFormFields,
+            triggerPoints: ['Storefront Load', 'Quantity Change', 'Add to Cart', 'Submit Order']
+          })
+        });
 
-      if (!response.ok) throw new Error('Failed to get response');
+        if (!response.ok) throw new Error('Failed to get logic response');
+        data = await response.json();
+        
+        // Add AI response
+        const aiMessage = {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: data.message,
+          timestamp: new Date(),
+          message_type: 'logic_response'
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+        
+        // If a script was generated, save it and show success
+        if (data.script) {
+          try {
+            const saveResponse = await fetch('/api/logic-scripts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(data.script)
+            });
 
-      const data = await response.json();
-      
-      // Add AI response to messages
-      const aiMessage = {
-        role: 'assistant',
-        content: data.message,
-        created_at: new Date().toISOString(),
-        message_type: data.intent,
-        metadata: JSON.stringify({
-          intent: data.intent,
-          uiResults: data.uiResults,
-          logicResults: data.logicResults
-        })
-      };
-      
-      setMessages(prev => [...prev, aiMessage]);
-      
-      // Update current conversation ID if this was a new conversation
-      if (!currentConversationId) {
-        setCurrentConversationId(data.conversationId);
+            if (saveResponse.ok) {
+              setMessages(prev => [...prev, { 
+                id: Date.now() + 2,
+                role: 'assistant', 
+                content: '✅ Perfect! Your logic script has been saved and is now active.',
+                timestamp: new Date(),
+                changes: [data.script.description],
+                message_type: 'success'
+              }]);
+              
+              setTimeout(() => {
+                alert('Logic script successfully created and saved!');
+              }, 1000);
+            }
+          } catch (saveError) {
+            console.error('Error saving script:', saveError);
+          }
+        }
+        
+      } else {
+        // Use UI customization API
+        response = await fetch('/api/ai-customize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            message: userMessage,
+            distributorSlug: distributorSlug
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to get UI response');
+        data = await response.json();
+
+        const aiMessage = {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: data.response,
+          changes: data.changes || [],
+          timestamp: new Date(),
+          message_type: 'ui_response'
+        };
+
+        setMessages(prev => [...prev, aiMessage]);
+
+        // Show success notification if changes were made
+        if (data.changes && data.changes.length > 0) {
+          setTimeout(() => {
+            alert(`Successfully applied ${data.changes.length} change(s)! Refresh the page to see updates.`);
+          }, 1000);
+        }
       }
-      
-      // Refresh conversations list to show updated title/timestamp
-      fetchConversations();
       
     } catch (error) {
       console.error('Error:', error);
       setMessages(prev => [...prev, {
+        id: Date.now() + 1,
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        created_at: new Date().toISOString(),
+        content: 'Sorry, I encountered an error. Please try again or contact support if the issue persists.',
+        timestamp: new Date(),
         message_type: 'error'
       }]);
     } finally {
@@ -166,172 +252,106 @@ What would you like to customize today?`,
     }
   };
 
-  const formatTimestamp = (timestamp) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
-  };
-
-  const filteredConversations = conversations.filter(conv => 
-    !searchQuery || conv.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const renderMessage = (message) => {
-    let metadata = null;
-    try {
-      metadata = message.metadata ? JSON.parse(message.metadata) : null;
-    } catch (e) {
-      // Ignore JSON parse errors
-    }
-
-    return (
-      <div key={message.id || Math.random()} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-        <div className={`max-w-3xl rounded-lg p-4 ${
-          message.role === 'user' 
-            ? 'bg-blue-600 text-white' 
-            : 'bg-white border shadow-sm'
-        }`}>
-          <div className="whitespace-pre-wrap">{message.content}</div>
-          
-          {/* Show operation results if any */}
-          {metadata && (metadata.uiResults || metadata.logicResults) && (
-            <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded">
-              <p className="text-sm font-medium text-green-800 mb-1">Changes Applied:</p>
-              <div className="text-sm text-green-700">
-                {metadata.uiResults && (
-                  <div>✓ UI: {metadata.uiResults.changes?.join(', ') || 'Style modifications applied'}</div>
-                )}
-                {metadata.logicResults && (
-                  <div>✓ Logic: {metadata.logicResults.description || 'Business rule created'}</div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {message.created_at && (
-            <div className={`text-xs mt-2 ${message.role === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
-              {formatTimestamp(message.created_at)}
-            </div>
-          )}
-        </div>
-      </div>
-    );
+  const formatTime = (timestamp) => {
+    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Conversations Sidebar */}
-      <div className="w-80 bg-white border-r flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-semibold">AI Assistant</h2>
-            <button 
-              onClick={createNewConversation}
-              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-            >
-              New Chat
-            </button>
-          </div>
-          
-          {/* Search */}
-          <input
-            type="text"
-            placeholder="Search conversations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-2 border rounded text-sm"
-          />
+    <div className="p-6 h-screen flex flex-col">
+      {/* Header */}
+      <div className="flex justify-between mb-4">
+        <h1 className="text-2xl font-bold">AI Storefront Assistant</h1>
+        <div className="flex gap-2">
+          <button onClick={() => navigate('/backoffice')} className="px-3 py-1 bg-blue-500 text-white rounded">Back</button>
+          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
+          <button onClick={onLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
         </div>
-        
-        {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredConversations.map(conversation => (
+      </div>
+
+      {/* Chat Container */}
+      <div className="flex-1 bg-gray-50 rounded-lg flex flex-col overflow-hidden">
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message) => (
             <div
-              key={conversation.id}
-              onClick={() => selectConversation(conversation.id)}
-              className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${
-                currentConversationId === conversation.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-              }`}
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className="font-medium text-sm truncate">{conversation.title}</div>
-              <div className="text-xs text-gray-500 mt-1">
-                {formatTimestamp(conversation.updated_at)}
+              <div
+                className={`max-w-3xl p-3 rounded-lg ${
+                  message.role === 'user'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white border shadow-sm'
+                }`}
+              >
+                <div className="whitespace-pre-wrap">{message.content}</div>
+                
+                {/* Show changes if any */}
+                {message.changes && message.changes.length > 0 && (
+                  <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded">
+                    <p className="text-sm font-medium text-green-800 mb-1">Changes Applied:</p>
+                    <ul className="text-sm text-green-700">
+                      {message.changes.map((change, index) => (
+                        <li key={index} className="flex items-start">
+                          <span className="text-green-500 mr-1">✓</span>
+                          {change}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                <div className={`text-xs mt-1 ${
+                  message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                }`}>
+                  {formatTime(message.timestamp)}
+                </div>
               </div>
             </div>
           ))}
           
-          {filteredConversations.length === 0 && (
-            <div className="p-4 text-center text-gray-500 text-sm">
-              {searchQuery ? 'No conversations found' : 'No conversations yet'}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="bg-white shadow-sm border-b p-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-800">AI Storefront Assistant</h1>
-            <div className="flex gap-2">
-              <button onClick={() => navigate('/backoffice')} className="px-3 py-1 bg-blue-500 text-white rounded">Back</button>
-              <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
-              <button onClick={onLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
-            </div>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-4xl mx-auto space-y-4">
-            {messages.map((message, index) => renderMessage(message))}
-            
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-white border shadow-sm rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <span>AI is thinking...</span>
-                  </div>
+          {/* Loading indicator */}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-white border shadow-sm p-3 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                  <span className="text-gray-500">AI is thinking...</span>
                 </div>
               </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Input Area */}
-        <div className="bg-white border-t p-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex gap-3">
-              <textarea
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask me to customize your storefront... (e.g., 'Add OrderType dropdown and make it mandatory')"
-                className="flex-1 border rounded-lg p-3 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows="2"
-                disabled={isLoading}
-              />
-              <button
-                onClick={handleSend}
-                disabled={isLoading || !inputValue.trim()}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed self-end"
-              >
-                Send
-              </button>
-            </div>
+        <div className="border-t bg-white p-4">
+          <div className="flex space-x-2">
+            <textarea
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask me to customize your storefront... (e.g., 'Make the buttons blue' or 'Add 20% surcharge for Pennsylvania')"
+              className="flex-1 border rounded-lg p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows="2"
+              disabled={isLoading}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!inputValue.trim() || isLoading}
+              className={`px-6 py-2 rounded-lg font-medium ${
+                !inputValue.trim() || isLoading
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
+            >
+              Send
+            </button>
+          </div>
+          
+          <div className="mt-2 text-xs text-gray-500">
+            Press Enter to send, Shift+Enter for new line
           </div>
         </div>
       </div>
