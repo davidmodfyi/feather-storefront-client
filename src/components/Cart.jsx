@@ -168,6 +168,35 @@ const handleSubmitOrder = async () => {
     return;
   }
 
+  // Validate required dynamic form fields
+  const requiredFields = [];
+  Object.entries(dynamicContent).forEach(([zone, content]) => {
+    content.forEach(item => {
+      if (item.type === 'form-field' && item.data.required) {
+        requiredFields.push(item.data.label);
+      }
+    });
+  });
+
+  // Check if any required fields are empty
+  for (const fieldLabel of requiredFields) {
+    if (!dynamicFormValues[fieldLabel] || dynamicFormValues[fieldLabel].trim() === '') {
+      alert(`Please select/enter a value for ${fieldLabel} before submitting your order.`);
+      return;
+    }
+  }
+
+  // Special case: if there's an OrderType field, make it required regardless of backend setting
+  // This is a temporary fix until the validation rules are properly configured
+  const hasOrderType = Object.entries(dynamicContent).some(([zone, content]) => 
+    content.some(item => item.type === 'form-field' && item.data.label.toLowerCase().includes('ordertype'))
+  );
+  
+  if (hasOrderType && (!dynamicFormValues['OrderType'] || dynamicFormValues['OrderType'].trim() === '')) {
+    alert('Please select an OrderType before submitting your order.');
+    return;
+  }
+
   try {
     // Prepare order data with dynamic form values
     console.log('Dynamic form values at submit:', dynamicFormValues);

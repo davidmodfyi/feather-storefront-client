@@ -11,6 +11,7 @@ export default function UnifiedAIChat({ onLogout, onHome, brandName }) {
   const [distributorSlug, setDistributorSlug] = useState('');
   const [customerAttributes, setCustomerAttributes] = useState([]);
   const [dynamicFormFields, setDynamicFormFields] = useState([]);
+  const [currentPageContext, setCurrentPageContext] = useState({});
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -49,6 +50,9 @@ export default function UnifiedAIChat({ onLogout, onHome, brandName }) {
       })
       .catch(console.error);
 
+    // Fetch current page context (what elements already exist)
+    fetchCurrentPageContext();
+
     // Add welcome message
     setMessages([{
       id: 1,
@@ -80,6 +84,51 @@ What would you like to customize today?`,
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Fetch current page context to understand what elements already exist
+  const fetchCurrentPageContext = async () => {
+    try {
+      // Get current dynamic content (shows what form fields, etc. are already on pages)
+      const dynamicResponse = await fetch('/api/dynamic-content', { credentials: 'include' });
+      const dynamicData = await dynamicResponse.json();
+      
+      // Get current styles (shows what visual customizations exist)
+      const stylesResponse = await fetch('/api/styles', { credentials: 'include' });
+      const stylesData = await stylesResponse.json();
+      
+      // Build context summary
+      const context = {
+        existingFormFields: [],
+        existingStyles: Object.keys(stylesData || {}),
+        pageElements: {}
+      };
+      
+      // Extract form fields by page
+      Object.entries(dynamicData || {}).forEach(([zone, content]) => {
+        if (!context.pageElements[zone]) context.pageElements[zone] = [];
+        
+        content.forEach(item => {
+          if (item.type === 'form-field') {
+            context.existingFormFields.push({
+              zone: zone,
+              label: item.data.label,
+              type: item.data.fieldType,
+              hasOptions: !!(item.data.options && item.data.options.length > 0)
+            });
+          }
+          context.pageElements[zone].push({
+            type: item.type,
+            details: item.data
+          });
+        });
+      });
+      
+      setCurrentPageContext(context);
+      console.log('Current page context:', context);
+    } catch (error) {
+      console.error('Error fetching page context:', error);
+    }
+  };
 
   // Simple intent detection based on keywords
   const detectIntent = (message) => {
@@ -140,11 +189,8 @@ What would you like to customize today?`,
     try {
       let response, data;
       
-      console.log(`Intent detected: ${intent} for message: "${userMessage}"`);
-      
       if (intent === 'logic') {
         // Use logic customization API
-        console.log('Sending to /api/claude-logic-chat');
         response = await fetch('/api/claude-logic-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -153,13 +199,13 @@ What would you like to customize today?`,
             message: userMessage,
             customerAttributes: customerAttributes,
             dynamicFormFields: dynamicFormFields,
-            triggerPoints: ['Storefront Load', 'Quantity Change', 'Add to Cart', 'Submit Order']
+            triggerPoints: ['Storefront Load', 'Quantity Change', 'Add to Cart', 'Submit Order'],
+            currentPageContext: currentPageContext
           })
         });
 
         if (!response.ok) throw new Error('Failed to get logic response');
         data = await response.json();
-        console.log('Logic API response:', data);
         
         // Add AI response
         const aiMessage = {
@@ -192,6 +238,11 @@ What would you like to customize today?`,
                 message_type: 'success'
               }]);
               
+              // Refresh page context after logic changes
+              setTimeout(() => {
+                fetchCurrentPageContext();
+              }, 500);
+              
               setTimeout(() => {
                 alert('Logic script successfully created and saved!');
               }, 1000);
@@ -203,20 +254,19 @@ What would you like to customize today?`,
         
       } else {
         // Use UI customization API
-        console.log('Sending to /api/ai-customize');
         response = await fetch('/api/ai-customize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
             message: userMessage,
-            distributorSlug: distributorSlug
+            distributorSlug: distributorSlug,
+            currentPageContext: currentPageContext
           })
         });
 
         if (!response.ok) throw new Error('Failed to get UI response');
         data = await response.json();
-        console.log('UI API response:', data);
 
         const aiMessage = {
           id: Date.now() + 1,
@@ -231,6 +281,11 @@ What would you like to customize today?`,
 
         // Show success notification if changes were made
         if (data.changes && data.changes.length > 0) {
+          // Refresh page context after changes
+          setTimeout(() => {
+            fetchCurrentPageContext();
+          }, 500);
+          
           setTimeout(() => {
             alert(`Successfully applied ${data.changes.length} change(s)! Refresh the page to see updates.`);
           }, 1000);
