@@ -399,9 +399,9 @@ What would you like to customize today?`,
   };
 
   return (
-    <div className="p-6 h-screen flex flex-col">
+    <div className="h-screen flex flex-col p-4">
       {/* Header */}
-      <div className="flex justify-between mb-4">
+      <div className="flex justify-between mb-4 flex-shrink-0">
         <h1 className="text-2xl font-bold">AI Storefront Assistant</h1>
         <div className="flex gap-2">
           <button onClick={() => navigate('/backoffice')} className="px-3 py-1 bg-blue-500 text-white rounded">Back</button>
@@ -410,46 +410,42 @@ What would you like to customize today?`,
         </div>
       </div>
 
-      {/* Dashboard Panels - 60% of height */}
-      <div className="flex-1 mb-4" style={{border: '2px solid red'}}>
+      {/* Dashboard Panels - Fixed height */}
+      <div className="h-96 mb-4 flex-shrink-0">
         <div className="grid grid-cols-2 gap-4 h-full">
           {console.log('🔍 Rendering dashboard with scripts:', dashboardScripts)}
           {/* Top Left: Storefront UI */}
-          <div className="bg-blue-200 p-4 rounded">
-            <h3>TEST: Storefront UI</h3>
-            <p>Scripts count: {dashboardScripts.storefrontUI.length}</p>
+          <div className="bg-blue-100 border-2 border-blue-300 p-4 rounded-lg shadow">
+            <h3 className="text-lg font-semibold text-blue-800 mb-2">📱 Storefront UI</h3>
+            <p className="text-blue-700">Scripts: {dashboardScripts.storefrontUI.length}</p>
+            <p className="text-sm text-blue-600 mt-2">Visual customizations for the main storefront</p>
           </div>
-          <ScriptPanel
-            title="Storefront UI"
-            scripts={dashboardScripts.storefrontUI}
-            type="ui"
-            onAnalyze={handleAnalyzeScript}
-            onDelete={handleDeleteScript}
-            onReorder={handleReorderScripts}
-          />
           
           {/* Top Right: Storefront Logic */}
-          <div className="bg-green-200 p-4 rounded">
-            <h3>TEST: Storefront Logic</h3>
-            <p>Scripts count: {dashboardScripts.storefrontLogic.length}</p>
+          <div className="bg-green-100 border-2 border-green-300 p-4 rounded-lg shadow">
+            <h3 className="text-lg font-semibold text-green-800 mb-2">⚙️ Storefront Logic</h3>
+            <p className="text-green-700">Scripts: {dashboardScripts.storefrontLogic.length}</p>
+            <p className="text-sm text-green-600 mt-2">Business rules for storefront behavior</p>
           </div>
           
           {/* Bottom Left: Cart UI */}
-          <div className="bg-yellow-200 p-4 rounded">
-            <h3>TEST: Cart UI</h3>
-            <p>Scripts count: {dashboardScripts.cartUI.length}</p>
+          <div className="bg-yellow-100 border-2 border-yellow-300 p-4 rounded-lg shadow">
+            <h3 className="text-lg font-semibold text-yellow-800 mb-2">🛒 Cart UI</h3>
+            <p className="text-yellow-700">Scripts: {dashboardScripts.cartUI.length}</p>
+            <p className="text-sm text-yellow-600 mt-2">Visual customizations for the cart page</p>
           </div>
           
           {/* Bottom Right: Cart Logic */}
-          <div className="bg-red-200 p-4 rounded">
-            <h3>TEST: Cart Logic</h3>
-            <p>Scripts count: {dashboardScripts.cartLogic.length}</p>
+          <div className="bg-red-100 border-2 border-red-300 p-4 rounded-lg shadow">
+            <h3 className="text-lg font-semibold text-red-800 mb-2">🔧 Cart Logic</h3>
+            <p className="text-red-700">Scripts: {dashboardScripts.cartLogic.length}</p>
+            <p className="text-sm text-red-600 mt-2">Validation rules and cart behavior</p>
           </div>
         </div>
       </div>
 
-      {/* Chat Container - 40% of height */}
-      <div className="h-96 bg-gray-50 rounded-lg flex flex-col overflow-hidden">
+      {/* Chat Container - Remaining height */}
+      <div className="flex-1 bg-gray-50 rounded-lg flex flex-col overflow-hidden min-h-0">
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message) => (
