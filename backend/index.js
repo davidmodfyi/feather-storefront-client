@@ -1546,7 +1546,7 @@ app.post('/api/logic-scripts', (req, res) => {
   
   try {
     const distributorId = req.session.distributor_id;
-    const { trigger_point, script_content, description } = req.body;
+    const { trigger_point, script_content, description, original_prompt } = req.body;
     
     // Get next sequence order for this trigger point
     const maxOrderStmt = db.prepare(`
@@ -1559,11 +1559,11 @@ app.post('/api/logic-scripts', (req, res) => {
     const nextOrder = maxOrderResult.max_order + 1;
     
     const insertStmt = db.prepare(`
-      INSERT INTO logic_scripts (distributor_id, trigger_point, script_content, description, sequence_order, active)
-      VALUES (?, ?, ?, ?, ?, 1)
+      INSERT INTO logic_scripts (distributor_id, trigger_point, script_content, description, sequence_order, active, original_prompt)
+      VALUES (?, ?, ?, ?, ?, 1, ?)
     `);
     
-    const result = insertStmt.run(distributorId, trigger_point, script_content, description, nextOrder);
+    const result = insertStmt.run(distributorId, trigger_point, script_content, description, nextOrder, original_prompt);
     pricingEngine.clearCache(); // Add this line
     res.json({ success: true, id: result.lastInsertRowid });
   } catch (error) {
@@ -1676,6 +1676,106 @@ app.delete('/api/logic-scripts/:id', (req, res) => {
   }
 });
 
+// Get scripts categorized for dashboard
+app.get('/api/dashboard/scripts', (req, res) => {
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get all logic scripts
+    const logicScripts = db.prepare(`
+      SELECT id, trigger_point, description, script_content, active, created_at, updated_at, original_prompt, sequence_order
+      FROM logic_scripts 
+      WHERE distributor_id = ? 
+      ORDER BY trigger_point, sequence_order
+    `).all(distributorId);
+    
+    // Get all UI styles
+    const uiStyles = db.prepare(`
+      SELECT id, element_selector, styles, created_at, updated_at, original_prompt
+      FROM styles 
+      WHERE distributor_id = ? 
+      ORDER BY created_at DESC
+    `).all(distributorId);
+    
+    // Categorize scripts
+    const categorized = {
+      storefrontUI: [],
+      cartUI: [],
+      storefrontLogic: [],
+      cartLogic: []
+    };
+    
+    // Categorize UI styles
+    uiStyles.forEach(style => {
+      const isCartElement = style.element_selector.toLowerCase().includes('cart');
+      if (isCartElement) {
+        categorized.cartUI.push({
+          id: style.id,
+          type: 'ui',
+          selector: style.element_selector,
+          styles: style.styles,
+          originalPrompt: style.original_prompt,
+          createdAt: style.created_at,
+          updatedAt: style.updated_at
+        });
+      } else {
+        categorized.storefrontUI.push({
+          id: style.id,
+          type: 'ui',
+          selector: style.element_selector,
+          styles: style.styles,
+          originalPrompt: style.original_prompt,
+          createdAt: style.created_at,
+          updatedAt: style.updated_at
+        });
+      }
+    });
+    
+    // Categorize logic scripts
+    logicScripts.forEach(script => {
+      const isCartLogic = script.trigger_point === 'submit' || 
+                         (script.description && script.description.toLowerCase().includes('cart')) ||
+                         (script.script_content && script.script_content.toLowerCase().includes('cart'));
+      
+      if (isCartLogic) {
+        categorized.cartLogic.push({
+          id: script.id,
+          type: 'logic',
+          triggerPoint: script.trigger_point,
+          description: script.description,
+          scriptContent: script.script_content,
+          originalPrompt: script.original_prompt,
+          active: script.active,
+          sequenceOrder: script.sequence_order,
+          createdAt: script.created_at,
+          updatedAt: script.updated_at
+        });
+      } else {
+        categorized.storefrontLogic.push({
+          id: script.id,
+          type: 'logic',
+          triggerPoint: script.trigger_point,
+          description: script.description,
+          scriptContent: script.script_content,
+          originalPrompt: script.original_prompt,
+          active: script.active,
+          sequenceOrder: script.sequence_order,
+          createdAt: script.created_at,
+          updatedAt: script.updated_at
+        });
+      }
+    });
+    
+    res.json(categorized);
+  } catch (error) {
+    console.error('Error fetching dashboard scripts:', error);
+    res.status(500).json({ error: 'Failed to fetch scripts' });
+  }
+});
 
 // Get customer attributes for script context
 app.get('/api/customer-attributes', async (req, res) => {
@@ -2175,9 +2275,9 @@ Respond with ONLY the classification: ui, logic, or both`
             `).run(JSON.stringify(mergedStyles), req.session.distributor_id, mod.selector);
           } else {
             db.prepare(`
-              INSERT INTO styles (distributor_id, element_selector, styles)
-              VALUES (?, ?, ?)
-            `).run(req.session.distributor_id, mod.selector, JSON.stringify(mod.styles));
+              INSERT INTO styles (distributor_id, element_selector, styles, original_prompt)
+              VALUES (?, ?, ?, ?)
+            `).run(req.session.distributor_id, mod.selector, JSON.stringify(mod.styles), message);
           }
           changes.push(`Modified ${mod.selector}`);
         }
@@ -2296,9 +2396,9 @@ SCRIPT REQUIREMENTS:
 
         // Save the script
         db.prepare(`
-          INSERT INTO logic_scripts (distributor_id, trigger_point, description, script_content, active)
-          VALUES (?, ?, ?, ?, 1)
-        `).run(req.session.distributor_id, script.trigger_point, script.description, script.script_content);
+          INSERT INTO logic_scripts (distributor_id, trigger_point, description, script_content, active, original_prompt)
+          VALUES (?, ?, ?, ?, 1, ?)
+        `).run(req.session.distributor_id, script.trigger_point, script.description, script.script_content, message);
 
         logicResults = { type: 'script', description: script.description };
       }
@@ -3499,6 +3599,27 @@ function initializeChatTables() {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+
+    // Add original_prompt column to existing tables if not exists
+    try {
+      db.prepare(`ALTER TABLE styles ADD COLUMN original_prompt TEXT`).run();
+      console.log('Added original_prompt column to styles table');
+    } catch (error) {
+      // Column might already exist, ignore error
+      if (!error.message.includes('duplicate column name')) {
+        console.log('Note: original_prompt column might already exist in styles table');
+      }
+    }
+
+    try {
+      db.prepare(`ALTER TABLE logic_scripts ADD COLUMN original_prompt TEXT`).run();
+      console.log('Added original_prompt column to logic_scripts table');
+    } catch (error) {
+      // Column might already exist, ignore error
+      if (!error.message.includes('duplicate column name')) {
+        console.log('Note: original_prompt column might already exist in logic_scripts table');
+      }
+    }
 
     console.log('Chat history, styles, and logic scripts tables initialized');
   } catch (error) {
