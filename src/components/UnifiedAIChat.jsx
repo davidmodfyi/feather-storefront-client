@@ -172,15 +172,8 @@ What would you like to customize today?`,
       'banner', 'message', 'content', 'dropdown', 'field', 'form', 'input'
     ];
     
-    // Cart-specific keywords (only for true cart operations, not general button styling)
-    const cartSpecificKeywords = [
-      'cart quantity', 'cart total', 'cart item', 'remove from cart', 'cart validation',
-      'checkout', 'cart page', 'cart button', 'cart styling'
-    ];
-    
     const logicMatches = logicKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
     const uiMatches = uiKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
-    const cartMatches = cartSpecificKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
     
     // If it mentions making something mandatory/required with visual elements, it's likely both
     if ((lowerMessage.includes('mandatory') || lowerMessage.includes('required')) && 
@@ -191,12 +184,6 @@ What would you like to customize today?`,
     // If logic keywords dominate, it's logic
     if (logicMatches > uiMatches && logicMatches > 0) {
       return 'logic';
-    }
-    
-    // Only treat as cart-specific if it explicitly mentions cart operations, not general styling
-    // "add to cart button" styling should go to storefront UI, not cart UI
-    if (cartMatches > 0 && !lowerMessage.includes('add to cart button')) {
-      return 'ui'; // Still UI, but will need additional logic for cart vs storefront
     }
     
     // Default to UI for styling requests or when UI keywords dominate
