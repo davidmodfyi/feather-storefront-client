@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ScriptPanel from './ScriptPanel';
 
 export default function UnifiedAIChat({ onLogout, onHome, brandName }) {
   document.title = brandName ? `${brandName} - AI Storefront Assistant` : 'AI Storefront Assistant - Feather';
@@ -12,6 +13,12 @@ export default function UnifiedAIChat({ onLogout, onHome, brandName }) {
   const [customerAttributes, setCustomerAttributes] = useState([]);
   const [dynamicFormFields, setDynamicFormFields] = useState([]);
   const [currentPageContext, setCurrentPageContext] = useState({});
+  const [dashboardScripts, setDashboardScripts] = useState({
+    storefrontUI: [],
+    cartUI: [],
+    storefrontLogic: [],
+    cartLogic: []
+  });
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -52,6 +59,9 @@ export default function UnifiedAIChat({ onLogout, onHome, brandName }) {
 
     // Fetch current page context (what elements already exist)
     fetchCurrentPageContext();
+
+    // Fetch dashboard scripts
+    fetchDashboardScripts();
 
     // Add welcome message
     setMessages([{
@@ -127,6 +137,19 @@ What would you like to customize today?`,
       console.log('Current page context:', context);
     } catch (error) {
       console.error('Error fetching page context:', error);
+    }
+  };
+
+  // Fetch dashboard scripts
+  const fetchDashboardScripts = async () => {
+    try {
+      const response = await fetch('/api/dashboard/scripts', { credentials: 'include' });
+      if (response.ok) {
+        const scripts = await response.json();
+        setDashboardScripts(scripts);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard scripts:', error);
     }
   };
 
@@ -230,7 +253,10 @@ What would you like to customize today?`,
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify(data.script)
+              body: JSON.stringify({
+                ...data.script,
+                original_prompt: userMessage
+              })
             });
 
             if (saveResponse.ok) {
@@ -244,9 +270,10 @@ What would you like to customize today?`,
                 message_type: 'success'
               }]);
               
-              // Refresh page context after logic changes
+              // Refresh page context and dashboard after logic changes
               setTimeout(() => {
                 fetchCurrentPageContext();
+                fetchDashboardScripts();
               }, 500);
               
               setTimeout(() => {
@@ -290,9 +317,10 @@ What would you like to customize today?`,
 
         // Show success notification if changes were made
         if (data.changes && data.changes.length > 0) {
-          // Refresh page context after changes
+          // Refresh page context and dashboard after changes
           setTimeout(() => {
             fetchCurrentPageContext();
+            fetchDashboardScripts();
           }, 500);
           
           setTimeout(() => {
@@ -326,6 +354,50 @@ What would you like to customize today?`,
     return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Handle script analysis (view original prompt and generated script)
+  const handleAnalyzeScript = (script) => {
+    // For now, we'll show an alert with the details
+    // Later this can be replaced with a modal or new page
+    const content = script.type === 'ui' 
+      ? `Styles: ${script.styles}`
+      : `Script: ${script.scriptContent}`;
+    
+    alert(`Original Prompt: ${script.originalPrompt || 'Not available'}\n\nGenerated ${script.type === 'ui' ? 'Styles' : 'Script'}:\n${content}`);
+  };
+
+  // Handle script deletion
+  const handleDeleteScript = async (script) => {
+    if (!confirm(`Are you sure you want to delete this ${script.type} script?`)) return;
+    
+    try {
+      const endpoint = script.type === 'ui' 
+        ? `/api/styles/${script.id}` 
+        : `/api/logic-scripts/${script.id}`;
+      
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        // Refresh the dashboard scripts
+        fetchDashboardScripts();
+        alert('Script deleted successfully');
+      } else {
+        alert('Failed to delete script');
+      }
+    } catch (error) {
+      console.error('Error deleting script:', error);
+      alert('Error deleting script');
+    }
+  };
+
+  // Handle script reordering (for future implementation)
+  const handleReorderScripts = (scripts) => {
+    // This will be implemented later for drag-and-drop
+    console.log('Reorder scripts:', scripts);
+  };
+
   return (
     <div className="p-6 h-screen flex flex-col">
       {/* Header */}
@@ -338,8 +410,46 @@ What would you like to customize today?`,
         </div>
       </div>
 
-      {/* Chat Container */}
-      <div className="flex-1 bg-gray-50 rounded-lg flex flex-col overflow-hidden">
+      {/* Dashboard Panels - 60% of height */}
+      <div className="flex-1 mb-4" style={{border: '2px solid red'}}>
+        <div className="grid grid-cols-2 gap-4 h-full">
+          {console.log('🔍 Rendering dashboard with scripts:', dashboardScripts)}
+          {/* Top Left: Storefront UI */}
+          <div className="bg-blue-200 p-4 rounded">
+            <h3>TEST: Storefront UI</h3>
+            <p>Scripts count: {dashboardScripts.storefrontUI.length}</p>
+          </div>
+          <ScriptPanel
+            title="Storefront UI"
+            scripts={dashboardScripts.storefrontUI}
+            type="ui"
+            onAnalyze={handleAnalyzeScript}
+            onDelete={handleDeleteScript}
+            onReorder={handleReorderScripts}
+          />
+          
+          {/* Top Right: Storefront Logic */}
+          <div className="bg-green-200 p-4 rounded">
+            <h3>TEST: Storefront Logic</h3>
+            <p>Scripts count: {dashboardScripts.storefrontLogic.length}</p>
+          </div>
+          
+          {/* Bottom Left: Cart UI */}
+          <div className="bg-yellow-200 p-4 rounded">
+            <h3>TEST: Cart UI</h3>
+            <p>Scripts count: {dashboardScripts.cartUI.length}</p>
+          </div>
+          
+          {/* Bottom Right: Cart Logic */}
+          <div className="bg-red-200 p-4 rounded">
+            <h3>TEST: Cart Logic</h3>
+            <p>Scripts count: {dashboardScripts.cartLogic.length}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Chat Container - 40% of height */}
+      <div className="h-96 bg-gray-50 rounded-lg flex flex-col overflow-hidden">
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message) => (
