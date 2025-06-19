@@ -2726,7 +2726,7 @@ app.post('/api/ai-customize', async (req, res) => {
     // Apply styling modifications
     for (const mod of modifications) {
       try {
-        await applyModification(mod, req.session.distributor_id);
+        await applyModification(mod, req.session.distributor_id, message);
         appliedChanges.push(mod.description);
         console.log(`Applied styling: ${mod.description}`);
       } catch (error) {
@@ -3209,16 +3209,17 @@ function parseClaudeResponse(claudeResponse) {
 }
 
 // Enhanced applyModification function
-async function applyModification(modification, distributorId) {
+async function applyModification(modification, distributorId, originalPrompt = null) {
   try {
-    // Insert or update the style directly in the database
+    // Insert into the styles table (used by dashboard) instead of distributor_styles
     db.prepare(`
-      INSERT OR REPLACE INTO distributor_styles (distributor_id, element_selector, css_properties, updated_at)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      INSERT INTO styles (distributor_id, element_selector, styles, original_prompt, created_at, updated_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
       distributorId,
       modification.elementSelector,
-      JSON.stringify(modification.cssProperties)
+      JSON.stringify(modification.cssProperties),
+      originalPrompt
     );
 
     console.log(`Successfully saved style for: ${modification.elementSelector}`);
