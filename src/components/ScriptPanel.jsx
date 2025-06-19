@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function ScriptPanel({ title, scripts, type, onAnalyze, onDelete, onReorder }) {
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown';
     return new Date(dateString).toLocaleDateString();
@@ -9,6 +11,48 @@ export default function ScriptPanel({ title, scripts, type, onAnalyze, onDelete,
   const truncateText = (text, maxLength = 50) => {
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
+  };
+
+  const handleDragStart = (e, script, index) => {
+    setDraggedItem({ script, index });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+    
+    if (draggedItem && draggedItem.index !== dropIndex) {
+      const newScripts = [...scripts];
+      const [removed] = newScripts.splice(draggedItem.index, 1);
+      newScripts.splice(dropIndex, 0, removed);
+      
+      // Update sequence order for logic scripts
+      if (type === 'logic') {
+        newScripts.forEach((script, index) => {
+          script.sequenceOrder = index + 1;
+        });
+      }
+      
+      onReorder(newScripts);
+    }
+    
+    setDraggedItem(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDragOverIndex(null);
   };
 
   return (
@@ -30,9 +74,20 @@ export default function ScriptPanel({ title, scripts, type, onAnalyze, onDelete,
           scripts.map((script, index) => (
             <div
               key={script.id}
-              className="border rounded p-3 hover:shadow-md transition-shadow bg-gray-50"
+              draggable={true}
+              onDragStart={(e) => handleDragStart(e, script, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`border rounded p-3 hover:shadow-md transition-shadow bg-gray-50 cursor-move relative ${
+                dragOverIndex === index ? 'border-blue-400 bg-blue-50' : ''
+              } ${draggedItem?.index === index ? 'opacity-50' : ''}`}
             >
-              <div className="flex justify-between items-start mb-2">
+              {/* Drag handle indicator */}
+              <div className="absolute top-2 left-2 text-gray-400 text-xs">⋮⋮</div>
+              
+              <div className="flex justify-between items-start mb-2 ml-4">
                 <div className="flex-1">
                   <div className="font-medium text-sm">
                     {type === 'ui' 
@@ -42,8 +97,8 @@ export default function ScriptPanel({ title, scripts, type, onAnalyze, onDelete,
                   </div>
                   {type === 'logic' && (
                     <div className="text-xs text-gray-500 mt-1">
-                      Trigger: {script.triggerPoint}
-                      {script.sequenceOrder && ` • Order: ${script.sequenceOrder}`}
+                      Trigger: {script.trigger_point || script.triggerPoint}
+                      {(script.sequence_order || script.sequenceOrder) && ` • Order: ${script.sequence_order || script.sequenceOrder}`}
                       {script.active !== undefined && (
                         <span className={`ml-2 ${script.active ? 'text-green-600' : 'text-red-600'}`}>
                           {script.active ? '● Active' : '● Inactive'}
@@ -52,7 +107,7 @@ export default function ScriptPanel({ title, scripts, type, onAnalyze, onDelete,
                     </div>
                   )}
                   <div className="text-xs text-gray-400 mt-1">
-                    Created: {formatDate(script.createdAt)}
+                    Created: {formatDate(script.created_at || script.createdAt)}
                   </div>
                 </div>
                 
@@ -60,7 +115,7 @@ export default function ScriptPanel({ title, scripts, type, onAnalyze, onDelete,
                   <button
                     onClick={() => onAnalyze(script)}
                     className="text-blue-500 hover:text-blue-700 text-lg"
-                    title="Analyze script"
+                    title="Inspect script (view original prompt and generated code)"
                   >
                     🔍
                   </button>
@@ -74,9 +129,9 @@ export default function ScriptPanel({ title, scripts, type, onAnalyze, onDelete,
                 </div>
               </div>
               
-              {script.originalPrompt && (
-                <div className="text-xs text-gray-600 mt-2 p-2 bg-white rounded border-l-2 border-blue-200">
-                  <span className="font-medium">Original request:</span> {truncateText(script.originalPrompt, 80)}
+              {(script.original_prompt || script.originalPrompt) && (
+                <div className="text-xs text-gray-600 mt-2 p-2 bg-white rounded border-l-2 border-blue-200 ml-4">
+                  <span className="font-medium">Original request:</span> {truncateText(script.original_prompt || script.originalPrompt, 80)}
                 </div>
               )}
             </div>

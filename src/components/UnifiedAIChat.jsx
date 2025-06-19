@@ -168,12 +168,19 @@ What would you like to customize today?`,
     // UI/Visual keywords
     const uiKeywords = [
       'color', 'button', 'style', 'background', 'font', 'size', 'layout', 'appearance',
-      'brown', 'blue', 'green', 'red', 'shadow', 'border', 'rounded', 'header', 'cart',
+      'brown', 'blue', 'green', 'red', 'shadow', 'border', 'rounded', 'header',
       'banner', 'message', 'content', 'dropdown', 'field', 'form', 'input'
+    ];
+    
+    // Cart-specific keywords (only for true cart operations, not general button styling)
+    const cartSpecificKeywords = [
+      'cart quantity', 'cart total', 'cart item', 'remove from cart', 'cart validation',
+      'checkout', 'cart page', 'cart button', 'cart styling'
     ];
     
     const logicMatches = logicKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
     const uiMatches = uiKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
+    const cartMatches = cartSpecificKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
     
     // If it mentions making something mandatory/required with visual elements, it's likely both
     if ((lowerMessage.includes('mandatory') || lowerMessage.includes('required')) && 
@@ -184,6 +191,12 @@ What would you like to customize today?`,
     // If logic keywords dominate, it's logic
     if (logicMatches > uiMatches && logicMatches > 0) {
       return 'logic';
+    }
+    
+    // Only treat as cart-specific if it explicitly mentions cart operations, not general styling
+    // "add to cart button" styling should go to storefront UI, not cart UI
+    if (cartMatches > 0 && !lowerMessage.includes('add to cart button')) {
+      return 'ui'; // Still UI, but will need additional logic for cart vs storefront
     }
     
     // Default to UI for styling requests or when UI keywords dominate
@@ -356,13 +369,94 @@ What would you like to customize today?`,
 
   // Handle script analysis (view original prompt and generated script)
   const handleAnalyzeScript = (script) => {
-    // For now, we'll show an alert with the details
-    // Later this can be replaced with a modal or new page
-    const content = script.type === 'ui' 
-      ? `Styles: ${script.styles}`
-      : `Script: ${script.scriptContent}`;
+    // Create a more detailed analysis display
+    let content = '';
+    let title = '';
     
-    alert(`Original Prompt: ${script.originalPrompt || 'Not available'}\n\nGenerated ${script.type === 'ui' ? 'Styles' : 'Script'}:\n${content}`);
+    if (script.type === 'ui' || script.styles) {
+      title = 'UI Style Script';
+      content = `CSS Selector: ${script.selector || 'Unknown'}\n\nGenerated Styles:\n${script.styles || 'No styles available'}`;
+    } else if (script.script_content || script.scriptContent) {
+      title = 'Logic Script';
+      content = `Description: ${script.description || 'No description'}\n\nTrigger Point: ${script.trigger_point || script.triggerPoint || 'Unknown'}\n\nGenerated Script:\n${script.script_content || script.scriptContent || 'No script content'}`;
+    } else {
+      title = 'Script Details';
+      content = `Type: ${script.type || 'Unknown'}\n\nContent: ${JSON.stringify(script, null, 2)}`;
+    }
+    
+    const fullMessage = `🔍 ${title}\n\n📝 Original Prompt:\n${script.originalPrompt || script.original_prompt || 'Not available'}\n\n⚙️ Generated Content:\n${content}`;
+    
+    // Create a more user-friendly display
+    const textarea = document.createElement('textarea');
+    textarea.value = fullMessage;
+    textarea.style.width = '80vw';
+    textarea.style.height = '60vh';
+    textarea.style.fontFamily = 'monospace';
+    textarea.style.fontSize = '12px';
+    textarea.style.padding = '10px';
+    textarea.style.border = '1px solid #ccc';
+    textarea.style.borderRadius = '4px';
+    textarea.readOnly = true;
+    
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = '100vw';
+    container.style.height = '100vh';
+    container.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
+    container.style.zIndex = '9999';
+    
+    const modal = document.createElement('div');
+    modal.style.backgroundColor = 'white';
+    modal.style.padding = '20px';
+    modal.style.borderRadius = '8px';
+    modal.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    modal.style.maxWidth = '90vw';
+    modal.style.maxHeight = '90vh';
+    modal.style.overflow = 'auto';
+    
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '✕ Close';
+    closeButton.style.marginBottom = '10px';
+    closeButton.style.padding = '5px 10px';
+    closeButton.style.backgroundColor = '#f0f0f0';
+    closeButton.style.border = '1px solid #ccc';
+    closeButton.style.borderRadius = '4px';
+    closeButton.style.cursor = 'pointer';
+    closeButton.onclick = () => document.body.removeChild(container);
+    
+    const copyButton = document.createElement('button');
+    copyButton.textContent = '📋 Copy';
+    copyButton.style.marginBottom = '10px';
+    copyButton.style.marginLeft = '10px';
+    copyButton.style.padding = '5px 10px';
+    copyButton.style.backgroundColor = '#007bff';
+    copyButton.style.color = 'white';
+    copyButton.style.border = 'none';
+    copyButton.style.borderRadius = '4px';
+    copyButton.style.cursor = 'pointer';
+    copyButton.onclick = () => {
+      navigator.clipboard.writeText(fullMessage);
+      copyButton.textContent = '✅ Copied!';
+      setTimeout(() => copyButton.textContent = '📋 Copy', 2000);
+    };
+    
+    modal.appendChild(closeButton);
+    modal.appendChild(copyButton);
+    modal.appendChild(textarea);
+    container.appendChild(modal);
+    document.body.appendChild(container);
+    
+    // Close on background click
+    container.onclick = (e) => {
+      if (e.target === container) {
+        document.body.removeChild(container);
+      }
+    };
   };
 
   // Handle script deletion
@@ -392,10 +486,36 @@ What would you like to customize today?`,
     }
   };
 
-  // Handle script reordering (for future implementation)
-  const handleReorderScripts = (scripts) => {
-    // This will be implemented later for drag-and-drop
-    console.log('Reorder scripts:', scripts);
+  // Handle script reordering
+  const handleReorderScripts = async (reorderedScripts) => {
+    console.log('Reordering scripts:', reorderedScripts);
+    
+    try {
+      // Update sequence order for logic scripts in the database
+      for (const script of reorderedScripts) {
+        if (script.sequence_order !== undefined) {
+          const response = await fetch(`/api/logic-scripts/${script.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              sequence_order: script.sequenceOrder || script.sequence_order
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to update script ${script.id}`);
+          }
+        }
+      }
+      
+      // Refresh the dashboard scripts after reordering
+      fetchDashboardScripts();
+      
+    } catch (error) {
+      console.error('Error reordering scripts:', error);
+      alert('Failed to reorder scripts. Please try again.');
+    }
   };
 
   return (
@@ -414,32 +534,77 @@ What would you like to customize today?`,
       <div className="h-96 mb-4 flex-shrink-0">
         <div className="grid grid-cols-2 gap-4 h-full">
           {console.log('🔍 Rendering dashboard with scripts:', dashboardScripts)}
+          
           {/* Top Left: Storefront UI */}
-          <div className="bg-blue-100 border-2 border-blue-300 p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-blue-800 mb-2">📱 Storefront UI</h3>
-            <p className="text-blue-700">Scripts: {dashboardScripts.storefrontUI.length}</p>
-            <p className="text-sm text-blue-600 mt-2">Visual customizations for the main storefront</p>
+          <div className="bg-blue-100 border-2 border-blue-300 rounded-lg shadow overflow-hidden">
+            <div className="bg-blue-200 px-4 py-2 border-b border-blue-300">
+              <h3 className="text-lg font-semibold text-blue-800">📱 Storefront UI</h3>
+              <p className="text-sm text-blue-600">Visual customizations for the main storefront</p>
+            </div>
+            <div className="h-full overflow-hidden">
+              <ScriptPanel 
+                title=""
+                scripts={dashboardScripts.storefrontUI} 
+                type="ui"
+                onAnalyze={handleAnalyzeScript}
+                onDelete={handleDeleteScript}
+                onReorder={handleReorderScripts}
+              />
+            </div>
           </div>
           
           {/* Top Right: Storefront Logic */}
-          <div className="bg-green-100 border-2 border-green-300 p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-green-800 mb-2">⚙️ Storefront Logic</h3>
-            <p className="text-green-700">Scripts: {dashboardScripts.storefrontLogic.length}</p>
-            <p className="text-sm text-green-600 mt-2">Business rules for storefront behavior</p>
+          <div className="bg-green-100 border-2 border-green-300 rounded-lg shadow overflow-hidden">
+            <div className="bg-green-200 px-4 py-2 border-b border-green-300">
+              <h3 className="text-lg font-semibold text-green-800">⚙️ Storefront Logic</h3>
+              <p className="text-sm text-green-600">Business rules for storefront behavior</p>
+            </div>
+            <div className="h-full overflow-hidden">
+              <ScriptPanel 
+                title=""
+                scripts={dashboardScripts.storefrontLogic} 
+                type="logic"
+                onAnalyze={handleAnalyzeScript}
+                onDelete={handleDeleteScript}
+                onReorder={handleReorderScripts}
+              />
+            </div>
           </div>
           
           {/* Bottom Left: Cart UI */}
-          <div className="bg-yellow-100 border-2 border-yellow-300 p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-yellow-800 mb-2">🛒 Cart UI</h3>
-            <p className="text-yellow-700">Scripts: {dashboardScripts.cartUI.length}</p>
-            <p className="text-sm text-yellow-600 mt-2">Visual customizations for the cart page</p>
+          <div className="bg-yellow-100 border-2 border-yellow-300 rounded-lg shadow overflow-hidden">
+            <div className="bg-yellow-200 px-4 py-2 border-b border-yellow-300">
+              <h3 className="text-lg font-semibold text-yellow-800">🛒 Cart UI</h3>
+              <p className="text-sm text-yellow-600">Visual customizations for the cart page</p>
+            </div>
+            <div className="h-full overflow-hidden">
+              <ScriptPanel 
+                title=""
+                scripts={dashboardScripts.cartUI} 
+                type="ui"
+                onAnalyze={handleAnalyzeScript}
+                onDelete={handleDeleteScript}
+                onReorder={handleReorderScripts}
+              />
+            </div>
           </div>
           
           {/* Bottom Right: Cart Logic */}
-          <div className="bg-red-100 border-2 border-red-300 p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-red-800 mb-2">🔧 Cart Logic</h3>
-            <p className="text-red-700">Scripts: {dashboardScripts.cartLogic.length}</p>
-            <p className="text-sm text-red-600 mt-2">Validation rules and cart behavior</p>
+          <div className="bg-red-100 border-2 border-red-300 rounded-lg shadow overflow-hidden">
+            <div className="bg-red-200 px-4 py-2 border-b border-red-300">
+              <h3 className="text-lg font-semibold text-red-800">🔧 Cart Logic</h3>
+              <p className="text-sm text-red-600">Validation rules and cart behavior</p>
+            </div>
+            <div className="h-full overflow-hidden">
+              <ScriptPanel 
+                title=""
+                scripts={dashboardScripts.cartLogic} 
+                type="logic"
+                onAnalyze={handleAnalyzeScript}
+                onDelete={handleDeleteScript}
+                onReorder={handleReorderScripts}
+              />
+            </div>
           </div>
         </div>
       </div>
