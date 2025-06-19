@@ -7,7 +7,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
   
   const navigate = useNavigate();
 
-  // Options for the backoffice
+  // Options for the backoffice dashboard
   const options = [
     { name: "Manage Customers", path: "/backoffice/customers" },
     { name: "Branding", path: "/backoffice/branding" },
