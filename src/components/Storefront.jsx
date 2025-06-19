@@ -116,10 +116,13 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     fetch('/api/styles', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
-        console.log('Custom styles loaded:', data);
+        console.log('🔥 STOREFRONT: Custom styles loaded from database:', data);
+        console.log('🔥 STOREFRONT: Style keys:', Object.keys(data));
         setCustomStyles(data);
       })
-      .catch(console.error);
+      .catch(error => {
+        console.error('🔥 STOREFRONT: Error loading styles:', error);
+      });
 
     // Fetch dynamic content
     fetch('/api/dynamic-content', { credentials: 'include' })
@@ -356,6 +359,9 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   });
 
   const getCustomStyle = (elementSelector) => {
+    console.log('🎨 getCustomStyle called for:', elementSelector);
+    console.log('🎨 Available custom styles:', Object.keys(customStyles));
+    console.log('🎨 Style for', elementSelector, ':', customStyles[elementSelector]);
     return customStyles[elementSelector] || {};
   };
 

@@ -1,0 +1,14 @@
+****Send as a single message. 
+
+Let's get back up to speed so we can continue working where we left off. Three tasks for you to start. 
+
+First task: 
+Review all of these files in feather-storefront-client CAREFULLY and understand what's going on with the project. Pay special attention to all of the AI endpoints that integrate with Claude, in index.js, and the associated Src files and database tables. This is the biggest and most important part of the site and it's not working too well. Don't change or try to test anything or give any opinions, I just want you to read it and read it again, understand deeply how this application works and how all of the different endpoints and files work together. 
+
+featherstorefront.db, index.js, pricing-engine.js, Backoffice.jsx, BackofficeOptions.jsx, Cart.jsx, LogicCustomizationChat.jsx,LogicHooks.js,LogicScriptsManagement.jsx,Storefront.jsx, TableBuilder.jsx, UnifiedAIChat.jsx
+
+Second task, memorize this: 
+NEVER, for the rest of my time with you, NEVER try to run ANY files locally, do not install any dependencies locally. Going forward when I ask you to change things, just push the changes directly to GitHub, I will test them. 
+
+Third task, test GitHub: 
+GitHub connection already exists, try to connect to it now and test. Make a subtle change on one file and commit it. Never try to run any files or test things locally. 

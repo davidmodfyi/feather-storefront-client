@@ -2693,6 +2693,7 @@ app.post('/api/ai-customize', async (req, res) => {
     console.log('🔥 DEBUG: Processing AI response type:', typeof aiResponse);
     console.log('🔥 DEBUG: AI response is array:', Array.isArray(aiResponse));
     console.log('🔥 DEBUG: AI response has type property:', aiResponse && aiResponse.type);
+    console.log('🔥 DEBUG: AI response structure:', JSON.stringify(aiResponse, null, 2));
     
     if (Array.isArray(aiResponse)) {
       console.log('🔥 DEBUG: Using old format - treating as styling modifications');
@@ -2726,11 +2727,17 @@ app.post('/api/ai-customize', async (req, res) => {
     // Apply styling modifications
     for (const mod of modifications) {
       try {
+        console.log('🔥 DEBUG: About to apply modification:', JSON.stringify(mod, null, 2));
+        console.log('🔥 DEBUG: Element selector being processed:', mod.elementSelector);
+        console.log('🔥 DEBUG: CSS properties being applied:', JSON.stringify(mod.cssProperties, null, 2));
+        
         await applyModification(mod, req.session.distributor_id, message);
         appliedChanges.push(mod.description);
-        console.log(`Applied styling: ${mod.description}`);
+        console.log(`🔥 DEBUG: Successfully applied styling: ${mod.description}`);
+        console.log('🔥 DEBUG: Style should now be saved to database');
       } catch (error) {
-        console.error(`Failed to apply styling modification: ${mod.description}`, error);
+        console.error(`🔥 DEBUG: Failed to apply styling modification: ${mod.description}`, error);
+        console.error('🔥 DEBUG: Error details:', error.stack);
         errors.push(`Failed: ${mod.description} - ${error.message}`);
       }
     }
@@ -3063,6 +3070,21 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
     console.log('🔥 DEBUG: Response contains "type":', claudeResponse.includes('"type"'));
     console.log('🔥 DEBUG: Response contains "content":', claudeResponse.includes('"content"'));
     console.log('🔥 DEBUG: Response contains "insertions":', claudeResponse.includes('"insertions"'));
+    console.log('🔥 DEBUG: Response contains "elementSelector":', claudeResponse.includes('"elementSelector"'));
+    console.log('🔥 DEBUG: Response contains "add-to-cart-button":', claudeResponse.includes('"add-to-cart-button"'));
+    
+    // Log specific patterns for Add to Cart button requests
+    if (userRequest.toLowerCase().includes('add to cart') && userRequest.toLowerCase().includes('button')) {
+      console.log('🔥 DEBUG: SPECIAL CASE - Add to Cart button request detected!');
+      console.log('🔥 DEBUG: Original user request:', userRequest);
+      console.log('🔥 DEBUG: Looking for add-to-cart-button in response...');
+      const addToCartMatch = claudeResponse.match(/"elementSelector"\s*:\s*"([^"]*add-to-cart[^"]*)"/i);
+      if (addToCartMatch) {
+        console.log('🔥 DEBUG: Found Add to Cart element selector:', addToCartMatch[1]);
+      } else {
+        console.log('🔥 DEBUG: WARNING - Add to Cart button request but no add-to-cart element selector found!');
+      }
+    }
     
     // Use the parseClaudeResponse function instead of inline parsing
     console.log('🔥 DEBUG: Calling parseClaudeResponse...');
@@ -3185,13 +3207,30 @@ function parseClaudeResponse(claudeResponse) {
     const parsed = JSON.parse(jsonMatch[0]);
     console.log('🔥 DEBUG: Successfully parsed JSON:', JSON.stringify(parsed, null, 2));
     
+    // Log element selectors if they exist
+    if (parsed.modifications && Array.isArray(parsed.modifications)) {
+      console.log('🔥 DEBUG: Element selectors found in modifications:');
+      parsed.modifications.forEach((mod, index) => {
+        console.log(`🔥 DEBUG: - Modification ${index + 1}: ${mod.elementSelector}`);
+        console.log(`🔥 DEBUG: - Description: ${mod.description}`);
+        console.log(`🔥 DEBUG: - CSS Properties: ${JSON.stringify(mod.cssProperties)}`);
+      });
+    }
+    
     // Handle new format with type field or old format with modifications
     if (parsed.type) {
       console.log('🔥 DEBUG: New format detected with type:', parsed.type);
+      if (parsed.type === 'styling' && parsed.modifications) {
+        console.log('🔥 DEBUG: Styling modifications count:', parsed.modifications.length);
+        parsed.modifications.forEach((mod, index) => {
+          console.log(`🔥 DEBUG: Styling ${index + 1} - Element: ${mod.elementSelector}, Props: ${JSON.stringify(mod.cssProperties)}`);
+        });
+      }
       // New format - return the entire parsed object
       return parsed;
     } else if (parsed.modifications) {
       console.log('🔥 DEBUG: Old format detected with modifications array');
+      console.log('🔥 DEBUG: Old format modifications count:', parsed.modifications.length);
       // Old format - return just modifications for backwards compatibility
       return parsed.modifications;
     } else {
@@ -3210,22 +3249,51 @@ function parseClaudeResponse(claudeResponse) {
 
 // Enhanced applyModification function
 async function applyModification(modification, distributorId, originalPrompt = null) {
+  console.log('🔥 DEBUG: applyModification called with:');
+  console.log('🔥 DEBUG: - distributorId:', distributorId);
+  console.log('🔥 DEBUG: - element_selector:', modification.elementSelector);
+  console.log('🔥 DEBUG: - cssProperties:', JSON.stringify(modification.cssProperties, null, 2));
+  console.log('🔥 DEBUG: - originalPrompt:', originalPrompt);
+  
   try {
     // Insert into the styles table (used by dashboard) instead of distributor_styles
-    db.prepare(`
+    const insertQuery = `
       INSERT INTO styles (distributor_id, element_selector, styles, original_prompt, created_at, updated_at)
       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `).run(
+    `;
+    
+    console.log('🔥 DEBUG: About to execute SQL query:', insertQuery);
+    console.log('🔥 DEBUG: Query parameters:', [
+      distributorId,
+      modification.elementSelector,
+      JSON.stringify(modification.cssProperties),
+      originalPrompt
+    ]);
+    
+    const result = db.prepare(insertQuery).run(
       distributorId,
       modification.elementSelector,
       JSON.stringify(modification.cssProperties),
       originalPrompt
     );
+    
+    console.log('🔥 DEBUG: SQL insert result:', result);
+    console.log('🔥 DEBUG: Insert lastInsertRowid:', result.lastInsertRowid);
+    console.log('🔥 DEBUG: Insert changes:', result.changes);
 
-    console.log(`Successfully saved style for: ${modification.elementSelector}`);
+    console.log(`🔥 DEBUG: Successfully saved style for: ${modification.elementSelector}`);
+    
+    // Verify the style was actually saved
+    const savedStyle = db.prepare(`
+      SELECT * FROM styles WHERE distributor_id = ? AND element_selector = ? ORDER BY created_at DESC LIMIT 1
+    `).get(distributorId, modification.elementSelector);
+    
+    console.log('🔥 DEBUG: Verification - style retrieved from database:', JSON.stringify(savedStyle, null, 2));
     
   } catch (error) {
-    console.error(`Failed to save style for ${modification.elementSelector}:`, error);
+    console.error(`🔥 DEBUG: Failed to save style for ${modification.elementSelector}:`, error);
+    console.error('🔥 DEBUG: Error details:', error.message);
+    console.error('🔥 DEBUG: Error stack:', error.stack);
     throw error;
   }
 }
@@ -3444,32 +3512,64 @@ app.delete('/api/branding/logo', (req, res) => {
 });
 
 app.get('/api/styles', (req, res) => {
-  console.log('Styles request');
+  console.log('🔥 DEBUG: /api/styles GET request received');
+  console.log('🔥 DEBUG: Session distributor_id:', req.session.distributor_id);
   
   if (!req.session.distributor_id) {
+    console.log('🔥 DEBUG: No distributor_id in session, returning 401');
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
   try {
-    const styles = db.prepare(`
+    // Check both tables to see where styles are stored
+    console.log('🔥 DEBUG: Checking distributor_styles table...');
+    const distributorStyles = db.prepare(`
       SELECT element_selector, css_properties 
       FROM distributor_styles 
       WHERE distributor_id = ?
     `).all(req.session.distributor_id);
     
-    // Convert to a more usable format
+    console.log('🔥 DEBUG: Found', distributorStyles.length, 'styles in distributor_styles table');
+    console.log('🔥 DEBUG: distributor_styles content:', JSON.stringify(distributorStyles, null, 2));
+    
+    console.log('🔥 DEBUG: Checking styles table...');
+    const stylesTable = db.prepare(`
+      SELECT element_selector, styles 
+      FROM styles 
+      WHERE distributor_id = ?
+    `).all(req.session.distributor_id);
+    
+    console.log('🔥 DEBUG: Found', stylesTable.length, 'styles in styles table');
+    console.log('🔥 DEBUG: styles table content:', JSON.stringify(stylesTable, null, 2));
+    
+    // Convert distributor_styles to a more usable format
     const styleMap = {};
-    styles.forEach(style => {
+    distributorStyles.forEach(style => {
       try {
         styleMap[style.element_selector] = JSON.parse(style.css_properties);
+        console.log('🔥 DEBUG: Parsed style for', style.element_selector, ':', JSON.parse(style.css_properties));
       } catch (e) {
-        console.error('Error parsing CSS properties:', e);
+        console.error('🔥 DEBUG: Error parsing CSS properties for', style.element_selector, ':', e);
       }
     });
     
+    // Also add styles from the styles table if they exist
+    stylesTable.forEach(style => {
+      try {
+        styleMap[style.element_selector] = JSON.parse(style.styles);
+        console.log('🔥 DEBUG: Added style from styles table for', style.element_selector, ':', JSON.parse(style.styles));
+      } catch (e) {
+        console.error('🔥 DEBUG: Error parsing styles from styles table for', style.element_selector, ':', e);
+      }
+    });
+    
+    console.log('🔥 DEBUG: Final styleMap being returned:', JSON.stringify(styleMap, null, 2));
+    console.log('🔥 DEBUG: Total styles being returned:', Object.keys(styleMap).length);
+    
     res.json(styleMap);
   } catch (error) {
-    console.error('Error fetching styles:', error);
+    console.error('🔥 DEBUG: Error fetching styles:', error);
+    console.error('🔥 DEBUG: Error stack:', error.stack);
     res.status(500).json({ error: 'Error fetching styles' });
   }
 });
