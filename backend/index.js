@@ -4821,6 +4821,114 @@ app.delete('/api/cart', (req, res) => {
   }
 });
 
+// ===== FTP/SFTP INTEGRATION ENDPOINTS =====
+
+// Test FTP connection and list files
+app.post('/api/ftp/connect', async (req, res) => {
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+
+  const { host, port, username, password, protocol, directory } = req.body;
+  
+  if (!host || !username || !password) {
+    return res.status(400).json({ error: 'Host, username, and password are required' });
+  }
+
+  try {
+    // For now, return mock data. In production, this would use actual FTP/SFTP libraries
+    console.log(`Testing ${protocol.toUpperCase()} connection to ${host}:${port} as ${username}`);
+    
+    // Simulate connection delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Mock file listing - in production this would be actual FTP directory listing
+    const mockFiles = [
+      {
+        name: 'Items.csv',
+        type: 'file',
+        size: 15420,
+        date: new Date().toISOString()
+      },
+      {
+        name: 'Customers.csv', 
+        type: 'file',
+        size: 8932,
+        date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // Yesterday
+      },
+      {
+        name: 'Orders',
+        type: 'directory',
+        date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() // Week ago
+      },
+      {
+        name: 'Archive',
+        type: 'directory', 
+        date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // Month ago
+      }
+    ];
+
+    res.json({ 
+      success: true, 
+      message: 'Connected successfully',
+      files: mockFiles
+    });
+  } catch (error) {
+    console.error('FTP connection error:', error);
+    res.status(500).json({ 
+      error: 'Failed to connect to FTP server. Please check your credentials and network connection.' 
+    });
+  }
+});
+
+// Refresh file listing
+app.post('/api/ftp/list', async (req, res) => {
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+
+  const { host, port, username, password, protocol, directory } = req.body;
+  
+  try {
+    console.log(`Refreshing file list for ${protocol.toUpperCase()} ${host}:${port}`);
+    
+    // Simulate refresh delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Mock refreshed file listing
+    const mockFiles = [
+      {
+        name: 'Items.csv',
+        type: 'file',
+        size: 15420,
+        date: new Date().toISOString()
+      },
+      {
+        name: 'Customers.csv',
+        type: 'file', 
+        size: 8932,
+        date: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString() // 12 hours ago
+      },
+      {
+        name: 'NewFile.txt',
+        type: 'file',
+        size: 1024,
+        date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
+      }
+    ];
+
+    res.json({ 
+      success: true,
+      files: mockFiles 
+    });
+  } catch (error) {
+    console.error('FTP list error:', error);
+    res.status(500).json({ 
+      error: 'Failed to refresh file list' 
+    });
+  }
+});
+
 // Serve the frontend in production
 // Add this near the bottom of your index.js file, before app.listen()
 if (process.env.NODE_ENV === 'production') {

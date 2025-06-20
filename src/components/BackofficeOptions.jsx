@@ -12,7 +12,8 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
     { name: "Manage Customers", path: "/backoffice/customers" },
     { name: "Branding", path: "/backoffice/branding" },
     { name: "AI Storefront Assistant", path: "/backoffice/ai-assistant" },
-    { name: "Table Builder", path: "/backoffice/table-builder" }
+    { name: "Table Builder", path: "/backoffice/table-builder" },
+    { name: "Integrations", path: "/backoffice/integrations" }
   ];
 
   return (
@@ -33,7 +34,8 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
               option.name === "Manage Customers" ? 'bg-blue-50' : 
               option.name === "Branding" ? 'bg-green-50' : 
               option.name === "AI Storefront Assistant" ? 'bg-purple-50' : 
-              option.name === "Table Builder" ? 'bg-cyan-50' : ''
+              option.name === "Table Builder" ? 'bg-cyan-50' : 
+              option.name === "Integrations" ? 'bg-orange-50' : ''
             }`}
             onClick={() => {
               if (option.name === "Manage Customers") {
@@ -44,6 +46,8 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
                 navigate("/backoffice/ai-assistant");
               } else if (option.name === "Table Builder") {
                 navigate("/backoffice/table-builder");
+              } else if (option.name === "Integrations") {
+                navigate("/backoffice/integrations");
               } else {
                 alert(`${option.name} functionality is not implemented yet.`);
               }
@@ -75,6 +79,9 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
                   className="w-4 h-4 opacity-75" 
                 />
               </div>
+            )}
+            {option.name === "Integrations" && (
+              <p className="text-sm text-gray-600">Connect to FTP, QuickBooks Online, and other external systems</p>
             )}
           </div>
         ))}

@@ -11,6 +11,7 @@ import TableBuilder from './components/TableBuilder';
 import { useNavigate } from 'react-router-dom';
 import UnifiedAIChat from './components/UnifiedAIChat';
 import LogicScriptsManagement from './components/LogicScriptsManagement';
+import Integrations from './components/Integrations';
 
 // Header Component with Logo
 function Header({ brandName }) {
@@ -333,6 +334,19 @@ function App({ distributorSlug }) {
                 <>
                   <Header brandName={brandName} />
                   <TableBuilder brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+                </>
+              )
+          }
+        />
+        <Route
+          path="/backoffice/integrations"
+          element={
+            userType === 'Customer' 
+              ? <Navigate to="/" replace /> 
+              : (
+                <>
+                  <Header brandName={brandName} />
+                  <Integrations brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
                 </>
               )
           }
