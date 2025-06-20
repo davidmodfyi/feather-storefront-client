@@ -2018,6 +2018,17 @@ Be conversational and helpful. Explain your reasoning.`;
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.log('🔥 Logic chat error response body:', errorText);
+      
+      // Check for 529 overload error
+      if (response.status === 529 || errorText.includes('overloaded_error')) {
+        return res.json({
+          message: "Claude's servers are currently overwhelmed with requests globally. Please try your request again in a few moments. This is not an issue with your input - the AI service is temporarily overloaded.",
+          script: null
+        });
+      }
+      
       throw new Error('Claude API request failed');
     }
 
@@ -2700,6 +2711,15 @@ app.post('/api/ai-customize', async (req, res) => {
     const aiResponse = await parseAIRequestWithClaude(message, orderCustomFields);
     console.log('🔥 AI Response received:', JSON.stringify(aiResponse, null, 2));
     
+    // Check if Claude is overloaded
+    if (aiResponse && aiResponse.overloaded) {
+      console.log('🔥 DEBUG: Claude is overloaded, returning overload message');
+      return res.json({
+        response: "Claude's servers are currently overwhelmed with requests globally. Please try your request again in a few moments. This is not an issue with your input - the AI service is temporarily overloaded.",
+        changes: []
+      });
+    }
+    
     // Handle both old format (array) and new format (object with type)
     let modifications = [];
     let insertions = [];
@@ -3071,6 +3091,12 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
     if (!response.ok) {
       const errorText = await response.text();
       console.log('🔥 Error response body:', errorText);
+      
+      // Check for 529 overload error
+      if (response.status === 529 || errorText.includes('overloaded_error')) {
+        throw new Error('CLAUDE_OVERLOADED');
+      }
+      
       throw new Error(`Claude API error: ${response.status} - ${errorText}`);
     }
 
@@ -3116,6 +3142,12 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
     console.error('🔥 Is TypeError:', error instanceof TypeError);
     console.error('🔥 Is ReferenceError:', error instanceof ReferenceError);
     console.error('🔥 Is SyntaxError:', error instanceof SyntaxError);
+    
+    // Check if this is a Claude overload error
+    if (error.message === 'CLAUDE_OVERLOADED') {
+      return { overloaded: true };
+    }
+    
     return [];
   }
 }
