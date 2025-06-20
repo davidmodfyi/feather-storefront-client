@@ -1711,8 +1711,22 @@ app.get('/api/dashboard/scripts', (req, res) => {
     
     // Categorize UI styles
     uiStyles.forEach(style => {
-      const isCartElement = style.element_selector.toLowerCase().includes('cart');
-      if (isCartElement) {
+      const selector = style.element_selector.toLowerCase();
+      
+      // Check if this is actually a cart page element (not just containing "cart")
+      // Cart page elements typically have patterns like: cart-page-*, cart-item-*, cart-total-*, etc.
+      // But "add-to-cart-button" is a storefront element that appears on product pages
+      const isActualCartElement = selector.includes('cart-page') || 
+                                 selector.includes('cart-item') || 
+                                 selector.includes('cart-total') ||
+                                 selector.includes('cart-summary') ||
+                                 selector.includes('cart-checkout') ||
+                                 selector.includes('cart-remove') ||
+                                 selector.includes('cart-update') ||
+                                 selector.includes('cart-quantity') ||
+                                 (selector.includes('cart') && !selector.includes('add-to-cart'));
+      
+      if (isActualCartElement) {
         categorized.cartUI.push({
           id: style.id,
           type: 'ui',
