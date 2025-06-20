@@ -3621,6 +3621,40 @@ app.post('/api/styles', (req, res) => {
   }
 });
 
+// Delete custom styles
+app.delete('/api/styles/:id', (req, res) => {
+  console.log('Delete style request for ID:', req.params.id);
+  
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+  
+  const styleId = req.params.id;
+  const distributorId = req.session.distributor_id;
+  
+  try {
+    // Delete from styles table (which has id field)
+    const deleteStylesResult = db.prepare(`
+      DELETE FROM styles 
+      WHERE id = ? AND distributor_id = ?
+    `).run(styleId, distributorId);
+    
+    // Also try to delete from distributor_styles table if it exists (by element_selector)
+    // First, get the element_selector from the styles table if it was found
+    if (deleteStylesResult.changes > 0) {
+      console.log(`Deleted style ID ${styleId} from styles table for distributor ${distributorId}`);
+    } else {
+      // If no record was found in styles table, return 404
+      return res.status(404).json({ error: 'Style not found' });
+    }
+    
+    res.json({ success: true, message: 'Style deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting style:', error);
+    res.status(500).json({ error: 'Failed to delete style' });
+  }
+});
+
 // ===== NEW: DYNAMIC CONTENT INSERTION ENDPOINTS =====
 
 // Initialize dynamic content table (run once on startup)
