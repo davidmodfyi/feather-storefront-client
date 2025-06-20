@@ -19,6 +19,12 @@ export default function UnifiedAIChat({ onLogout, onHome, brandName }) {
     storefrontLogic: [],
     cartLogic: []
   });
+  const [expandedPanels, setExpandedPanels] = useState({
+    storefrontUI: false,
+    cartUI: false,
+    storefrontLogic: false,
+    cartLogic: false
+  });
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -473,6 +479,14 @@ What would you like to customize today?`,
     }
   };
 
+  // Toggle panel expansion
+  const togglePanel = (panelKey) => {
+    setExpandedPanels(prev => ({
+      ...prev,
+      [panelKey]: !prev[panelKey]
+    }));
+  };
+
   // Handle script reordering
   const handleReorderScripts = async (reorderedScripts) => {
     console.log('Reordering scripts:', reorderedScripts);
@@ -517,82 +531,244 @@ What would you like to customize today?`,
         </div>
       </div>
 
-      {/* Dashboard Panels - Fixed height */}
-      <div className="h-96 mb-4 flex-shrink-0">
-        <div className="grid grid-cols-2 gap-4 h-full">
-          {console.log('🔍 Rendering dashboard with scripts:', dashboardScripts)}
-          
-          {/* Top Left: Storefront UI */}
-          <div className="bg-blue-100 border-2 border-blue-300 rounded-lg shadow overflow-hidden">
-            <div className="bg-blue-200 px-4 py-2 border-b border-blue-300">
-              <h3 className="text-lg font-semibold text-blue-800">📱 Storefront UI</h3>
-              <p className="text-sm text-blue-600">Visual customizations for the main storefront</p>
+      {/* Dashboard Panels - Vertical Stack */}
+      <div className="mb-4 flex-shrink-0 space-y-2">
+        {console.log('🔍 Rendering dashboard with scripts:', dashboardScripts)}
+        
+        {/* Storefront UI Panel */}
+        <div className="bg-white border rounded-lg shadow">
+          <div 
+            className="px-4 py-3 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+            onClick={() => togglePanel('storefrontUI')}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📱</span>
+              <h3 className="text-lg font-semibold text-gray-800">Storefront UI</h3>
+              <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                {dashboardScripts.storefrontUI.length}
+              </span>
             </div>
-            <div className="h-full overflow-hidden">
-              <ScriptPanel 
-                title=""
-                scripts={dashboardScripts.storefrontUI} 
-                type="ui"
-                onAnalyze={handleAnalyzeScript}
-                onDelete={handleDeleteScript}
-                onReorder={handleReorderScripts}
-              />
-            </div>
+            <span className="text-gray-400">
+              {expandedPanels.storefrontUI ? '▲' : '▼'}
+            </span>
           </div>
-          
-          {/* Top Right: Storefront Logic */}
-          <div className="bg-green-100 border-2 border-green-300 rounded-lg shadow overflow-hidden">
-            <div className="bg-green-200 px-4 py-2 border-b border-green-300">
-              <h3 className="text-lg font-semibold text-green-800">⚙️ Storefront Logic</h3>
-              <p className="text-sm text-green-600">Business rules for storefront behavior</p>
+          {expandedPanels.storefrontUI && (
+            <div className="border-t bg-gray-50">
+              <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
+                {dashboardScripts.storefrontUI.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    <p className="text-sm">No scripts yet. Use the chat below to create customizations!</p>
+                  </div>
+                ) : (
+                  dashboardScripts.storefrontUI.map((script) => (
+                    <div key={script.id} className="bg-white border rounded p-2 flex justify-between items-center hover:shadow-sm">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {script.selector || 'Unknown selector'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(script.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 ml-2">
+                        <button
+                          onClick={() => handleAnalyzeScript(script)}
+                          className="text-blue-500 hover:text-blue-700 text-sm"
+                          title="Inspect script"
+                        >
+                          🔍
+                        </button>
+                        <button
+                          onClick={() => handleDeleteScript(script)}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                          title="Delete script"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-            <div className="h-full overflow-hidden">
-              <ScriptPanel 
-                title=""
-                scripts={dashboardScripts.storefrontLogic} 
-                type="logic"
-                onAnalyze={handleAnalyzeScript}
-                onDelete={handleDeleteScript}
-                onReorder={handleReorderScripts}
-              />
+          )}
+        </div>
+
+        {/* Storefront Logic Panel */}
+        <div className="bg-white border rounded-lg shadow">
+          <div 
+            className="px-4 py-3 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+            onClick={() => togglePanel('storefrontLogic')}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⚙️</span>
+              <h3 className="text-lg font-semibold text-gray-800">Storefront Logic</h3>
+              <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
+                {dashboardScripts.storefrontLogic.length}
+              </span>
             </div>
+            <span className="text-gray-400">
+              {expandedPanels.storefrontLogic ? '▲' : '▼'}
+            </span>
           </div>
-          
-          {/* Bottom Left: Cart UI */}
-          <div className="bg-yellow-100 border-2 border-yellow-300 rounded-lg shadow overflow-hidden">
-            <div className="bg-yellow-200 px-4 py-2 border-b border-yellow-300">
-              <h3 className="text-lg font-semibold text-yellow-800">🛒 Cart UI</h3>
-              <p className="text-sm text-yellow-600">Visual customizations for the cart page</p>
+          {expandedPanels.storefrontLogic && (
+            <div className="border-t bg-gray-50">
+              <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
+                {dashboardScripts.storefrontLogic.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    <p className="text-sm">No scripts yet. Use the chat below to create customizations!</p>
+                  </div>
+                ) : (
+                  dashboardScripts.storefrontLogic.map((script) => (
+                    <div key={script.id} className="bg-white border rounded p-2 flex justify-between items-center hover:shadow-sm">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {script.description || 'Unknown description'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Trigger: {script.triggerPoint} • {script.active ? '🟢 Active' : '🔴 Inactive'} • {new Date(script.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 ml-2">
+                        <button
+                          onClick={() => handleAnalyzeScript(script)}
+                          className="text-blue-500 hover:text-blue-700 text-sm"
+                          title="Inspect script"
+                        >
+                          🔍
+                        </button>
+                        <button
+                          onClick={() => handleDeleteScript(script)}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                          title="Delete script"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-            <div className="h-full overflow-hidden">
-              <ScriptPanel 
-                title=""
-                scripts={dashboardScripts.cartUI} 
-                type="ui"
-                onAnalyze={handleAnalyzeScript}
-                onDelete={handleDeleteScript}
-                onReorder={handleReorderScripts}
-              />
+          )}
+        </div>
+
+        {/* Cart UI Panel */}
+        <div className="bg-white border rounded-lg shadow">
+          <div 
+            className="px-4 py-3 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+            onClick={() => togglePanel('cartUI')}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🛒</span>
+              <h3 className="text-lg font-semibold text-gray-800">Cart UI</h3>
+              <span className="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                {dashboardScripts.cartUI.length}
+              </span>
             </div>
+            <span className="text-gray-400">
+              {expandedPanels.cartUI ? '▲' : '▼'}
+            </span>
           </div>
-          
-          {/* Bottom Right: Cart Logic */}
-          <div className="bg-red-100 border-2 border-red-300 rounded-lg shadow overflow-hidden">
-            <div className="bg-red-200 px-4 py-2 border-b border-red-300">
-              <h3 className="text-lg font-semibold text-red-800">🔧 Cart Logic</h3>
-              <p className="text-sm text-red-600">Validation rules and cart behavior</p>
+          {expandedPanels.cartUI && (
+            <div className="border-t bg-gray-50">
+              <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
+                {dashboardScripts.cartUI.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    <p className="text-sm">No scripts yet. Use the chat below to create customizations!</p>
+                  </div>
+                ) : (
+                  dashboardScripts.cartUI.map((script) => (
+                    <div key={script.id} className="bg-white border rounded p-2 flex justify-between items-center hover:shadow-sm">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {script.selector || 'Unknown selector'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(script.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 ml-2">
+                        <button
+                          onClick={() => handleAnalyzeScript(script)}
+                          className="text-blue-500 hover:text-blue-700 text-sm"
+                          title="Inspect script"
+                        >
+                          🔍
+                        </button>
+                        <button
+                          onClick={() => handleDeleteScript(script)}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                          title="Delete script"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-            <div className="h-full overflow-hidden">
-              <ScriptPanel 
-                title=""
-                scripts={dashboardScripts.cartLogic} 
-                type="logic"
-                onAnalyze={handleAnalyzeScript}
-                onDelete={handleDeleteScript}
-                onReorder={handleReorderScripts}
-              />
+          )}
+        </div>
+
+        {/* Cart Logic Panel */}
+        <div className="bg-white border rounded-lg shadow">
+          <div 
+            className="px-4 py-3 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+            onClick={() => togglePanel('cartLogic')}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🔧</span>
+              <h3 className="text-lg font-semibold text-gray-800">Cart Logic</h3>
+              <span className="text-sm bg-red-100 text-red-800 px-2 py-1 rounded">
+                {dashboardScripts.cartLogic.length}
+              </span>
             </div>
+            <span className="text-gray-400">
+              {expandedPanels.cartLogic ? '▲' : '▼'}
+            </span>
           </div>
+          {expandedPanels.cartLogic && (
+            <div className="border-t bg-gray-50">
+              <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
+                {dashboardScripts.cartLogic.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    <p className="text-sm">No scripts yet. Use the chat below to create customizations!</p>
+                  </div>
+                ) : (
+                  dashboardScripts.cartLogic.map((script) => (
+                    <div key={script.id} className="bg-white border rounded p-2 flex justify-between items-center hover:shadow-sm">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {script.description || 'Unknown description'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Trigger: {script.triggerPoint} • {script.active ? '🟢 Active' : '🔴 Inactive'} • {new Date(script.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 ml-2">
+                        <button
+                          onClick={() => handleAnalyzeScript(script)}
+                          className="text-blue-500 hover:text-blue-700 text-sm"
+                          title="Inspect script"
+                        >
+                          🔍
+                        </button>
+                        <button
+                          onClick={() => handleDeleteScript(script)}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                          title="Delete script"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
