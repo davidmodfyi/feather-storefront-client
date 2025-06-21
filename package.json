@@ -2,6 +2,7 @@
   "name": "feather-storefront-client",
   "version": "1.0.0",
   "private": true,
+  "description": "AI-powered storefront with Claude integration for dynamic customization",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
