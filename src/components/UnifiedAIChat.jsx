@@ -284,7 +284,12 @@ What would you like to customize today?`,
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
-              message: userMessage,
+              message: `${userMessage}
+
+IMPORTANT: For dynamic form fields created via UI customization, access them directly on the cart object. For example:
+- OrderType field: access as cart.OrderType (exact case match)
+- DeliveryDate field: access as cart.DeliveryDate  
+- Dynamic form values are merged into the cart object, so use cart.FieldName where FieldName matches the exact label from the UI.`,
               customerAttributes: customerAttributes,
               dynamicFormFields: dynamicFormFields,
               triggerPoints: ['Storefront Load', 'Quantity Change', 'Add to Cart', 'Submit Order'],
@@ -361,7 +366,12 @@ What would you like to customize today?`,
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            message: userMessage,
+            message: `${userMessage}
+
+IMPORTANT: For dynamic form fields created via UI customization, access them directly on the cart object. For example:
+- OrderType field: access as cart.OrderType (exact case match)
+- DeliveryDate field: access as cart.DeliveryDate  
+- Dynamic form values are merged into the cart object, so use cart.FieldName where FieldName matches the exact label from the UI.`,
             customerAttributes: customerAttributes,
             dynamicFormFields: dynamicFormFields,
             triggerPoints: ['Storefront Load', 'Quantity Change', 'Add to Cart', 'Submit Order'],
