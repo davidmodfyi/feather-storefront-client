@@ -10,6 +10,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { PricingEngine } = require('./pricing-engine');
 const ftp = require('basic-ftp');
 const SftpClient = require('ssh2-sftp-client');
+const { Client: SSH2Client } = require('ssh2');
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
@@ -4857,6 +4858,75 @@ app.delete('/api/cart', (req, res) => {
 
 // ===== FTP/SFTP INTEGRATION ENDPOINTS =====
 
+// Direct SSH2 connection function as last resort
+function connectDirectSSH2(host, port, username, password, directory) {
+  return new Promise((resolve, reject) => {
+    const conn = new SSH2Client();
+    
+    console.log('🔒 SSH2: Creating direct connection...');
+    
+    conn.on('ready', () => {
+      console.log('🔒 SSH2: Connection ready, requesting SFTP...');
+      
+      conn.sftp((err, sftp) => {
+        if (err) {
+          console.log('🔒 SSH2: SFTP request failed:', err.message);
+          reject(err);
+          return;
+        }
+        
+        console.log('🔒 SSH2: SFTP ready, listing directory...');
+        
+        sftp.readdir(directory, (readErr, list) => {
+          if (readErr) {
+            console.log('🔒 SSH2: Directory listing failed:', readErr.message);
+            reject(readErr);
+            return;
+          }
+          
+          const files = list.map(item => ({
+            name: item.filename,
+            type: item.attrs.isDirectory() ? 'directory' : 'file',
+            size: item.attrs.size,
+            date: new Date(item.attrs.mtime * 1000).toISOString()
+          }));
+          
+          console.log('🔒 SSH2: Directory listing successful:', files.length, 'items');
+          conn.end();
+          resolve(files);
+        });
+      });
+    });
+    
+    conn.on('error', (err) => {
+      console.log('🔒 SSH2: Connection error:', err.message);
+      reject(err);
+    });
+    
+    conn.on('close', () => {
+      console.log('🔒 SSH2: Connection closed');
+    });
+    
+    console.log('🔒 SSH2: Connecting with minimal config...');
+    conn.connect({
+      host: host,
+      port: port,
+      username: username,
+      password: password,
+      readyTimeout: 20000,
+      algorithms: {
+        kex: ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1'],
+        serverHostKey: ['ssh-rsa', 'ssh-dss'],
+        cipher: ['aes128-cbc', '3des-cbc'],
+        hmac: ['hmac-sha1', 'hmac-md5']
+      },
+      debug: (info) => {
+        console.log('🔒 SSH2 DEBUG:', info);
+      }
+    });
+  });
+}
+
 // Test FTP connection and list files
 app.post('/api/ftp/connect', async (req, res) => {
   if (!req.session.distributor_id || req.session.userType !== 'Admin') {
@@ -4926,11 +4996,34 @@ app.post('/api/ftp/connect', async (req, res) => {
         port: parseInt(port) || 22,
         username: username,
         password: password,
-        readyTimeout: 30000,
-        connTimeout: 30000,
+        readyTimeout: 15000,
+        connTimeout: 15000,
         tryKeyboard: true,
+        keepaliveInterval: 5000,
+        keepaliveCountMax: 3,
         debug: (info) => {
           console.log('🔒 SFTP DEBUG:', info);
+        },
+        algorithms: {
+          kex: [
+            'diffie-hellman-group14-sha1',
+            'diffie-hellman-group14-sha256',
+            'diffie-hellman-group1-sha1',
+            'ecdh-sha2-nistp256',
+            'ecdh-sha2-nistp384',
+            'ecdh-sha2-nistp521'
+          ],
+          serverHostKey: ['ssh-rsa', 'ssh-dss'],
+          cipher: [
+            'aes128-ctr',
+            'aes128-cbc',
+            'aes192-ctr',
+            'aes192-cbc',
+            'aes256-ctr',
+            'aes256-cbc',
+            '3des-cbc'
+          ],
+          hmac: ['hmac-sha1', 'hmac-sha2-256', 'hmac-sha2-512', 'hmac-md5']
         }
       };
       
@@ -4946,35 +5039,55 @@ app.post('/api/ftp/connect', async (req, res) => {
         console.log('🔒 SFTP: Primary connection failed, trying fallback config...');
         console.log('🔒 SFTP: Primary error:', primaryError.message);
         
-        // Try a simpler connection without custom algorithms
+        // Try a simpler connection with very basic settings
         const fallbackConfig = {
           host: host,
           port: parseInt(port) || 22,
           username: username,
           password: password,
-          readyTimeout: 30000,
-          connTimeout: 30000,
+          readyTimeout: 10000,
+          connTimeout: 10000,
+          forceIPv4: true,
           debug: (info) => {
             console.log('🔒 SFTP FALLBACK DEBUG:', info);
+          },
+          algorithms: {
+            kex: ['diffie-hellman-group1-sha1'],
+            serverHostKey: ['ssh-rsa'],
+            cipher: ['aes128-cbc'],
+            hmac: ['hmac-sha1']
           }
         };
         
         console.log('🔒 SFTP: Trying fallback connection...');
-        await sftp.connect(fallbackConfig);
-        console.log('🔒 SFTP: Fallback connection successful!');
+        try {
+          await sftp.connect(fallbackConfig);
+          console.log('🔒 SFTP: Fallback connection successful!');
+        } catch (fallbackError) {
+          console.log('🔒 SFTP: Fallback failed, trying direct SSH2 approach...');
+          console.log('🔒 SFTP: Fallback error:', fallbackError.message);
+          
+          // Last resort: direct SSH2 connection
+          const directFiles = await connectDirectSSH2(host, parseInt(port) || 22, username, password, directory || '/');
+          files = directFiles;
+          console.log('🔒 SFTP: Direct SSH2 connection successful!');
+        }
       }
       
-      const listing = await sftp.list(directory || '/');
-      console.log(`SFTP listing for ${directory || '/'}: ${listing.length} items`);
-      
-      files = listing.map(item => ({
-        name: item.name,
-        type: item.type === 'd' ? 'directory' : 'file',
-        size: item.size,
-        date: new Date(item.modifyTime).toISOString()
-      }));
+      // Only list files if we haven't already got them from direct SSH2
+      if (files.length === 0) {
+        const listing = await sftp.list(directory || '/');
+        console.log(`SFTP listing for ${directory || '/'}: ${listing.length} items`);
+        
+        files = listing.map(item => ({
+          name: item.name,
+          type: item.type === 'd' ? 'directory' : 'file',
+          size: item.size,
+          date: new Date(item.modifyTime).toISOString()
+        }));
 
-      await sftp.end();
+        await sftp.end();
+      }
       
     } else {
       // FTP Connection
