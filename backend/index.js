@@ -8,6 +8,8 @@ const MemoryStore = require('memorystore')(session);
 const multer = require('multer');
 const Anthropic = require('@anthropic-ai/sdk');
 const { PricingEngine } = require('./pricing-engine');
+const ftp = require('basic-ftp');
+const SftpClient = require('ssh2-sftp-client');
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
@@ -4867,49 +4869,104 @@ app.post('/api/ftp/connect', async (req, res) => {
     return res.status(400).json({ error: 'Host, username, and password are required' });
   }
 
-  try {
-    // For now, return mock data. In production, this would use actual FTP/SFTP libraries
-    console.log(`Testing ${protocol.toUpperCase()} connection to ${host}:${port} as ${username}`);
-    
-    // Simulate connection delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock file listing - in production this would be actual FTP directory listing
-    const mockFiles = [
-      {
-        name: 'Items.csv',
-        type: 'file',
-        size: 15420,
-        date: new Date().toISOString()
-      },
-      {
-        name: 'Customers.csv', 
-        type: 'file',
-        size: 8932,
-        date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // Yesterday
-      },
-      {
-        name: 'Orders',
-        type: 'directory',
-        date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() // Week ago
-      },
-      {
-        name: 'Archive',
-        type: 'directory', 
-        date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // Month ago
-      }
-    ];
+  console.log(`Attempting ${protocol.toUpperCase()} connection to ${host}:${port} as ${username}`);
 
+  try {
+    let files = [];
+
+    if (protocol === 'sftp') {
+      // SFTP Connection
+      const sftp = new SftpClient();
+      
+      await sftp.connect({
+        host: host,
+        port: parseInt(port) || 22,
+        username: username,
+        password: password,
+        readyTimeout: 10000,
+        algorithms: {
+          kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group-exchange-sha256'],
+          cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
+          serverHostKey: ['rsa-sha2-512', 'rsa-sha2-256', 'ssh-rsa'],
+          hmac: ['hmac-sha2-256', 'hmac-sha1']
+        }
+      });
+
+      console.log('SFTP connected successfully');
+      
+      const listing = await sftp.list(directory || '/');
+      console.log(`SFTP listing for ${directory || '/'}: ${listing.length} items`);
+      
+      files = listing.map(item => ({
+        name: item.name,
+        type: item.type === 'd' ? 'directory' : 'file',
+        size: item.size,
+        date: new Date(item.modifyTime).toISOString()
+      }));
+
+      await sftp.end();
+      
+    } else {
+      // FTP Connection
+      const client = new ftp.Client();
+      client.ftp.verbose = true;
+      
+      await client.access({
+        host: host,
+        port: parseInt(port) || 21,
+        user: username,
+        password: password,
+        secure: false
+      });
+
+      console.log('FTP connected successfully');
+      
+      const listing = await client.list(directory || '/');
+      console.log(`FTP listing for ${directory || '/'}: ${listing.length} items`);
+      
+      files = listing.map(item => ({
+        name: item.name,
+        type: item.type === 2 ? 'directory' : 'file', // 2 = directory, 1 = file
+        size: item.size,
+        date: item.date ? item.date.toISOString() : new Date().toISOString()
+      }));
+
+      client.close();
+    }
+
+    console.log(`Successfully retrieved ${files.length} files/directories`);
+    
     res.json({ 
       success: true, 
       message: 'Connected successfully',
-      files: mockFiles
+      files: files
     });
+    
   } catch (error) {
-    console.error('FTP connection error:', error);
-    res.status(500).json({ 
-      error: 'Failed to connect to FTP server. Please check your credentials and network connection.' 
+    console.error('FTP/SFTP connection error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
     });
+    
+    let errorMessage = 'Failed to connect to FTP/SFTP server.';
+    
+    if (error.code === 'ENOTFOUND') {
+      errorMessage = 'Host not found. Please check the hostname.';
+    } else if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Connection refused. Please check the port and host.';
+    } else if (error.code === 'ECONNRESET') {
+      errorMessage = 'Connection reset. Please check your credentials.';
+    } else if (error.message && error.message.includes('Authentication')) {
+      errorMessage = 'Authentication failed. Please check your username and password.';
+    } else if (error.message && error.message.includes('timeout')) {
+      errorMessage = 'Connection timeout. Please check your network and server.';
+    } else if (error.message) {
+      errorMessage = `Connection failed: ${error.message}`;
+    }
+    
+    res.status(500).json({ error: errorMessage });
   }
 });
 
@@ -4921,43 +4978,87 @@ app.post('/api/ftp/list', async (req, res) => {
 
   const { host, port, username, password, protocol, directory } = req.body;
   
+  console.log(`Refreshing file list for ${protocol.toUpperCase()} ${host}:${port}`);
+  
   try {
-    console.log(`Refreshing file list for ${protocol.toUpperCase()} ${host}:${port}`);
-    
-    // Simulate refresh delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Mock refreshed file listing
-    const mockFiles = [
-      {
-        name: 'Items.csv',
-        type: 'file',
-        size: 15420,
-        date: new Date().toISOString()
-      },
-      {
-        name: 'Customers.csv',
-        type: 'file', 
-        size: 8932,
-        date: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString() // 12 hours ago
-      },
-      {
-        name: 'NewFile.txt',
-        type: 'file',
-        size: 1024,
-        date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
-      }
-    ];
+    let files = [];
 
+    if (protocol === 'sftp') {
+      // SFTP Connection
+      const sftp = new SftpClient();
+      
+      await sftp.connect({
+        host: host,
+        port: parseInt(port) || 22,
+        username: username,
+        password: password,
+        readyTimeout: 10000,
+        algorithms: {
+          kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group-exchange-sha256'],
+          cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
+          serverHostKey: ['rsa-sha2-512', 'rsa-sha2-256', 'ssh-rsa'],
+          hmac: ['hmac-sha2-256', 'hmac-sha1']
+        }
+      });
+
+      const listing = await sftp.list(directory || '/');
+      
+      files = listing.map(item => ({
+        name: item.name,
+        type: item.type === 'd' ? 'directory' : 'file',
+        size: item.size,
+        date: new Date(item.modifyTime).toISOString()
+      }));
+
+      await sftp.end();
+      
+    } else {
+      // FTP Connection
+      const client = new ftp.Client();
+      
+      await client.access({
+        host: host,
+        port: parseInt(port) || 21,
+        user: username,
+        password: password,
+        secure: false
+      });
+
+      const listing = await client.list(directory || '/');
+      
+      files = listing.map(item => ({
+        name: item.name,
+        type: item.type === 2 ? 'directory' : 'file',
+        size: item.size,
+        date: item.date ? item.date.toISOString() : new Date().toISOString()
+      }));
+
+      client.close();
+    }
+
+    console.log(`Refreshed listing: ${files.length} items`);
+    
     res.json({ 
       success: true,
-      files: mockFiles 
+      files: files 
     });
+    
   } catch (error) {
-    console.error('FTP list error:', error);
-    res.status(500).json({ 
-      error: 'Failed to refresh file list' 
-    });
+    console.error('FTP/SFTP refresh error:', error);
+    
+    let errorMessage = 'Failed to refresh file list.';
+    
+    if (error.code === 'ENOTFOUND') {
+      errorMessage = 'Host not found. Please check the hostname.';
+    } else if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Connection refused. Please check the port and host.';
+    } else if (error.message && error.message.includes('Authentication')) {
+      errorMessage = 'Authentication failed. Please check your credentials.';
+    } else if (error.message) {
+      errorMessage = `Refresh failed: ${error.message}`;
+    }
+    
+    res.status(500).json({ error: errorMessage });
   }
 });
 
