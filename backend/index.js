@@ -4730,7 +4730,7 @@ app.post('/api/customer-card-config', (req, res) => {
         field.field_name,
         field.display_label,
         field.display_order || index,
-        field.is_visible !== false,
+        field.is_visible !== false ? 1 : 0,  // Convert boolean to integer
         field.field_type || 'text'
       );
       console.log('Insert result:', result.changes);
