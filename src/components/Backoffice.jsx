@@ -21,6 +21,9 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
     fetch('/api/accounts-with-cav', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
+        console.log('🔍 Fetched accounts data:', data);
+        console.log('🔍 Custom attributes:', data.customAttributes);
+        console.log('🔍 Attribute definitions:', data.attributeDefinitions);
         setAccounts(data.accounts || []);
         setCustomAttributes(data.customAttributes || []);
         setAttributeDefinitions(data.attributeDefinitions || []);
@@ -44,6 +47,7 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
     fetch('/api/customer-card-config', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
+        console.log('🔍 Card configuration:', data);
         setCardConfiguration(data);
       })
       .catch(console.error);
@@ -156,10 +160,14 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
       );
     }
 
+    console.log(`🔍 Rendering fields for account ${account.id}:`, account);
+    console.log(`🔍 Card configuration:`, cardConfiguration);
+
     return cardConfiguration.map((fieldConfig, index) => {
       if (!fieldConfig.is_visible) return null;
       
       let fieldValue = account[fieldConfig.field_name];
+      console.log(`🔍 Field ${fieldConfig.field_name}: value from account =`, fieldValue, `is_custom =`, fieldConfig.is_custom);
       
       // If not found in account object, check if it's a CAV field
       if ((fieldValue === undefined || fieldValue === null) && fieldConfig.is_custom) {
@@ -168,14 +176,20 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
           attr.entity_id === account.id && 
           attr.attribute_name === fieldConfig.field_name
         );
+        console.log(`🔍 CAV lookup for ${fieldConfig.field_name}:`, cavValue);
         if (cavValue) {
           fieldValue = cavValue.attribute_value;
+          console.log(`🔍 Found CAV value:`, fieldValue);
         }
       }
       
       // Skip fields that don't have values
-      if (!fieldValue && fieldValue !== 0) return null;
+      if (!fieldValue && fieldValue !== 0) {
+        console.log(`🔍 Skipping field ${fieldConfig.field_name} - no value`);
+        return null;
+      }
       
+      console.log(`🔍 Rendering field ${fieldConfig.field_name} with value:`, fieldValue);
       return (
         <div key={index} className="flex justify-between">
           <span className="font-medium text-gray-700">{fieldConfig.display_label}:</span>
