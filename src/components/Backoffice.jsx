@@ -8,6 +8,7 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
   const [accounts, setAccounts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [connectedAccounts, setConnectedAccounts] = useState({});
+  const [cardConfiguration, setCardConfiguration] = useState([]);
   const navigate = useNavigate();
 
   // Remove the useEffect that was setting the title and keep the rest
@@ -30,6 +31,14 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
           connected[account.account_id] = true;
         });
         setConnectedAccounts(connected);
+      })
+      .catch(console.error);
+
+    // Fetch customer card configuration
+    fetch('/api/customer-card-config', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        setCardConfiguration(data);
       })
       .catch(console.error);
   }, []);
@@ -76,25 +85,47 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
   function handleContextMenu(e, account) {
     e.preventDefault();
     
-    // Don't show connect option if already connected
-    if (connectedAccounts[account.id]) return;
-    
     // Create custom context menu
     const menu = document.createElement('div');
     menu.className = 'absolute bg-white shadow-lg rounded py-2 z-50';
     menu.style.left = `${e.pageX}px`;
     menu.style.top = `${e.pageY}px`;
     
-    // Add menu option
-    const option = document.createElement('div');
-    option.className = 'px-4 py-2 hover:bg-blue-100 cursor-pointer';
-    option.textContent = 'Connect for ordering';
-    option.onclick = () => {
-      connectAccount(account);
+    // Add Configure option (always available)
+    const configureOption = document.createElement('div');
+    configureOption.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2';
+    configureOption.innerHTML = `
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+      </svg>
+      Configure Cards
+    `;
+    configureOption.onclick = () => {
+      navigate('/backoffice/customers/configure');
       document.body.removeChild(menu);
     };
     
-    menu.appendChild(option);
+    menu.appendChild(configureOption);
+    
+    // Add Connect option if not already connected
+    if (!connectedAccounts[account.id]) {
+      const connectOption = document.createElement('div');
+      connectOption.className = 'px-4 py-2 hover:bg-blue-100 cursor-pointer flex items-center gap-2';
+      connectOption.innerHTML = `
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+        </svg>
+        Connect for ordering
+      `;
+      connectOption.onclick = () => {
+        connectAccount(account);
+        document.body.removeChild(menu);
+      };
+      
+      menu.appendChild(connectOption);
+    }
+    
     document.body.appendChild(menu);
     
     // Remove menu on click outside
@@ -107,6 +138,40 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
     document.addEventListener('click', removeMenu);
   }
 
+  // Function to render customer card fields based on configuration
+  const renderCustomerFields = (account) => {
+    if (cardConfiguration.length === 0) {
+      // Default display if no configuration loaded yet
+      return (
+        <>
+          <p>{account.street}, {account.city}, {account.state} {account.zip}</p>
+          <p>Email: {account.email}</p>
+        </>
+      );
+    }
+
+    return cardConfiguration.map((fieldConfig, index) => {
+      if (!fieldConfig.is_visible) return null;
+      
+      let fieldValue = account[fieldConfig.field_name];
+      
+      // Handle special field mappings
+      if (fieldConfig.field_name === 'street') {
+        fieldValue = account.street;
+      }
+      
+      // Skip fields that don't have values
+      if (!fieldValue && fieldValue !== 0) return null;
+      
+      return (
+        <div key={index} className="flex justify-between">
+          <span className="font-medium text-gray-700">{fieldConfig.display_label}:</span>
+          <span className="text-gray-600">{fieldValue}</span>
+        </div>
+      );
+    }).filter(Boolean);
+  };
+
   // Filter accounts based on search query
   const filteredAccounts = searchQuery 
     ? accounts.filter(account => 
@@ -118,7 +183,19 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
   return (
     <div className="p-6">
       <div className="flex justify-between mb-4">
-        <h1 className="text-2xl font-bold">Manage Customers</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">Manage Customers</h1>
+          <button 
+            onClick={() => navigate('/backoffice/customers/configure')}
+            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+            title="Configure customer card layout"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
         <div className="flex gap-2">
           <button onClick={goToBackoffice} className="px-3 py-1 bg-blue-500 text-white rounded">Back</button>
           <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
@@ -153,16 +230,17 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
               className="border p-4 rounded shadow" 
               onContextMenu={(e) => handleContextMenu(e, account)}
             >
-              <div className="flex justify-between">
-                <h2 className="text-xl font-bold mb-2">{account.name}</h2>
+              <div className="flex justify-between items-start mb-3">
+                <h2 className="text-xl font-bold">{account.name}</h2>
                 {connectedAccounts[account.id] && (
                   <span className="text-green-500 flex items-center">
                     ✅ Connected
                   </span>
                 )}
               </div>
-              <p>{account.street}, {account.city}, {account.state} {account.zip}</p>
-              <p>Email: {account.email}</p>
+              <div className="space-y-1">
+                {renderCustomerFields(account)}
+              </div>
             </div>
           ))}
         </div>

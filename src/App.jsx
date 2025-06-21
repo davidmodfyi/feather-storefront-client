@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import UnifiedAIChat from './components/UnifiedAIChat';
 import LogicScriptsManagement from './components/LogicScriptsManagement';
 import Integrations from './components/Integrations';
+import CustomerConfigPage from './components/CustomerConfigPage';
 
 // Header Component with Logo
 function Header({ brandName }) {
@@ -308,6 +309,19 @@ function App({ distributorSlug }) {
                 <>
                   <Header brandName={brandName} />
                   <Backoffice brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+                </>
+              )
+          }
+        />
+        <Route
+          path="/backoffice/customers/configure"
+          element={
+            userType === 'Customer' 
+              ? <Navigate to="/" replace /> 
+              : (
+                <>
+                  <Header brandName={brandName} />
+                  <CustomerConfigPage brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
                 </>
               )
           }

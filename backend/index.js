@@ -3812,9 +3812,34 @@ function initializeChatTables() {
   }
 }
 
+// Initialize customer card configuration table
+function initializeCustomerCardConfigTable() {
+  try {
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS customer_card_configurations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        distributor_id INTEGER NOT NULL,
+        field_name TEXT NOT NULL,
+        display_label TEXT NOT NULL,
+        display_order INTEGER NOT NULL,
+        is_visible BOOLEAN DEFAULT TRUE,
+        field_type TEXT DEFAULT 'text',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (distributor_id) REFERENCES distributors(id),
+        UNIQUE(distributor_id, field_name)
+      )
+    `).run();
+    console.log('Customer card configuration table initialized');
+  } catch (error) {
+    console.error('Error initializing customer card configuration table:', error);
+  }
+}
+
 // Initialize the tables on startup
 initializeDynamicContentTable();
 initializeChatTables();
+initializeCustomerCardConfigTable();
 
 // Get dynamic content for a distributor
 app.get('/api/dynamic-content', (req, res) => {
@@ -4562,6 +4587,138 @@ app.get('/api/accounts', (req, res) => {
   console.log('Found accounts count:', accounts.length);
   
   res.json(accounts);
+});
+
+// CUSTOMER CARD CONFIGURATION ENDPOINTS
+
+// Get available customer fields
+app.get('/api/available-customer-fields', (req, res) => {
+  console.log('Available customer fields request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    // Get columns from accounts table to determine available fields
+    const tableInfo = db.prepare("PRAGMA table_info(accounts)").all();
+    
+    // Define standard fields available for customer cards
+    const standardFields = [
+      { field_name: 'name', display_label: 'Name', field_type: 'text', is_custom: false },
+      { field_name: 'email', display_label: 'Email', field_type: 'text', is_custom: false },
+      { field_name: 'phone', display_label: 'Phone', field_type: 'text', is_custom: false },
+      { field_name: 'street', display_label: 'Address', field_type: 'text', is_custom: false },
+      { field_name: 'city', display_label: 'City', field_type: 'text', is_custom: false },
+      { field_name: 'state', display_label: 'State', field_type: 'text', is_custom: false },
+      { field_name: 'zip', display_label: 'ZIP', field_type: 'text', is_custom: false }
+    ];
+
+    // Get custom fields from dynamic content if any exist
+    const customFields = db.prepare(`
+      SELECT DISTINCT JSON_EXTRACT(content_data, '$.label') as display_label,
+             LOWER(REPLACE(JSON_EXTRACT(content_data, '$.label'), ' ', '')) as field_name,
+             JSON_EXTRACT(content_data, '$.fieldType') as field_type
+      FROM dynamic_content 
+      WHERE distributor_id = ? AND content_type = 'form-field'
+    `).all(req.session.distributor_id);
+
+    const customFieldsFormatted = customFields.map(field => ({
+      field_name: field.field_name,
+      display_label: field.display_label,
+      field_type: field.field_type || 'text',
+      is_custom: true
+    }));
+
+    const allFields = [...standardFields, ...customFieldsFormatted];
+    
+    res.json(allFields);
+  } catch (error) {
+    console.error('Error fetching available fields:', error);
+    res.status(500).json({ error: 'Failed to fetch available fields' });
+  }
+});
+
+// Get current customer card configuration
+app.get('/api/customer-card-config', (req, res) => {
+  console.log('Customer card config request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    const config = db.prepare(`
+      SELECT field_name, display_label, display_order, is_visible, field_type
+      FROM customer_card_configurations 
+      WHERE distributor_id = ? 
+      ORDER BY display_order
+    `).all(req.session.distributor_id);
+
+    // If no configuration exists, return default configuration
+    if (config.length === 0) {
+      const defaultConfig = [
+        { field_name: 'name', display_label: 'Name', display_order: 0, is_visible: true, field_type: 'text' },
+        { field_name: 'email', display_label: 'Email', display_order: 1, is_visible: true, field_type: 'text' },
+        { field_name: 'phone', display_label: 'Phone', display_order: 2, is_visible: true, field_type: 'text' },
+        { field_name: 'street', display_label: 'Address', display_order: 3, is_visible: true, field_type: 'text' },
+        { field_name: 'city', display_label: 'City', display_order: 4, is_visible: true, field_type: 'text' },
+        { field_name: 'state', display_label: 'State', display_order: 5, is_visible: true, field_type: 'text' },
+        { field_name: 'zip', display_label: 'ZIP', display_order: 6, is_visible: true, field_type: 'text' }
+      ];
+      return res.json(defaultConfig);
+    }
+
+    res.json(config);
+  } catch (error) {
+    console.error('Error fetching customer card config:', error);
+    res.status(500).json({ error: 'Failed to fetch configuration' });
+  }
+});
+
+// Save customer card configuration
+app.post('/api/customer-card-config', (req, res) => {
+  console.log('Save customer card config request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const { configuration } = req.body;
+  
+  if (!configuration || !Array.isArray(configuration)) {
+    return res.status(400).json({ error: 'Invalid configuration data' });
+  }
+
+  try {
+    // Delete existing configuration for this distributor
+    db.prepare(`DELETE FROM customer_card_configurations WHERE distributor_id = ?`)
+      .run(req.session.distributor_id);
+
+    // Insert new configuration
+    const insertStmt = db.prepare(`
+      INSERT INTO customer_card_configurations 
+      (distributor_id, field_name, display_label, display_order, is_visible, field_type, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `);
+
+    configuration.forEach((field, index) => {
+      insertStmt.run(
+        req.session.distributor_id,
+        field.field_name,
+        field.display_label,
+        field.display_order || index,
+        field.is_visible !== false,
+        field.field_type || 'text'
+      );
+    });
+
+    console.log(`Saved ${configuration.length} field configurations for distributor ${req.session.distributor_id}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving customer card config:', error);
+    res.status(500).json({ error: 'Failed to save configuration' });
+  }
 });
 
 // CART ENDPOINTS
