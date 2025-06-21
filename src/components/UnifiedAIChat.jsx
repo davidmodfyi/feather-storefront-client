@@ -159,7 +159,7 @@ What would you like to customize today?`,
     }
   };
 
-  // Simple intent detection based on keywords
+  // Enhanced intent detection for UI + Logic combinations
   const detectIntent = (message) => {
     const lowerMessage = message.toLowerCase();
     
@@ -171,19 +171,40 @@ What would you like to customize today?`,
       'script', 'function', 'ordertype', 'shipping', 'tax'
     ];
     
-    // UI/Visual keywords
+    // UI/Visual keywords (enhanced with placement actions)
     const uiKeywords = [
       'color', 'button', 'style', 'background', 'font', 'size', 'layout', 'appearance',
       'brown', 'blue', 'green', 'red', 'shadow', 'border', 'rounded', 'header',
-      'banner', 'message', 'content', 'dropdown', 'field', 'form', 'input'
+      'banner', 'message', 'content', 'dropdown', 'field', 'form', 'input',
+      'add to', 'display on', 'show on', 'place on', 'screen', 'cart', 'storefront',
+      'near', 'above', 'below', 'beside', 'create', 'add'
     ];
     
     const logicMatches = logicKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
     const uiMatches = uiKeywords.filter(keyword => lowerMessage.includes(keyword)).length;
     
-    // If it mentions making something mandatory/required with visual elements, it's likely both
-    if ((lowerMessage.includes('mandatory') || lowerMessage.includes('required')) && 
-        (lowerMessage.includes('dropdown') || lowerMessage.includes('field'))) {
+    // Enhanced detection for 'both' scenarios
+    const hasMandatoryPattern = lowerMessage.includes('mandatory') || lowerMessage.includes('required') || lowerMessage.includes('require');
+    const hasUIPlacement = lowerMessage.includes('add to') || lowerMessage.includes('display on') || 
+                          lowerMessage.includes('show on') || lowerMessage.includes('place on') ||
+                          lowerMessage.includes('screen') || lowerMessage.includes('cart') || 
+                          lowerMessage.includes('storefront');
+    const hasUIElement = lowerMessage.includes('dropdown') || lowerMessage.includes('field') || 
+                        lowerMessage.includes('form') || lowerMessage.includes('input') || 
+                        lowerMessage.includes('button');
+    
+    // Complex patterns that indicate both UI and logic work needed
+    const bothPatterns = [
+      /add.*and.*(?:mandatory|required|require)/i,
+      /create.*and.*(?:mandatory|required|require)/i,
+      /(?:mandatory|required|require).*(?:add to|display on|show on)/i,
+      /(?:add to|display on|show on).*(?:mandatory|required|require)/i
+    ];
+    
+    const hasBothPattern = bothPatterns.some(pattern => pattern.test(message));
+    
+    // Return 'both' if we detect UI + Logic combination
+    if (hasBothPattern || (hasMandatoryPattern && (hasUIPlacement || hasUIElement))) {
       return 'both';
     }
     
@@ -220,9 +241,121 @@ What would you like to customize today?`,
       
       console.log(`🔍 DIAGNOSIS: Intent detected as "${intent}" for message: "${userMessage}"`);
       
-      if (intent === 'logic' || intent === 'both') {
+      if (intent === 'both') {
+        console.log('🎯 ROUTING: Sequential API calls - UI first, then Logic');
+        let allChanges = [];
+        let combinedMessages = [];
+        
+        // Step 1: Call UI API first to create the visual elements
+        console.log('📱 Step 1: Creating UI components...');
+        try {
+          const uiResponse = await fetch('/api/ai-customize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              message: userMessage,
+              distributorSlug: distributorSlug,
+              currentPageContext: currentPageContext
+            })
+          });
+
+          if (uiResponse.ok) {
+            const uiData = await uiResponse.json();
+            console.log('📋 UI API RESPONSE:', uiData);
+            
+            if (uiData.changes && uiData.changes.length > 0) {
+              allChanges.push(...uiData.changes);
+              combinedMessages.push(`✅ UI Components: ${uiData.response}`);
+            }
+          } else {
+            console.log('⚠️ UI API call failed, but continuing with logic...');
+          }
+        } catch (uiError) {
+          console.error('❌ UI API ERROR:', uiError);
+          combinedMessages.push('⚠️ UI creation encountered an issue, but continuing with logic...');
+        }
+
+        // Step 2: Call Logic API to add validation rules
+        console.log('⚙️ Step 2: Creating logic validation...');
+        try {
+          const logicResponse = await fetch('/api/claude-logic-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              message: userMessage,
+              customerAttributes: customerAttributes,
+              dynamicFormFields: dynamicFormFields,
+              triggerPoints: ['Storefront Load', 'Quantity Change', 'Add to Cart', 'Submit Order'],
+              currentPageContext: currentPageContext
+            })
+          });
+
+          if (logicResponse.ok) {
+            const logicData = await logicResponse.json();
+            console.log('📋 LOGIC API RESPONSE:', logicData);
+            
+            combinedMessages.push(`✅ Business Logic: ${logicData.message}`);
+            
+            // Save the logic script if generated
+            if (logicData.script) {
+              console.log('💾 SAVING LOGIC SCRIPT:', logicData.script);
+              const saveResponse = await fetch('/api/logic-scripts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  ...logicData.script,
+                  original_prompt: userMessage
+                })
+              });
+
+              if (saveResponse.ok) {
+                console.log('✅ LOGIC SCRIPT SAVED SUCCESSFULLY');
+                allChanges.push(logicData.script.description);
+              }
+            }
+          } else {
+            console.log('⚠️ Logic API call failed');
+            combinedMessages.push('⚠️ Logic validation setup encountered an issue.');
+          }
+        } catch (logicError) {
+          console.error('❌ LOGIC API ERROR:', logicError);
+          combinedMessages.push('⚠️ Logic validation setup encountered an issue.');
+        }
+
+        // Add combined response message
+        const combinedContent = combinedMessages.length > 0 
+          ? combinedMessages.join('\n\n') 
+          : 'I attempted to create both UI and logic components for your request.';
+          
+        const aiMessage = {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: combinedContent,
+          changes: allChanges,
+          timestamp: new Date(),
+          message_type: 'both_response'
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+
+        // Show success notification and refresh
+        if (allChanges.length > 0) {
+          setTimeout(() => {
+            fetchCurrentPageContext();
+            fetchDashboardScripts();
+          }, 500);
+          
+          setTimeout(() => {
+            alert(`Successfully applied ${allChanges.length} change(s)! Both UI and logic components created. Refresh the page to see updates.`);
+          }, 1000);
+        }
+        
+      } else if (intent === 'logic') {
         console.log('🎯 ROUTING: Sending to LOGIC API (/api/claude-logic-chat)');
-        // Use logic customization API
+        // Pure logic customization API
         response = await fetch('/api/claude-logic-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -240,7 +373,6 @@ What would you like to customize today?`,
         data = await response.json();
         console.log('📋 LOGIC API RESPONSE:', data);
         
-        // Add AI response
         const aiMessage = {
           id: Date.now() + 1,
           role: 'assistant',
@@ -276,7 +408,6 @@ What would you like to customize today?`,
                 message_type: 'success'
               }]);
               
-              // Refresh page context and dashboard after logic changes
               setTimeout(() => {
                 fetchCurrentPageContext();
                 fetchDashboardScripts();
@@ -295,7 +426,7 @@ What would you like to customize today?`,
         
       } else {
         console.log('🎯 ROUTING: Sending to UI API (/api/ai-customize)');
-        // Use UI customization API
+        // Pure UI customization API
         response = await fetch('/api/ai-customize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -323,7 +454,6 @@ What would you like to customize today?`,
 
         // Show success notification if changes were made
         if (data.changes && data.changes.length > 0) {
-          // Refresh page context and dashboard after changes
           setTimeout(() => {
             fetchCurrentPageContext();
             fetchDashboardScripts();
