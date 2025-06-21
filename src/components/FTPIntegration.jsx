@@ -68,6 +68,38 @@ export default function FTPIntegration({ onBack, onLogout, onHome, brandName }) 
     setConnectionError('');
   };
 
+  const handleTestNetwork = async () => {
+    if (!ftpConfig.host) {
+      setConnectionError('Please enter a host first');
+      return;
+    }
+
+    setIsConnecting(true);
+    setConnectionError('');
+
+    try {
+      const response = await fetch('/api/ftp/test-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(ftpConfig)
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert(`Network test successful!\n\nMessage: ${data.message}\nEnvironment: ${data.environment.platform} ${data.environment.nodeVersion}`);
+      } else {
+        setConnectionError(`Network test failed: ${data.error}`);
+      }
+    } catch (error) {
+      setConnectionError('Network test error: ' + error.message);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   const handleRefresh = async () => {
     if (!isConnected) return;
     
@@ -221,12 +253,20 @@ export default function FTPIntegration({ onBack, onLogout, onHome, brandName }) 
               </div>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleTestNetwork}
+                disabled={isConnecting}
+                className="w-full bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 disabled:opacity-50"
+              >
+                {isConnecting ? 'Testing...' : 'Test Network Connection'}
+              </button>
+              
               {!isConnected ? (
                 <button
                   onClick={handleConnect}
                   disabled={isConnecting}
-                  className="flex-1 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:opacity-50"
+                  className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:opacity-50"
                 >
                   {isConnecting ? 'Connecting...' : 'Connect & List Files'}
                 </button>

@@ -11,6 +11,7 @@ const { PricingEngine } = require('./pricing-engine');
 const ftp = require('basic-ftp');
 const SftpClient = require('ssh2-sftp-client');
 const { Client: SSH2Client } = require('ssh2');
+const net = require('net');
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
@@ -4858,6 +4859,76 @@ app.delete('/api/cart', (req, res) => {
 
 // ===== FTP/SFTP INTEGRATION ENDPOINTS =====
 
+// Simple network test endpoint
+app.post('/api/ftp/test-connection', async (req, res) => {
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+
+  const { host, port, protocol } = req.body;
+  
+  try {
+    console.log(`🧪 NETWORK TEST: Testing connectivity to ${host}:${port}`);
+    
+    const testPort = parseInt(port) || (protocol === 'sftp' ? 22 : 21);
+    await testTCPConnection(host, testPort);
+    
+    res.json({ 
+      success: true, 
+      message: `TCP connection to ${host}:${testPort} successful`,
+      environment: {
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        env: process.env.NODE_ENV
+      }
+    });
+  } catch (error) {
+    console.log('🧪 NETWORK TEST: Failed -', error.message);
+    res.status(500).json({ 
+      error: `Network test failed: ${error.message}`,
+      environment: {
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        env: process.env.NODE_ENV
+      }
+    });
+  }
+});
+
+// Test basic TCP connectivity first
+function testTCPConnection(host, port) {
+  return new Promise((resolve, reject) => {
+    console.log(`🌐 TCP: Testing basic connectivity to ${host}:${port}...`);
+    
+    const socket = new net.Socket();
+    const timeout = 10000;
+    
+    socket.setTimeout(timeout);
+    
+    socket.on('connect', () => {
+      console.log('🌐 TCP: Connection successful!');
+      socket.destroy();
+      resolve(true);
+    });
+    
+    socket.on('timeout', () => {
+      console.log('🌐 TCP: Connection timed out');
+      socket.destroy();
+      reject(new Error('TCP connection timeout'));
+    });
+    
+    socket.on('error', (err) => {
+      console.log('🌐 TCP: Connection error:', err.message);
+      socket.destroy();
+      reject(err);
+    });
+    
+    socket.connect(port, host);
+  });
+}
+
 // Direct SSH2 connection function as last resort
 function connectDirectSSH2(host, port, username, password, directory) {
   return new Promise((resolve, reject) => {
@@ -4942,6 +5013,11 @@ app.post('/api/ftp/connect', async (req, res) => {
   console.log(`🔄 Starting ${protocol.toUpperCase()} connection to ${host}:${port} as ${username}`);
 
   try {
+    // First test basic TCP connectivity
+    console.log('🌐 Step 1: Testing basic network connectivity...');
+    await testTCPConnection(host, parseInt(port) || (protocol === 'sftp' ? 22 : 21));
+    console.log('🌐 TCP test passed, proceeding with protocol connection...');
+    
     let files = [];
 
     if (protocol === 'sftp') {
