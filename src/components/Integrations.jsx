@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FTPIntegration from './FTPIntegration';
 
 export default function Integrations({ onLogout, onHome, brandName }) {
   document.title = brandName ? `${brandName} - Integrations` : 'Integrations - Feather';
@@ -9,13 +8,6 @@ export default function Integrations({ onLogout, onHome, brandName }) {
   const [selectedIntegration, setSelectedIntegration] = useState('');
 
   const integrations = [
-    {
-      id: 'ftp',
-      name: 'FTP/SFTP',
-      description: 'Connect to FTP or SFTP servers to sync files like Items.csv and Customers.csv',
-      color: 'bg-blue-50 border-blue-200',
-      icon: '📁'
-    },
     {
       id: 'quickbooks',
       name: 'QuickBooks Online',
@@ -32,16 +24,6 @@ export default function Integrations({ onLogout, onHome, brandName }) {
     }
   ];
 
-  if (selectedIntegration === 'ftp') {
-    return (
-      <FTPIntegration 
-        onBack={() => setSelectedIntegration('')}
-        onLogout={onLogout}
-        onHome={onHome}
-        brandName={brandName}
-      />
-    );
-  }
 
   return (
     <div className="p-6">
@@ -78,11 +60,7 @@ export default function Integrations({ onLogout, onHome, brandName }) {
             key={integration.id}
             className={`border-2 ${integration.color} p-6 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer`}
             onClick={() => {
-              if (integration.id === 'ftp') {
-                setSelectedIntegration('ftp');
-              } else {
-                alert(`${integration.name} integration coming soon!`);
-              }
+              alert(`${integration.name} integration coming soon!`);
             }}
           >
             <div className="flex items-center gap-3 mb-3">
@@ -91,16 +69,9 @@ export default function Integrations({ onLogout, onHome, brandName }) {
             </div>
             <p className="text-sm text-gray-600">{integration.description}</p>
             
-            {integration.id === 'ftp' && (
-              <div className="mt-4 text-xs text-blue-600">
-                <p>✓ Ready to configure</p>
-              </div>
-            )}
-            {integration.id !== 'ftp' && (
-              <div className="mt-4 text-xs text-gray-400">
-                <p>Coming soon...</p>
-              </div>
-            )}
+            <div className="mt-4 text-xs text-gray-400">
+              <p>Coming soon...</p>
+            </div>
           </div>
         ))}
       </div>

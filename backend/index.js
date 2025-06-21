@@ -4859,6 +4859,45 @@ app.delete('/api/cart', (req, res) => {
 
 // ===== FTP/SFTP INTEGRATION ENDPOINTS =====
 
+// Get Render's outbound IP address
+app.get('/api/ftp/render-ip', async (req, res) => {
+  if (!req.session.distributor_id || req.session.userType !== 'Admin') {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
+
+  try {
+    console.log('🌐 Getting Render outbound IP...');
+    
+    // Get external IP by calling a public service
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    
+    console.log('🌐 Render outbound IP:', data.ip);
+    
+    res.json({
+      success: true,
+      renderIP: data.ip,
+      message: `Render is connecting from IP: ${data.ip}`,
+      instructions: [
+        `Add this IP to your SFTP server's firewall whitelist: ${data.ip}`,
+        'Allow inbound connections on port 22 from this IP',
+        'If using cloud hosting, add this to your security group rules',
+        'Contact your hosting provider if you need help with firewall configuration'
+      ]
+    });
+  } catch (error) {
+    console.log('🌐 Failed to get IP:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to determine Render IP address',
+      fallbackInstructions: [
+        'Contact your SFTP server hosting provider',
+        'Ask them to whitelist Render.com IP ranges',
+        'Render typically uses IP ranges in: 216.24.57.0/24'
+      ]
+    });
+  }
+});
+
 // Simple network test endpoint
 app.post('/api/ftp/test-connection', async (req, res) => {
   if (!req.session.distributor_id || req.session.userType !== 'Admin') {
