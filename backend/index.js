@@ -4589,6 +4589,59 @@ app.get('/api/accounts', (req, res) => {
   res.json(accounts);
 });
 
+// Get all accounts with CAV data for customer list (no limit)
+app.get('/api/accounts-with-cav', (req, res) => {
+  console.log('Accounts with CAV request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get ALL accounts data (no limit)
+    const accounts = db.prepare(`
+      SELECT * FROM accounts 
+      WHERE distributor_id = ? 
+      ORDER BY id
+    `).all(distributorId);
+    
+    // Get all custom attribute definitions for accounts
+    const attributeDefinitions = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'accounts'
+      ORDER BY display_order
+    `).all(distributorId);
+    
+    // Get all custom attribute values for these accounts
+    const accountIds = accounts.map(account => account.id);
+    
+    let customAttributes = [];
+    if (accountIds.length > 0) {
+      const placeholders = accountIds.map(() => '?').join(',');
+      customAttributes = db.prepare(`
+        SELECT * FROM custom_attributes_values 
+        WHERE distributor_id = ? 
+        AND entity_type = 'accounts' 
+        AND entity_id IN (${placeholders})
+      `).all(distributorId, ...accountIds);
+    }
+    
+    console.log(`Found ${accounts.length} accounts, ${customAttributes.length} custom attributes`);
+    
+    res.json({
+      accounts: accounts,
+      customAttributes: customAttributes,
+      attributeDefinitions: attributeDefinitions
+    });
+    
+  } catch (error) {
+    console.error('Error fetching accounts with CAV data:', error);
+    res.status(500).json({ error: 'Failed to fetch accounts data' });
+  }
+});
+
 // CUSTOMER CARD CONFIGURATION ENDPOINTS
 
 // Get available customer fields

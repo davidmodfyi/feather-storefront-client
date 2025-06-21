@@ -17,8 +17,8 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
 
   // The remaining useEffect for data fetching
   useEffect(() => {
-    // Fetch accounts with CAV data from table-builder endpoint
-    fetch('/api/table-builder/accounts', { credentials: 'include' })
+    // Fetch ALL accounts with CAV data (no limit)
+    fetch('/api/accounts-with-cav', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         setAccounts(data.accounts || []);
