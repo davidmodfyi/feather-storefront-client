@@ -4878,17 +4878,41 @@ app.post('/api/ftp/connect', async (req, res) => {
       // SFTP Connection
       const sftp = new SftpClient();
       
+      console.log('Attempting SFTP connection with config:', {
+        host: host,
+        port: parseInt(port) || 22,
+        username: username
+      });
+      
       await sftp.connect({
         host: host,
         port: parseInt(port) || 22,
         username: username,
         password: password,
-        readyTimeout: 10000,
+        readyTimeout: 20000,
+        connTimeout: 20000,
+        tryKeyboard: true,
         algorithms: {
-          kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group-exchange-sha256'],
-          cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-          serverHostKey: ['rsa-sha2-512', 'rsa-sha2-256', 'ssh-rsa'],
-          hmac: ['hmac-sha2-256', 'hmac-sha1']
+          kex: [
+            'ecdh-sha2-nistp256',
+            'ecdh-sha2-nistp384', 
+            'ecdh-sha2-nistp521',
+            'diffie-hellman-group14-sha256',
+            'diffie-hellman-group14-sha1',
+            'diffie-hellman-group-exchange-sha256'
+          ],
+          serverHostKey: ['ssh-rsa', 'rsa-sha2-512', 'rsa-sha2-256', 'ssh-ed25519'],
+          cipher: [
+            'aes128-ctr',
+            'aes192-ctr', 
+            'aes256-ctr',
+            'aes128-gcm',
+            'aes256-gcm',
+            'aes128-cbc',
+            'aes192-cbc',
+            'aes256-cbc'
+          ],
+          hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
         }
       });
 
@@ -4958,10 +4982,16 @@ app.post('/api/ftp/connect', async (req, res) => {
       errorMessage = 'Connection refused. Please check the port and host.';
     } else if (error.code === 'ECONNRESET') {
       errorMessage = 'Connection reset. Please check your credentials.';
+    } else if (error.code === 'ETIMEDOUT') {
+      errorMessage = 'Connection timed out. The server may be busy or unreachable.';
+    } else if (error.message && error.message.includes('handshake')) {
+      errorMessage = 'SFTP handshake failed. Try using FTP instead or check server SSH configuration.';
     } else if (error.message && error.message.includes('Authentication')) {
       errorMessage = 'Authentication failed. Please check your username and password.';
     } else if (error.message && error.message.includes('timeout')) {
-      errorMessage = 'Connection timeout. Please check your network and server.';
+      errorMessage = 'Connection timeout. Server may be slow or blocking connections.';
+    } else if (error.message && error.message.includes('algorithms')) {
+      errorMessage = 'SSH algorithm mismatch. Server may have strict security settings.';
     } else if (error.message) {
       errorMessage = `Connection failed: ${error.message}`;
     }
@@ -4987,17 +5017,41 @@ app.post('/api/ftp/list', async (req, res) => {
       // SFTP Connection
       const sftp = new SftpClient();
       
+      console.log('Attempting SFTP connection with config:', {
+        host: host,
+        port: parseInt(port) || 22,
+        username: username
+      });
+      
       await sftp.connect({
         host: host,
         port: parseInt(port) || 22,
         username: username,
         password: password,
-        readyTimeout: 10000,
+        readyTimeout: 20000,
+        connTimeout: 20000,
+        tryKeyboard: true,
         algorithms: {
-          kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group-exchange-sha256'],
-          cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr', 'aes128-gcm', 'aes256-gcm'],
-          serverHostKey: ['rsa-sha2-512', 'rsa-sha2-256', 'ssh-rsa'],
-          hmac: ['hmac-sha2-256', 'hmac-sha1']
+          kex: [
+            'ecdh-sha2-nistp256',
+            'ecdh-sha2-nistp384', 
+            'ecdh-sha2-nistp521',
+            'diffie-hellman-group14-sha256',
+            'diffie-hellman-group14-sha1',
+            'diffie-hellman-group-exchange-sha256'
+          ],
+          serverHostKey: ['ssh-rsa', 'rsa-sha2-512', 'rsa-sha2-256', 'ssh-ed25519'],
+          cipher: [
+            'aes128-ctr',
+            'aes192-ctr', 
+            'aes256-ctr',
+            'aes128-gcm',
+            'aes256-gcm',
+            'aes128-cbc',
+            'aes192-cbc',
+            'aes256-cbc'
+          ],
+          hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
         }
       });
 
