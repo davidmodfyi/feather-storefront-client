@@ -4603,16 +4603,30 @@ app.get('/api/available-customer-fields', (req, res) => {
     // Get columns from accounts table to determine available fields
     const tableInfo = db.prepare("PRAGMA table_info(accounts)").all();
     
-    // Define standard fields available for customer cards
-    const standardFields = [
-      { field_name: 'name', display_label: 'Name', field_type: 'text', is_custom: false },
-      { field_name: 'email', display_label: 'Email', field_type: 'text', is_custom: false },
-      { field_name: 'phone', display_label: 'Phone', field_type: 'text', is_custom: false },
-      { field_name: 'street', display_label: 'Address', field_type: 'text', is_custom: false },
-      { field_name: 'city', display_label: 'City', field_type: 'text', is_custom: false },
-      { field_name: 'state', display_label: 'State', field_type: 'text', is_custom: false },
-      { field_name: 'zip', display_label: 'ZIP', field_type: 'text', is_custom: false }
-    ];
+    // Field display name mappings for better labels
+    const fieldLabels = {
+      'name': 'Name',
+      'email': 'Email', 
+      'phone': 'Phone',
+      'street': 'Address',
+      'city': 'City',
+      'state': 'State',
+      'zip': 'ZIP',
+      'id': 'ID',
+      'payment_terms': 'Payment Terms',
+      'distributor_id': 'Distributor ID'
+    };
+    
+    // Convert table columns to field objects, excluding internal fields
+    const excludeFields = ['distributor_id']; // Hide internal fields
+    const standardFields = tableInfo
+      .filter(col => !excludeFields.includes(col.name))
+      .map(col => ({
+        field_name: col.name,
+        display_label: fieldLabels[col.name] || col.name.charAt(0).toUpperCase() + col.name.slice(1).replace(/_/g, ' '),
+        field_type: col.type.toLowerCase().includes('int') ? 'number' : 'text',
+        is_custom: false
+      }));
 
     // Get custom fields from dynamic content if any exist
     const customFields = db.prepare(`
