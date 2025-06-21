@@ -4869,7 +4869,7 @@ app.post('/api/ftp/connect', async (req, res) => {
     return res.status(400).json({ error: 'Host, username, and password are required' });
   }
 
-  console.log(`Attempting ${protocol.toUpperCase()} connection to ${host}:${port} as ${username}`);
+  console.log(`🔄 Starting ${protocol.toUpperCase()} connection to ${host}:${port} as ${username}`);
 
   try {
     let files = [];
@@ -4878,45 +4878,91 @@ app.post('/api/ftp/connect', async (req, res) => {
       // SFTP Connection
       const sftp = new SftpClient();
       
-      console.log('Attempting SFTP connection with config:', {
-        host: host,
-        port: parseInt(port) || 22,
-        username: username
+      console.log('🔒 SFTP: Creating new client instance');
+      console.log('🔒 SFTP: Host:', host);
+      console.log('🔒 SFTP: Port:', parseInt(port) || 22);
+      console.log('🔒 SFTP: Username:', username);
+      console.log('🔒 SFTP: Password length:', password ? password.length : 0);
+      console.log('🔒 SFTP: Directory:', directory || '/');
+      
+      // Add event listeners for debugging
+      sftp.client.on('ready', () => {
+        console.log('🔒 SFTP EVENT: Client ready');
       });
       
-      await sftp.connect({
+      sftp.client.on('connect', () => {
+        console.log('🔒 SFTP EVENT: Client connect');
+      });
+      
+      sftp.client.on('handshake', (info) => {
+        console.log('🔒 SFTP EVENT: Handshake completed:', JSON.stringify(info, null, 2));
+      });
+      
+      sftp.client.on('banner', (message) => {
+        console.log('🔒 SFTP EVENT: Server banner:', message);
+      });
+      
+      sftp.client.on('error', (err) => {
+        console.log('🔒 SFTP EVENT: Client error -', err.message);
+        console.log('🔒 SFTP EVENT: Error code -', err.code);
+        console.log('🔒 SFTP EVENT: Error level -', err.level);
+      });
+      
+      sftp.client.on('close', () => {
+        console.log('🔒 SFTP EVENT: Client closed');
+      });
+      
+      sftp.client.on('keyboard-interactive', (name, instructions, instructionsLang, prompts, finish) => {
+        console.log('🔒 SFTP EVENT: Keyboard interactive auth requested');
+        console.log('🔒 SFTP EVENT: Name:', name);
+        console.log('🔒 SFTP EVENT: Instructions:', instructions);
+        console.log('🔒 SFTP EVENT: Prompts:', prompts);
+      });
+      
+      console.log('🔒 SFTP: Attempting connection...');
+      
+      const connectionConfig = {
         host: host,
         port: parseInt(port) || 22,
         username: username,
         password: password,
-        readyTimeout: 20000,
-        connTimeout: 20000,
+        readyTimeout: 30000,
+        connTimeout: 30000,
         tryKeyboard: true,
-        algorithms: {
-          kex: [
-            'ecdh-sha2-nistp256',
-            'ecdh-sha2-nistp384', 
-            'ecdh-sha2-nistp521',
-            'diffie-hellman-group14-sha256',
-            'diffie-hellman-group14-sha1',
-            'diffie-hellman-group-exchange-sha256'
-          ],
-          serverHostKey: ['ssh-rsa', 'rsa-sha2-512', 'rsa-sha2-256', 'ssh-ed25519'],
-          cipher: [
-            'aes128-ctr',
-            'aes192-ctr', 
-            'aes256-ctr',
-            'aes128-gcm',
-            'aes256-gcm',
-            'aes128-cbc',
-            'aes192-cbc',
-            'aes256-cbc'
-          ],
-          hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1']
+        debug: (info) => {
+          console.log('🔒 SFTP DEBUG:', info);
         }
+      };
+      
+      console.log('🔒 SFTP: Connection config (without password):', {
+        ...connectionConfig,
+        password: '[HIDDEN]'
       });
-
-      console.log('SFTP connected successfully');
+      
+      try {
+        await sftp.connect(connectionConfig);
+        console.log('🔒 SFTP: Connection established successfully!');
+      } catch (primaryError) {
+        console.log('🔒 SFTP: Primary connection failed, trying fallback config...');
+        console.log('🔒 SFTP: Primary error:', primaryError.message);
+        
+        // Try a simpler connection without custom algorithms
+        const fallbackConfig = {
+          host: host,
+          port: parseInt(port) || 22,
+          username: username,
+          password: password,
+          readyTimeout: 30000,
+          connTimeout: 30000,
+          debug: (info) => {
+            console.log('🔒 SFTP FALLBACK DEBUG:', info);
+          }
+        };
+        
+        console.log('🔒 SFTP: Trying fallback connection...');
+        await sftp.connect(fallbackConfig);
+        console.log('🔒 SFTP: Fallback connection successful!');
+      }
       
       const listing = await sftp.list(directory || '/');
       console.log(`SFTP listing for ${directory || '/'}: ${listing.length} items`);
