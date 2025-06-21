@@ -286,10 +286,11 @@ What would you like to customize today?`,
             body: JSON.stringify({
               message: `${userMessage}
 
-IMPORTANT: For dynamic form fields created via UI customization, access them directly on the cart object. For example:
-- OrderType field: access as cart.OrderType (exact case match)
-- DeliveryDate field: access as cart.DeliveryDate  
-- Dynamic form values are merged into the cart object, so use cart.FieldName where FieldName matches the exact label from the UI.`,
+IMPORTANT: For dynamic form fields created via UI customization, access them using LOWERCASE field names on the cart object. For example:
+- OrderType field: access as cart.ordertype (always lowercase)
+- DeliveryDate field: access as cart.deliverydate (always lowercase)
+- ShippingMethod field: access as cart.shippingmethod (always lowercase)
+- Dynamic form values are merged into the cart object with lowercase property names for reliable access.`,
               customerAttributes: customerAttributes,
               dynamicFormFields: dynamicFormFields,
               triggerPoints: ['Storefront Load', 'Quantity Change', 'Add to Cart', 'Submit Order'],
@@ -368,10 +369,11 @@ IMPORTANT: For dynamic form fields created via UI customization, access them dir
           body: JSON.stringify({
             message: `${userMessage}
 
-IMPORTANT: For dynamic form fields created via UI customization, access them directly on the cart object. For example:
-- OrderType field: access as cart.OrderType (exact case match)
-- DeliveryDate field: access as cart.DeliveryDate  
-- Dynamic form values are merged into the cart object, so use cart.FieldName where FieldName matches the exact label from the UI.`,
+IMPORTANT: For dynamic form fields created via UI customization, access them using LOWERCASE field names on the cart object. For example:
+- OrderType field: access as cart.ordertype (always lowercase)
+- DeliveryDate field: access as cart.deliverydate (always lowercase)
+- ShippingMethod field: access as cart.shippingmethod (always lowercase)
+- Dynamic form values are merged into the cart object with lowercase property names for reliable access.`,
             customerAttributes: customerAttributes,
             dynamicFormFields: dynamicFormFields,
             triggerPoints: ['Storefront Load', 'Quantity Change', 'Add to Cart', 'Submit Order'],
