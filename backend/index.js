@@ -4628,8 +4628,23 @@ app.get('/api/available-customer-fields', (req, res) => {
         is_custom: false
       }));
 
+    // Get CAV custom fields for accounts from table builder
+    const cavFields = db.prepare(`
+      SELECT attribute_name, attribute_label, data_type
+      FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'accounts' AND is_active = 1
+      ORDER BY display_order
+    `).all(req.session.distributor_id);
+
+    const cavFieldsFormatted = cavFields.map(field => ({
+      field_name: field.attribute_name,
+      display_label: field.attribute_label,
+      field_type: field.data_type || 'text',
+      is_custom: true
+    }));
+
     // Get custom fields from dynamic content if any exist
-    const customFields = db.prepare(`
+    const dynamicFields = db.prepare(`
       SELECT DISTINCT JSON_EXTRACT(content_data, '$.label') as display_label,
              LOWER(REPLACE(JSON_EXTRACT(content_data, '$.label'), ' ', '')) as field_name,
              JSON_EXTRACT(content_data, '$.fieldType') as field_type
@@ -4637,14 +4652,14 @@ app.get('/api/available-customer-fields', (req, res) => {
       WHERE distributor_id = ? AND content_type = 'form-field'
     `).all(req.session.distributor_id);
 
-    const customFieldsFormatted = customFields.map(field => ({
+    const dynamicFieldsFormatted = dynamicFields.map(field => ({
       field_name: field.field_name,
       display_label: field.display_label,
       field_type: field.field_type || 'text',
       is_custom: true
     }));
 
-    const allFields = [...standardFields, ...customFieldsFormatted];
+    const allFields = [...standardFields, ...cavFieldsFormatted, ...dynamicFieldsFormatted];
     
     res.json(allFields);
   } catch (error) {

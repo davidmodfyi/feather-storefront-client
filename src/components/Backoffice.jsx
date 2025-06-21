@@ -9,16 +9,22 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [connectedAccounts, setConnectedAccounts] = useState({});
   const [cardConfiguration, setCardConfiguration] = useState([]);
+  const [customAttributes, setCustomAttributes] = useState([]);
+  const [attributeDefinitions, setAttributeDefinitions] = useState([]);
   const navigate = useNavigate();
 
   // Remove the useEffect that was setting the title and keep the rest
 
   // The remaining useEffect for data fetching
   useEffect(() => {
-    // Fetch accounts
-    fetch('/api/accounts', { credentials: 'include' })
+    // Fetch accounts with CAV data from table-builder endpoint
+    fetch('/api/table-builder/accounts', { credentials: 'include' })
       .then(res => res.json())
-      .then(data => setAccounts(data))
+      .then(data => {
+        setAccounts(data.accounts || []);
+        setCustomAttributes(data.customAttributes || []);
+        setAttributeDefinitions(data.attributeDefinitions || []);
+      })
       .catch(console.error);
 
     // Fetch connected accounts info
@@ -155,9 +161,16 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
       
       let fieldValue = account[fieldConfig.field_name];
       
-      // Handle special field mappings
-      if (fieldConfig.field_name === 'street') {
-        fieldValue = account.street;
+      // If not found in account object, check if it's a CAV field
+      if ((fieldValue === undefined || fieldValue === null) && fieldConfig.is_custom) {
+        // Look for this field in customAttributes
+        const cavValue = customAttributes.find(attr => 
+          attr.entity_id === account.id && 
+          attr.attribute_name === fieldConfig.field_name
+        );
+        if (cavValue) {
+          fieldValue = cavValue.attribute_value;
+        }
       }
       
       // Skip fields that don't have values
