@@ -203,6 +203,9 @@ export default function FTPIntegration({ onBack, onLogout, onHome, brandName }) 
                 className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={isConnected}
               />
+              <p className="text-xs text-orange-600 mt-1">
+                ⚠️ If SFTP fails, try FTP protocol instead - some servers block SSH from certain IP ranges
+              </p>
             </div>
 
             <div>
