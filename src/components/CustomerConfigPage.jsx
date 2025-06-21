@@ -45,6 +45,7 @@ export default function CustomerConfigPage({ onLogout, onHome, brandName }) {
   const saveConfiguration = async () => {
     setSaving(true);
     try {
+      console.log('Saving configuration:', currentConfig);
       const response = await fetch('/api/customer-card-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,11 +56,13 @@ export default function CustomerConfigPage({ onLogout, onHome, brandName }) {
       if (response.ok) {
         alert('Configuration saved successfully!');
       } else {
-        alert('Failed to save configuration');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Save failed:', response.status, errorData);
+        alert(`Failed to save configuration: ${errorData.details || errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error saving configuration:', error);
-      alert('Error saving configuration');
+      alert(`Error saving configuration: ${error.message}`);
     } finally {
       setSaving(false);
     }

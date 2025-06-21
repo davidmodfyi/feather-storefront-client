@@ -4693,21 +4693,28 @@ app.get('/api/customer-card-config', (req, res) => {
 // Save customer card configuration
 app.post('/api/customer-card-config', (req, res) => {
   console.log('Save customer card config request');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Session distributor_id:', req.session.distributor_id);
   
   if (!req.session.distributor_id) {
+    console.log('Authentication failed - no distributor_id');
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
   const { configuration } = req.body;
   
   if (!configuration || !Array.isArray(configuration)) {
+    console.log('Invalid configuration data:', configuration);
     return res.status(400).json({ error: 'Invalid configuration data' });
   }
 
+  console.log(`Attempting to save ${configuration.length} field configurations`);
+
   try {
     // Delete existing configuration for this distributor
-    db.prepare(`DELETE FROM customer_card_configurations WHERE distributor_id = ?`)
+    const deleteResult = db.prepare(`DELETE FROM customer_card_configurations WHERE distributor_id = ?`)
       .run(req.session.distributor_id);
+    console.log('Deleted existing configurations:', deleteResult.changes);
 
     // Insert new configuration
     const insertStmt = db.prepare(`
@@ -4717,7 +4724,8 @@ app.post('/api/customer-card-config', (req, res) => {
     `);
 
     configuration.forEach((field, index) => {
-      insertStmt.run(
+      console.log(`Inserting field ${index}:`, field);
+      const result = insertStmt.run(
         req.session.distributor_id,
         field.field_name,
         field.display_label,
@@ -4725,13 +4733,16 @@ app.post('/api/customer-card-config', (req, res) => {
         field.is_visible !== false,
         field.field_type || 'text'
       );
+      console.log('Insert result:', result.changes);
     });
 
-    console.log(`Saved ${configuration.length} field configurations for distributor ${req.session.distributor_id}`);
+    console.log(`Successfully saved ${configuration.length} field configurations for distributor ${req.session.distributor_id}`);
     res.json({ success: true });
   } catch (error) {
     console.error('Error saving customer card config:', error);
-    res.status(500).json({ error: 'Failed to save configuration' });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: 'Failed to save configuration', details: error.message });
   }
 });
 
