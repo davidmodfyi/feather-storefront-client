@@ -4731,7 +4731,7 @@ app.get('/api/customer-card-config', (req, res) => {
 
   try {
     const config = db.prepare(`
-      SELECT field_name, display_label, display_order, is_visible, field_type
+      SELECT field_name, display_label, display_order, is_visible, field_type, is_custom
       FROM customer_card_configurations 
       WHERE distributor_id = ? 
       ORDER BY display_order
@@ -4740,13 +4740,13 @@ app.get('/api/customer-card-config', (req, res) => {
     // If no configuration exists, return default configuration
     if (config.length === 0) {
       const defaultConfig = [
-        { field_name: 'name', display_label: 'Name', display_order: 0, is_visible: true, field_type: 'text' },
-        { field_name: 'email', display_label: 'Email', display_order: 1, is_visible: true, field_type: 'text' },
-        { field_name: 'phone', display_label: 'Phone', display_order: 2, is_visible: true, field_type: 'text' },
-        { field_name: 'street', display_label: 'Address', display_order: 3, is_visible: true, field_type: 'text' },
-        { field_name: 'city', display_label: 'City', display_order: 4, is_visible: true, field_type: 'text' },
-        { field_name: 'state', display_label: 'State', display_order: 5, is_visible: true, field_type: 'text' },
-        { field_name: 'zip', display_label: 'ZIP', display_order: 6, is_visible: true, field_type: 'text' }
+        { field_name: 'name', display_label: 'Name', display_order: 0, is_visible: true, field_type: 'text', is_custom: false },
+        { field_name: 'email', display_label: 'Email', display_order: 1, is_visible: true, field_type: 'text', is_custom: false },
+        { field_name: 'phone', display_label: 'Phone', display_order: 2, is_visible: true, field_type: 'text', is_custom: false },
+        { field_name: 'street', display_label: 'Address', display_order: 3, is_visible: true, field_type: 'text', is_custom: false },
+        { field_name: 'city', display_label: 'City', display_order: 4, is_visible: true, field_type: 'text', is_custom: false },
+        { field_name: 'state', display_label: 'State', display_order: 5, is_visible: true, field_type: 'text', is_custom: false },
+        { field_name: 'zip', display_label: 'ZIP', display_order: 6, is_visible: true, field_type: 'text', is_custom: false }
       ];
       return res.json(defaultConfig);
     }
@@ -4784,11 +4784,22 @@ app.post('/api/customer-card-config', (req, res) => {
       .run(req.session.distributor_id);
     console.log('Deleted existing configurations:', deleteResult.changes);
 
+    // Add is_custom column if it doesn't exist
+    try {
+      db.prepare(`ALTER TABLE customer_card_configurations ADD COLUMN is_custom BOOLEAN DEFAULT FALSE`).run();
+      console.log('Added is_custom column to customer_card_configurations table');
+    } catch (error) {
+      // Column might already exist, ignore error
+      if (!error.message.includes('duplicate column name')) {
+        console.log('Note: is_custom column might already exist');
+      }
+    }
+
     // Insert new configuration
     const insertStmt = db.prepare(`
       INSERT INTO customer_card_configurations 
-      (distributor_id, field_name, display_label, display_order, is_visible, field_type, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      (distributor_id, field_name, display_label, display_order, is_visible, field_type, is_custom, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `);
 
     configuration.forEach((field, index) => {
@@ -4799,7 +4810,8 @@ app.post('/api/customer-card-config', (req, res) => {
         field.display_label,
         field.display_order || index,
         field.is_visible !== false ? 1 : 0,  // Convert boolean to integer
-        field.field_type || 'text'
+        field.field_type || 'text',
+        field.is_custom ? 1 : 0  // Convert boolean to integer
       );
       console.log('Insert result:', result.changes);
     });
