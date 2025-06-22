@@ -19,16 +19,35 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
   useEffect(() => {
     // Fetch ALL accounts with CAV data (no limit)
     fetch('/api/accounts-with-cav', { credentials: 'include' })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
       .then(data => {
         console.log('🔍 Fetched accounts data:', data);
         console.log('🔍 Custom attributes:', data.customAttributes);
         console.log('🔍 Attribute definitions:', data.attributeDefinitions);
-        setAccounts(data.accounts || []);
-        setCustomAttributes(data.customAttributes || []);
-        setAttributeDefinitions(data.attributeDefinitions || []);
+        
+        // Ensure data is in expected format
+        if (data && typeof data === 'object') {
+          setAccounts(Array.isArray(data.accounts) ? data.accounts : []);
+          setCustomAttributes(Array.isArray(data.customAttributes) ? data.customAttributes : []);
+          setAttributeDefinitions(Array.isArray(data.attributeDefinitions) ? data.attributeDefinitions : []);
+        } else {
+          console.error('Invalid data format received:', data);
+          setAccounts([]);
+          setCustomAttributes([]);
+          setAttributeDefinitions([]);
+        }
       })
-      .catch(console.error);
+      .catch(error => {
+        console.error('Error fetching accounts:', error);
+        setAccounts([]);
+        setCustomAttributes([]);
+        setAttributeDefinitions([]);
+      });
 
     // Fetch connected accounts info
     fetch('/api/connected-accounts', { credentials: 'include' })
@@ -36,21 +55,29 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
       .then(data => {
         // Convert array to object with account_id as key for easy lookup
         const connected = {};
-        data.forEach(account => {
-          connected[account.account_id] = true;
-        });
+        if (Array.isArray(data)) {
+          data.forEach(account => {
+            connected[account.account_id] = true;
+          });
+        }
         setConnectedAccounts(connected);
       })
-      .catch(console.error);
+      .catch(error => {
+        console.error('Error fetching connected accounts:', error);
+        setConnectedAccounts({});
+      });
 
     // Fetch customer card configuration
     fetch('/api/customer-card-config', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         console.log('🔍 Card configuration:', data);
-        setCardConfiguration(data);
+        setCardConfiguration(Array.isArray(data) ? data : []);
       })
-      .catch(console.error);
+      .catch(error => {
+        console.error('Error fetching card configuration:', error);
+        setCardConfiguration([]);
+      });
   }, []);
 
   function handleLogout() {
@@ -150,7 +177,7 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
 
   // Function to render customer card fields based on configuration
   const renderCustomerFields = (account) => {
-    if (cardConfiguration.length === 0) {
+    if (!Array.isArray(cardConfiguration) || cardConfiguration.length === 0) {
       // Default display if no configuration loaded yet
       return (
         <>
@@ -200,12 +227,12 @@ export default function Backoffice({ onLogout, onHome, brandName }) {
   };
 
   // Filter accounts based on search query
-  const filteredAccounts = searchQuery 
+  const filteredAccounts = (Array.isArray(accounts) && searchQuery) 
     ? accounts.filter(account => 
-        account.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        account.email.toLowerCase().includes(searchQuery.toLowerCase())
+        account.name && account.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        account.email && account.email.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : accounts;
+    : (Array.isArray(accounts) ? accounts : []);
 
   return (
     <div className="p-6">
