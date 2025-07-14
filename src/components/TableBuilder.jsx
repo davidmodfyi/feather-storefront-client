@@ -23,6 +23,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const [customTables, setCustomTables] = useState([]);
   const [showCustomTableCreator, setShowCustomTableCreator] = useState(false);
   const [selectedCustomTable, setSelectedCustomTable] = useState(null);
+  const [customTableExpanded, setCustomTableExpanded] = useState({});
   
   // Set title
   document.title = brandName ? `${brandName} - Table Builder` : 'Table Builder - Feather';
@@ -531,6 +532,64 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
     } catch (error) {
       console.error('Error deleting custom table:', error);
       alert('Error deleting custom table');
+    }
+  };
+
+  const handleAddCustomTableField = async (tableId) => {
+    const nameInput = document.getElementById(`custom-field-name-${tableId}`);
+    const typeSelect = document.getElementById(`custom-field-type-${tableId}`);
+    const optionsInput = document.getElementById(`custom-field-options-${tableId}`);
+    
+    const name = nameInput.value.trim();
+    const dataType = typeSelect.value;
+    const options = optionsInput.value.trim();
+    
+    if (!name) {
+      alert('Please enter a field name');
+      return;
+    }
+    
+    if (dataType === 'dropdown' && !options) {
+      alert('Please enter options for dropdown field');
+      return;
+    }
+    
+    try {
+      setAddingField(true);
+      
+      const response = await fetch(`/api/custom-tables/${tableId}/add-field`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: name,
+          label: name,
+          data_type: dataType,
+          options: options
+        })
+      });
+
+      if (response.ok) {
+        // Clear form
+        nameInput.value = '';
+        typeSelect.value = 'text';
+        optionsInput.value = '';
+        
+        // Refresh custom tables to show new field
+        await fetchCustomTables();
+        
+        alert('Custom field added successfully!');
+      } else {
+        const error = await response.json();
+        alert('Error adding field: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error adding custom field:', error);
+      alert('Error adding custom field: ' + error.message);
+    } finally {
+      setAddingField(false);
     }
   };
 
@@ -1281,7 +1340,10 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         {/* Custom Tables Section */}
         {customTables.map((table) => (
           <div key={table.id} className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="px-6 py-5 bg-gradient-to-r from-gray-600 to-gray-700 cursor-pointer hover:from-gray-700 hover:to-gray-800 transition-all duration-200 flex justify-between items-center">
+            <div 
+              className="px-6 py-5 bg-gradient-to-r from-gray-600 to-gray-700 cursor-pointer hover:from-gray-700 hover:to-gray-800 transition-all duration-200 flex justify-between items-center"
+              onClick={() => setCustomTableExpanded(prev => ({ ...prev, [table.id]: !prev[table.id] }))}
+            >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1293,11 +1355,20 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                   <h2 className="text-xl font-bold text-white">{table.name}</h2>
                   <p className="text-gray-100 text-sm">{table.description || 'Custom table'}</p>
                 </div>
+                <div className="text-white/80 text-sm">
+                  {table.data && table.data.length > 0 
+                    ? `${table.data.length} records` 
+                    : 'No data'
+                  }
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex gap-2">
                   <button
-                    onClick={() => exportToCSV(`custom-${table.id}`)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      exportToCSV(`custom-${table.id}`);
+                    }}
                     className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
                     disabled={loading}
                   >
@@ -1307,7 +1378,10 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                     Export to Excel
                   </button>
                   <button
-                    onClick={() => triggerFileUpload(`custom-${table.id}`)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerFileUpload(`custom-${table.id}`);
+                    }}
                     className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
                     disabled={loading}
                   >
@@ -1317,7 +1391,10 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                     Upload from Excel
                   </button>
                   <button
-                    onClick={() => handleDeleteCustomTable(table.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCustomTable(table.id);
+                    }}
                     className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1326,52 +1403,115 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                     Delete
                   </button>
                 </div>
+                <div className="text-white/60">
+                  <svg 
+                    className={`w-5 h-5 transition-transform duration-200 ${
+                      customTableExpanded[table.id] ? 'rotate-90' : ''
+                    }`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </div>
             
-            <div className="p-6">
-              {table.data && table.data.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        {table.fields.map((field, index) => (
-                          <th key={index} className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">
-                            {field.label || field.name}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {table.data.slice(0, 10).map((row, rowIndex) => (
-                        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          {table.fields.map((field, fieldIndex) => (
-                            <td key={fieldIndex} className="border border-gray-300 px-4 py-2 text-gray-900">
-                              {row[field.name] || ''}
-                            </td>
+            {customTableExpanded[table.id] && (
+              <div className="p-6">
+                {table.data && table.data.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-300">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          {table.fields.map((field, index) => (
+                            <th key={index} className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">
+                              {field.label || field.name}
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {table.data.length > 10 && (
-                    <p className="text-sm text-gray-500 mt-2">
-                      Showing first 10 of {table.data.length} records
+                      </thead>
+                      <tbody>
+                        {table.data.slice(0, 10).map((row, rowIndex) => (
+                          <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            {table.fields.map((field, fieldIndex) => (
+                              <td key={fieldIndex} className="border border-gray-300 px-4 py-2 text-gray-900">
+                                {row[field.name] || ''}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {table.data.length > 10 && (
+                      <p className="text-sm text-gray-500 mt-2">
+                        Showing first 10 of {table.data.length} records
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 text-lg font-medium">Custom Table: {table.name}</p>
+                    <p className="text-gray-400 text-sm">
+                      {table.fields ? `${table.fields.length} custom fields configured` : 'No fields configured yet'}
                     </p>
-                  )}
+                    <p className="text-gray-400 text-sm mt-2">
+                      No data uploaded yet. Use "Export to Excel" to get a template.
+                    </p>
+                  </div>
+                )}
+                
+                {/* Add Custom Field Section */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800">Add Custom Field</h3>
+                  </div>
+                  <div className="grid md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Field Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., NewField"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        id={`custom-field-name-${table.id}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Field Type</label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        id={`custom-field-type-${table.id}`}
+                      >
+                        <option value="text">Text</option>
+                        <option value="number">Number</option>
+                        <option value="date">Date</option>
+                        <option value="boolean">Yes/No</option>
+                        <option value="dropdown">Dropdown</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Options (if dropdown)</label>
+                      <input
+                        type="text"
+                        placeholder="Option1,Option2,Option3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        id={`custom-field-options-${table.id}`}
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        onClick={() => handleAddCustomTableField(table.id)}
+                        disabled={addingField}
+                        className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                      >
+                        {addingField ? 'Adding...' : 'Add Field'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 text-lg font-medium">Custom Table: {table.name}</p>
-                  <p className="text-gray-400 text-sm">
-                    {table.fields ? `${table.fields.length} custom fields configured` : 'No fields configured yet'}
-                  </p>
-                  <p className="text-gray-400 text-sm mt-2">
-                    No data uploaded yet. Use "Export to Excel" to get a template.
-                  </p>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         ))}
 

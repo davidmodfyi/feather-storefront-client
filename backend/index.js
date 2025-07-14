@@ -1792,6 +1792,97 @@ app.post('/api/table-builder/custom-:tableId/import', csvUpload.single('csvFile'
   }
 });
 
+// Add field to existing custom table
+app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
+  console.log('Add field to custom table request:', req.params.tableId);
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const tableId = req.params.tableId;
+    const { name, label, data_type, options } = req.body;
+    
+    // Validate input
+    if (!name || !data_type) {
+      return res.status(400).json({ error: 'Field name and data type are required' });
+    }
+    
+    // Check if table exists and belongs to distributor
+    const customTable = db.prepare(`
+      SELECT * FROM custom_tables 
+      WHERE id = ? AND distributor_id = ?
+    `).get(tableId, distributorId);
+    
+    if (!customTable) {
+      return res.status(404).json({ error: 'Custom table not found' });
+    }
+    
+    // Check if field name already exists
+    const existingField = db.prepare(`
+      SELECT * FROM custom_table_fields 
+      WHERE table_id = ? AND name = ?
+    `).get(tableId, name);
+    
+    if (existingField) {
+      return res.status(400).json({ error: 'Field name already exists' });
+    }
+    
+    // Get the highest field_order for this table
+    const maxOrder = db.prepare(`
+      SELECT MAX(field_order) as max_order FROM custom_table_fields 
+      WHERE table_id = ?
+    `).get(tableId);
+    
+    const fieldOrder = (maxOrder.max_order || 0) + 1;
+    
+    // Prepare validation_rules
+    let validationRules = {};
+    if (data_type === 'dropdown' && options) {
+      const optionsArray = options.split(',').map(option => option.trim()).filter(option => option.length > 0);
+      validationRules = {
+        type: 'dropdown',
+        options: optionsArray
+      };
+    }
+    
+    // Insert the new field
+    const insertField = db.prepare(`
+      INSERT INTO custom_table_fields (
+        table_id, name, label, source_table, source_attribute, 
+        data_type, is_key, field_order, validation_rules, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    const result = insertField.run(
+      tableId,
+      name,
+      label || name,
+      null, // source_table
+      null, // source_attribute
+      data_type,
+      false, // is_key
+      fieldOrder,
+      JSON.stringify(validationRules),
+      new Date().toISOString()
+    );
+    
+    console.log(`Added field '${name}' to custom table ${tableId}`);
+    
+    res.json({
+      success: true,
+      field_id: result.lastInsertRowid,
+      message: 'Field added successfully'
+    });
+    
+  } catch (error) {
+    console.error('Error adding field to custom table:', error);
+    res.status(500).json({ error: 'Failed to add field to custom table' });
+  }
+});
+
 app.get('/api/add-header-logo-column', (req, res) => {
   try {
     // Check if column exists
