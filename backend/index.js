@@ -1887,7 +1887,7 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
       source_table: null,
       source_attribute: null,
       data_type,
-      is_key: false,
+      is_key: 0, // Convert boolean to integer for SQLite
       field_order: fieldOrder
     });
     
@@ -1898,7 +1898,7 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
       null, // source_table
       null, // source_attribute
       data_type,
-      false, // is_key
+      0, // is_key: Convert boolean false to integer 0 for SQLite
       fieldOrder
     );
     
