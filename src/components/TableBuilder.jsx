@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import CustomTableCreator from './CustomTableCreator';
 
 export default function TableBuilder({ onLogout, onHome, brandName }) {
   const navigate = useNavigate();
@@ -19,6 +20,9 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const [newOrderItemField, setNewOrderItemField] = useState({ name: '', type: 'text', options: '' });
   const [addingField, setAddingField] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null);
+  const [customTables, setCustomTables] = useState([]);
+  const [showCustomTableCreator, setShowCustomTableCreator] = useState(false);
+  const [selectedCustomTable, setSelectedCustomTable] = useState(null);
   
   // Set title
   document.title = brandName ? `${brandName} - Table Builder` : 'Table Builder - Feather';
@@ -137,8 +141,28 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
     }
   };
 
+  const fetchCustomTables = async () => {
+    try {
+      const response = await fetch('/api/custom-tables', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCustomTables(data);
+      } else {
+        console.log('Custom tables endpoint not available yet');
+        setCustomTables([]);
+      }
+    } catch (error) {
+      console.log('Custom tables not implemented yet:', error);
+      setCustomTables([]);
+    }
+  };
+
   useEffect(() => {
     fetchAllTablesData();
+    fetchCustomTables();
   }, []);
 
   const getColumnNames = (data, entityType) => {
@@ -384,6 +408,53 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
       }
     };
     input.click();
+  };
+
+  const handleCreateCustomTable = async (tableData) => {
+    try {
+      const response = await fetch('/api/custom-tables', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(tableData)
+      });
+
+      if (response.ok) {
+        const newTable = await response.json();
+        setCustomTables(prev => [...prev, newTable]);
+        setShowCustomTableCreator(false);
+        alert('Custom table created successfully!');
+      } else {
+        const error = await response.json();
+        alert('Error creating custom table: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error creating custom table:', error);
+      alert('Error creating custom table: ' + error.message);
+    }
+  };
+
+  const handleDeleteCustomTable = async (tableId) => {
+    if (!confirm('Are you sure you want to delete this custom table?')) return;
+    
+    try {
+      const response = await fetch(`/api/custom-tables/${tableId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        setCustomTables(prev => prev.filter(table => table.id !== tableId));
+        alert('Custom table deleted successfully');
+      } else {
+        alert('Failed to delete custom table');
+      }
+    } catch (error) {
+      console.error('Error deleting custom table:', error);
+      alert('Error deleting custom table');
+    }
   };
 
   if (loading) {
@@ -1129,7 +1200,94 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
             </>
           )}
         </div>
+
+        {/* Custom Tables Section */}
+        {customTables.map((table) => (
+          <div key={table.id} className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="px-6 py-5 bg-gradient-to-r from-gray-600 to-gray-700 cursor-pointer hover:from-gray-700 hover:to-gray-800 transition-all duration-200 flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m8 5 4-4 4 4" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">{table.name}</h2>
+                  <p className="text-gray-100 text-sm">{table.description || 'Custom table'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => exportToCSV(`custom-${table.id}`)}
+                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                    disabled={loading}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export to Excel
+                  </button>
+                  <button
+                    onClick={() => triggerFileUpload(`custom-${table.id}`)}
+                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                    disabled={loading}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                    </svg>
+                    Upload from Excel
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCustomTable(table.id)}
+                    className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="text-center py-8">
+                <p className="text-gray-500 text-lg font-medium">Custom Table: {table.name}</p>
+                <p className="text-gray-400 text-sm">
+                  {table.fields ? `${table.fields.length} custom fields configured` : 'No fields configured yet'}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Add Custom Table Button */}
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={() => setShowCustomTableCreator(true)}
+            className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add Custom Table
+          </button>
+        </div>
       </div>
+
+      {/* Custom Table Creator Modal */}
+      {showCustomTableCreator && (
+        <CustomTableCreator
+          onClose={() => setShowCustomTableCreator(false)}
+          onCreateTable={handleCreateCustomTable}
+          accountsData={accountsData}
+          productsData={productsData}
+          ordersData={ordersData}
+          orderItemsData={orderItemsData}
+        />
+      )}
     </div>
   );
 }

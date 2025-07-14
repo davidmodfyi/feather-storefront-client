@@ -1388,6 +1388,199 @@ app.get('/api/debug/custom-attributes', (req, res) => {
   }
 });
 
+// Custom Tables API Endpoints
+app.get('/api/custom-tables', (req, res) => {
+  console.log('Custom tables request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get all custom tables for this distributor
+    const customTables = db.prepare(`
+      SELECT * FROM custom_tables 
+      WHERE distributor_id = ? 
+      ORDER BY created_at DESC
+    `).all(distributorId);
+    
+    // Get fields for each table
+    const tablesWithFields = customTables.map(table => {
+      const fields = db.prepare(`
+        SELECT * FROM custom_table_fields 
+        WHERE table_id = ? 
+        ORDER BY field_order
+      `).all(table.id);
+      
+      return {
+        ...table,
+        fields: fields
+      };
+    });
+    
+    console.log(`Found ${tablesWithFields.length} custom tables`);
+    res.json(tablesWithFields);
+    
+  } catch (error) {
+    console.error('Error fetching custom tables:', error);
+    res.status(500).json({ error: 'Failed to fetch custom tables' });
+  }
+});
+
+app.post('/api/custom-tables', (req, res) => {
+  console.log('Create custom table request:', req.body);
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const { name, description, fields } = req.body;
+    
+    // Validate required fields
+    if (!name || !fields || fields.length === 0) {
+      return res.status(400).json({ error: 'Name and fields are required' });
+    }
+    
+    // Create tables if they don't exist
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS custom_tables (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        distributor_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS custom_table_fields (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        table_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        label TEXT NOT NULL,
+        source_table TEXT NOT NULL,
+        source_attribute TEXT NOT NULL,
+        data_type TEXT NOT NULL,
+        is_key BOOLEAN DEFAULT FALSE,
+        field_order INTEGER NOT NULL,
+        FOREIGN KEY (table_id) REFERENCES custom_tables(id) ON DELETE CASCADE
+      )
+    `).run();
+    
+    // Insert custom table
+    const tableResult = db.prepare(`
+      INSERT INTO custom_tables (distributor_id, name, description)
+      VALUES (?, ?, ?)
+    `).run(distributorId, name, description);
+    
+    const tableId = tableResult.lastInsertRowid;
+    
+    // Insert fields
+    const insertFieldStmt = db.prepare(`
+      INSERT INTO custom_table_fields 
+      (table_id, name, label, source_table, source_attribute, data_type, is_key, field_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    fields.forEach((field, index) => {
+      insertFieldStmt.run(
+        tableId,
+        field.name,
+        field.label,
+        field.sourceTable,
+        field.sourceAttribute,
+        field.dataType,
+        field.isKey ? 1 : 0,
+        index
+      );
+    });
+    
+    // Return the created table with fields
+    const createdTable = db.prepare(`
+      SELECT * FROM custom_tables WHERE id = ?
+    `).get(tableId);
+    
+    const tableFields = db.prepare(`
+      SELECT * FROM custom_table_fields WHERE table_id = ? ORDER BY field_order
+    `).all(tableId);
+    
+    console.log(`Created custom table: ${name} with ${fields.length} fields`);
+    
+    res.json({
+      ...createdTable,
+      fields: tableFields
+    });
+    
+  } catch (error) {
+    console.error('Error creating custom table:', error);
+    res.status(500).json({ error: 'Failed to create custom table' });
+  }
+});
+
+app.delete('/api/custom-tables/:id', (req, res) => {
+  console.log('Delete custom table request:', req.params.id);
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const tableId = req.params.id;
+    
+    // Verify table belongs to this distributor
+    const table = db.prepare(`
+      SELECT * FROM custom_tables 
+      WHERE id = ? AND distributor_id = ?
+    `).get(tableId, distributorId);
+    
+    if (!table) {
+      return res.status(404).json({ error: 'Table not found' });
+    }
+    
+    // Delete table (fields will be deleted via CASCADE)
+    db.prepare(`DELETE FROM custom_tables WHERE id = ?`).run(tableId);
+    
+    console.log(`Deleted custom table: ${table.name}`);
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Error deleting custom table:', error);
+    res.status(500).json({ error: 'Failed to delete custom table' });
+  }
+});
+
+app.get('/api/custom-attributes', (req, res) => {
+  console.log('Custom attributes request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get all custom attribute definitions for this distributor
+    const customAttributes = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND is_active = 1
+      ORDER BY entity_type, display_order
+    `).all(distributorId);
+    
+    console.log(`Found ${customAttributes.length} custom attributes`);
+    res.json(customAttributes);
+    
+  } catch (error) {
+    console.error('Error fetching custom attributes:', error);
+    res.status(500).json({ error: 'Failed to fetch custom attributes' });
+  }
+});
+
 app.get('/api/add-header-logo-column', (req, res) => {
   try {
     // Check if column exists
