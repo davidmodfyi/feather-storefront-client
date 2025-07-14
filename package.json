@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "AI-powered storefront with Claude integration for dynamic customization",
+  "_comment": "Claude Assistant: Testing git connection",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
