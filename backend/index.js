@@ -1795,8 +1795,11 @@ app.post('/api/table-builder/custom-:tableId/import', csvUpload.single('csvFile'
 // Add field to existing custom table
 app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
   console.log('Add field to custom table request:', req.params.tableId);
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Distributor ID:', req.session.distributor_id);
   
   if (!req.session.distributor_id) {
+    console.log('ERROR: Not authenticated');
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
@@ -1805,38 +1808,52 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
     const tableId = req.params.tableId;
     const { name, label, data_type, options } = req.body;
     
+    console.log('Parsed values:', { name, label, data_type, options });
+    
     // Validate input
     if (!name || !data_type) {
+      console.log('ERROR: Missing required fields');
       return res.status(400).json({ error: 'Field name and data type are required' });
     }
     
     // Check if table exists and belongs to distributor
+    console.log('Checking if table exists...');
     const customTable = db.prepare(`
       SELECT * FROM custom_tables 
       WHERE id = ? AND distributor_id = ?
     `).get(tableId, distributorId);
     
+    console.log('Custom table found:', customTable);
+    
     if (!customTable) {
+      console.log('ERROR: Custom table not found');
       return res.status(404).json({ error: 'Custom table not found' });
     }
     
     // Check if field name already exists
+    console.log('Checking for existing field...');
     const existingField = db.prepare(`
       SELECT * FROM custom_table_fields 
       WHERE table_id = ? AND name = ?
     `).get(tableId, name);
     
+    console.log('Existing field check result:', existingField);
+    
     if (existingField) {
+      console.log('ERROR: Field name already exists');
       return res.status(400).json({ error: 'Field name already exists' });
     }
     
     // Get the highest field_order for this table
+    console.log('Getting max field order...');
     const maxOrder = db.prepare(`
       SELECT MAX(field_order) as max_order FROM custom_table_fields 
       WHERE table_id = ?
     `).get(tableId);
     
+    console.log('Max order result:', maxOrder);
     const fieldOrder = (maxOrder.max_order || 0) + 1;
+    console.log('New field order:', fieldOrder);
     
     // Prepare validation_rules
     let validationRules = {};
@@ -1847,14 +1864,32 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
         options: optionsArray
       };
     }
+    console.log('Validation rules:', JSON.stringify(validationRules));
     
-    // Insert the new field
+    // First, let's check the actual table schema
+    console.log('Checking table schema...');
+    const schemaInfo = db.prepare(`PRAGMA table_info(custom_table_fields)`).all();
+    console.log('Current table schema:', schemaInfo);
+    
+    // Insert the new field (only using columns that exist)
+    console.log('Preparing to insert new field...');
     const insertField = db.prepare(`
       INSERT INTO custom_table_fields (
         table_id, name, label, source_table, source_attribute, 
-        data_type, is_key, field_order, validation_rules, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        data_type, is_key, field_order
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
+    
+    console.log('Insert parameters:', {
+      tableId,
+      name,
+      label: label || name,
+      source_table: null,
+      source_attribute: null,
+      data_type,
+      is_key: false,
+      field_order: fieldOrder
+    });
     
     const result = insertField.run(
       tableId,
@@ -1864,12 +1899,11 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
       null, // source_attribute
       data_type,
       false, // is_key
-      fieldOrder,
-      JSON.stringify(validationRules),
-      new Date().toISOString()
+      fieldOrder
     );
     
-    console.log(`Added field '${name}' to custom table ${tableId}`);
+    console.log('Insert result:', result);
+    console.log(`SUCCESS: Added field '${name}' to custom table ${tableId}`);
     
     res.json({
       success: true,
@@ -1878,8 +1912,12 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error adding field to custom table:', error);
-    res.status(500).json({ error: 'Failed to add field to custom table' });
+    console.error('FULL ERROR adding field to custom table:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to add field to custom table',
+      details: error.message 
+    });
   }
 });
 

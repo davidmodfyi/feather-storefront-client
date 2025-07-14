@@ -583,7 +583,11 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         alert('Custom field added successfully!');
       } else {
         const error = await response.json();
-        alert('Error adding field: ' + (error.error || 'Unknown error'));
+        console.error('Server error details:', error);
+        const errorMessage = error.details 
+          ? `${error.error}: ${error.details}` 
+          : (error.error || 'Unknown error');
+        alert('Error adding field: ' + errorMessage);
       }
     } catch (error) {
       console.error('Error adding custom field:', error);
