@@ -1581,6 +1581,181 @@ app.get('/api/custom-attributes', (req, res) => {
   }
 });
 
+// Custom table export endpoint
+app.get('/api/table-builder/custom-:tableId/export', (req, res) => {
+  console.log('Export custom table request:', req.params.tableId);
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const tableId = req.params.tableId;
+    
+    // Get the custom table
+    const customTable = db.prepare(`
+      SELECT * FROM custom_tables 
+      WHERE id = ? AND distributor_id = ?
+    `).get(tableId, distributorId);
+    
+    if (!customTable) {
+      return res.status(404).json({ error: 'Custom table not found' });
+    }
+    
+    // Get table fields
+    const fields = db.prepare(`
+      SELECT * FROM custom_table_fields 
+      WHERE table_id = ? 
+      ORDER BY field_order
+    `).all(tableId);
+    
+    // Check if we have any data for this table
+    let customTableData = [];
+    try {
+      // Try to get existing data from custom_table_data table
+      const dataStmt = db.prepare(`
+        SELECT * FROM custom_table_data 
+        WHERE table_id = ? AND distributor_id = ?
+      `);
+      customTableData = dataStmt.all(tableId, distributorId);
+    } catch (error) {
+      console.log('No existing data table found, creating empty export');
+      customTableData = [];
+    }
+    
+    if (customTableData.length === 0) {
+      // Return empty template with headers
+      const emptyRow = {};
+      fields.forEach(field => {
+        emptyRow[field.name] = '';
+      });
+      
+      // Add a few empty rows to make it easier to work with
+      const templateData = [emptyRow, {...emptyRow}, {...emptyRow}];
+      
+      console.log(`Exporting empty template for custom table: ${customTable.name}`);
+      return res.json({
+        data: templateData,
+        exported_at: new Date().toISOString(),
+        table_name: customTable.name,
+        template: true
+      });
+    }
+    
+    // If we have data, export it
+    console.log(`Exporting ${customTableData.length} rows from custom table: ${customTable.name}`);
+    res.json({
+      data: customTableData,
+      exported_at: new Date().toISOString(),
+      table_name: customTable.name,
+      template: false
+    });
+    
+  } catch (error) {
+    console.error('Error exporting custom table:', error);
+    res.status(500).json({ error: 'Failed to export custom table' });
+  }
+});
+
+// Custom table import endpoint
+app.post('/api/table-builder/custom-:tableId/import', csvUpload.single('csvFile'), (req, res) => {
+  console.log('Import custom table request:', req.params.tableId);
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const tableId = req.params.tableId;
+    
+    // Get the custom table
+    const customTable = db.prepare(`
+      SELECT * FROM custom_tables 
+      WHERE id = ? AND distributor_id = ?
+    `).get(tableId, distributorId);
+    
+    if (!customTable) {
+      return res.status(404).json({ error: 'Custom table not found' });
+    }
+    
+    // Get table fields
+    const fields = db.prepare(`
+      SELECT * FROM custom_table_fields 
+      WHERE table_id = ? 
+      ORDER BY field_order
+    `).all(tableId);
+    
+    // Parse the CSV
+    const csvText = req.file.buffer.toString('utf8');
+    const parsedData = parseCSV(csvText);
+    
+    if (parsedData.length === 0) {
+      return res.status(400).json({ error: 'No data found in CSV file' });
+    }
+    
+    // Create custom table data table if it doesn't exist
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS custom_table_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        table_id INTEGER NOT NULL,
+        distributor_id TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (table_id) REFERENCES custom_tables(id) ON DELETE CASCADE
+      )
+    `).run();
+    
+    // Clear existing data for this table
+    db.prepare(`
+      DELETE FROM custom_table_data 
+      WHERE table_id = ? AND distributor_id = ?
+    `).run(tableId, distributorId);
+    
+    // Insert new data
+    const insertStmt = db.prepare(`
+      INSERT INTO custom_table_data (table_id, distributor_id, data)
+      VALUES (?, ?, ?)
+    `);
+    
+    let imported = 0;
+    let errors = [];
+    
+    parsedData.forEach((row, index) => {
+      try {
+        // Skip empty rows
+        const hasData = Object.values(row).some(value => value && value.trim());
+        if (!hasData) return;
+        
+        // Store row data as JSON
+        insertStmt.run(tableId, distributorId, JSON.stringify(row));
+        imported++;
+      } catch (error) {
+        errors.push(`Row ${index + 1}: ${error.message}`);
+      }
+    });
+    
+    console.log(`Imported ${imported} rows into custom table: ${customTable.name}`);
+    
+    res.json({
+      success: true,
+      imported: imported,
+      errors: errors,
+      table_name: customTable.name
+    });
+    
+  } catch (error) {
+    console.error('Error importing custom table data:', error);
+    res.status(500).json({ error: 'Failed to import custom table data' });
+  }
+});
+
 app.get('/api/add-header-logo-column', (req, res) => {
   try {
     // Check if column exists

@@ -311,7 +311,62 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
   const exportToCSV = async (entityType) => {
     try {
       setLoading(true);
-      // Handle the order-items special case for URL
+      
+      // Check if this is a custom table export
+      if (entityType.startsWith('custom-')) {
+        const tableId = entityType.replace('custom-', '');
+        const response = await fetch(`/api/table-builder/custom-${tableId}/export`, {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (!data.data || data.data.length === 0) {
+            alert(`No data to export for custom table: ${data.table_name || 'Unknown'}`);
+            return;
+          }
+
+          // Convert to CSV
+          const headers = Object.keys(data.data[0]);
+          const csvContent = [
+            headers.join(','),
+            ...data.data.map(row => 
+              headers.map(header => {
+                const value = row[header] || '';
+                // Escape quotes and wrap in quotes if contains comma
+                const escaped = String(value).replace(/"/g, '""');
+                return escaped.includes(',') ? `"${escaped}"` : escaped;
+              }).join(',')
+            )
+          ].join('\n');
+
+          // Download CSV
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          const fileName = data.template ? 
+            `${data.table_name}_template_${new Date().toISOString().split('T')[0]}.csv` :
+            `${data.table_name}_export_${new Date().toISOString().split('T')[0]}.csv`;
+          link.setAttribute('href', url);
+          link.setAttribute('download', fileName);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          const message = data.template ? 
+            `Template exported successfully for ${data.table_name}! Fill in the data and upload back.` :
+            `Data exported successfully for ${data.table_name}!`;
+          alert(message);
+        } else {
+          const error = await response.json();
+          alert('Export error: ' + (error.error || 'Unknown error'));
+        }
+        return;
+      }
+
+      // Handle standard table exports
       const apiEntityType = entityType === 'order-items' ? 'order-items' : entityType;
       const response = await fetch(`/api/table-builder/${apiEntityType}/export`, {
         credentials: 'include'
@@ -370,6 +425,28 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
       setLoading(true);
       const formData = new FormData();
       formData.append('csvFile', file);
+      
+      // Check if this is a custom table import
+      if (entityType.startsWith('custom-')) {
+        const tableId = entityType.replace('custom-', '');
+        const response = await fetch(`/api/table-builder/custom-${tableId}/import`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          alert(`Import successful! ${result.imported || 0} records imported.`);
+          
+          // Refresh custom tables data
+          fetchCustomTables();
+        } else {
+          const error = await response.json();
+          alert('Import error: ' + (error.error || 'Unknown error'));
+        }
+        return;
+      }
       
       // Handle the order-items special case for URL
       const apiEntityType = entityType === 'order-items' ? 'order-items' : entityType;
