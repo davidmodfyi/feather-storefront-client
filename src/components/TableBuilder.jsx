@@ -1330,12 +1330,47 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
             </div>
             
             <div className="p-6">
-              <div className="text-center py-8">
-                <p className="text-gray-500 text-lg font-medium">Custom Table: {table.name}</p>
-                <p className="text-gray-400 text-sm">
-                  {table.fields ? `${table.fields.length} custom fields configured` : 'No fields configured yet'}
-                </p>
-              </div>
+              {table.data && table.data.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        {table.fields.map((field, index) => (
+                          <th key={index} className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">
+                            {field.label || field.name}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {table.data.slice(0, 10).map((row, rowIndex) => (
+                        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          {table.fields.map((field, fieldIndex) => (
+                            <td key={fieldIndex} className="border border-gray-300 px-4 py-2 text-gray-900">
+                              {row[field.name] || ''}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {table.data.length > 10 && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Showing first 10 of {table.data.length} records
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 text-lg font-medium">Custom Table: {table.name}</p>
+                  <p className="text-gray-400 text-sm">
+                    {table.fields ? `${table.fields.length} custom fields configured` : 'No fields configured yet'}
+                  </p>
+                  <p className="text-gray-400 text-sm mt-2">
+                    No data uploaded yet. Use "Export to Excel" to get a template.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         ))}

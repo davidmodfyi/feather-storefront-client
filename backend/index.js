@@ -1406,7 +1406,7 @@ app.get('/api/custom-tables', (req, res) => {
       ORDER BY created_at DESC
     `).all(distributorId);
     
-    // Get fields for each table
+    // Get fields and data for each table
     const tablesWithFields = customTables.map(table => {
       const fields = db.prepare(`
         SELECT * FROM custom_table_fields 
@@ -1414,9 +1414,32 @@ app.get('/api/custom-tables', (req, res) => {
         ORDER BY field_order
       `).all(table.id);
       
+      // Get table data
+      let tableData = [];
+      try {
+        const dataRows = db.prepare(`
+          SELECT * FROM custom_table_data 
+          WHERE table_id = ? AND distributor_id = ?
+          ORDER BY created_at DESC
+        `).all(table.id, distributorId);
+        
+        tableData = dataRows.map(row => {
+          try {
+            return JSON.parse(row.data);
+          } catch (e) {
+            console.error('Error parsing table data:', e);
+            return {};
+          }
+        });
+      } catch (error) {
+        console.log('No data found for table:', table.id);
+        tableData = [];
+      }
+      
       return {
         ...table,
-        fields: fields
+        fields: fields,
+        data: tableData
       };
     });
     
@@ -1693,7 +1716,10 @@ app.post('/api/table-builder/custom-:tableId/import', csvUpload.single('csvFile'
     
     // Parse the CSV
     const csvText = req.file.buffer.toString('utf8');
+    console.log('CSV text:', csvText.substring(0, 200) + '...');
     const parsedData = parseCSV(csvText);
+    
+    console.log('Parsed data:', JSON.stringify(parsedData, null, 2));
     
     if (parsedData.length === 0) {
       return res.status(400).json({ error: 'No data found in CSV file' });
@@ -1729,14 +1755,24 @@ app.post('/api/table-builder/custom-:tableId/import', csvUpload.single('csvFile'
     
     parsedData.forEach((row, index) => {
       try {
+        console.log(`Processing row ${index + 1}:`, JSON.stringify(row));
+        
         // Skip empty rows
         const hasData = Object.values(row).some(value => value && value.trim());
-        if (!hasData) return;
+        console.log(`Row ${index + 1} has data:`, hasData);
+        
+        if (!hasData) {
+          console.log(`Skipping empty row ${index + 1}`);
+          return;
+        }
         
         // Store row data as JSON
+        console.log(`Inserting row ${index + 1} into database:`, JSON.stringify(row));
         insertStmt.run(tableId, distributorId, JSON.stringify(row));
         imported++;
+        console.log(`Successfully imported row ${index + 1}`);
       } catch (error) {
+        console.error(`Error processing row ${index + 1}:`, error);
         errors.push(`Row ${index + 1}: ${error.message}`);
       }
     });
