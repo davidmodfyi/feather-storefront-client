@@ -1463,8 +1463,8 @@ app.post('/api/custom-tables', (req, res) => {
         table_id INTEGER NOT NULL,
         name TEXT NOT NULL,
         label TEXT NOT NULL,
-        source_table TEXT NOT NULL,
-        source_attribute TEXT NOT NULL,
+        source_table TEXT,
+        source_attribute TEXT,
         data_type TEXT NOT NULL,
         is_key BOOLEAN DEFAULT FALSE,
         field_order INTEGER NOT NULL,
@@ -1491,9 +1491,9 @@ app.post('/api/custom-tables', (req, res) => {
       insertFieldStmt.run(
         tableId,
         field.name,
-        field.label,
-        field.sourceTable,
-        field.sourceAttribute,
+        field.label || field.name,
+        field.sourceTable || null,
+        field.sourceAttribute || null,
         field.dataType,
         field.isKey ? 1 : 0,
         index
