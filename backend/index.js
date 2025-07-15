@@ -2802,9 +2802,11 @@ Current System State:
 - Active logic scripts: ${currentLogicScripts.map(s => s.description).join(', ')}
 
 Classify as one of:
-1. "ui" - styling, visual changes, adding content/fields
-2. "logic" - business rules, validation, pricing
+1. "ui" - styling, visual changes, adding content/fields, layout modifications
+2. "logic" - business rules, validation, pricing modifications, custom table lookups, price calculations, discounts, conditional pricing, customer-specific pricing
 3. "both" - requires both UI and logic changes
+
+IMPORTANT: Any request mentioning custom tables for pricing, price changes, price calculations, or business logic should be classified as "logic" or "both", NOT "ui".
 
 Respond with ONLY the classification: ui, logic, or both`
         }]
@@ -2913,9 +2915,49 @@ AVAILABLE DYNAMIC FORM FIELDS (added via UI customization):
 ${formFields.map(field => `- cart.${field.label} or cart.${field.label.toLowerCase()} or cart.${field.label.toLowerCase().replace(/\s+/g, '_')} (${field.fieldType})`).join('\n')}`;
       }
 
+      // Fetch available custom tables for logic context
+      const customTables = db.prepare(`
+        SELECT ct.*, 
+               GROUP_CONCAT(
+                 ctf.name || ':' || ctf.label || ':' || ctf.data_type || ':' || 
+                 COALESCE(ctf.source_table, '') || ':' || COALESCE(ctf.source_attribute, ''),
+                 '|'
+               ) as fields_info
+        FROM custom_tables ct
+        LEFT JOIN custom_table_fields ctf ON ct.id = ctf.table_id
+        WHERE ct.distributor_id = ?
+        GROUP BY ct.id, ct.name, ct.description
+        ORDER BY ct.created_at DESC
+      `).all(req.session.distributor_id);
+
+      // Build custom tables context for logic AI
+      let customTablesContext = '';
+      if (customTables.length > 0) {
+        customTablesContext = `
+
+AVAILABLE CUSTOM TABLES (for data lookups and business logic):
+${customTables.map(table => {
+  let tableInfo = `- "${table.name}" - ${table.description || 'Custom data table'}`;
+  if (table.fields_info) {
+    const fields = table.fields_info.split('|').filter(f => f.trim());
+    tableInfo += '\n  Fields:';
+    fields.forEach(fieldInfo => {
+      const [name, label, dataType, sourceTable, sourceAttribute] = fieldInfo.split(':');
+      tableInfo += `\n    • ${name} (${dataType})`;
+      if (sourceTable && sourceAttribute) {
+        tableInfo += ` - linked to ${sourceTable}.${sourceAttribute}`;
+      }
+    });
+  }
+  return tableInfo;
+}).join('\n\n')}
+
+IMPORTANT: To access custom table data in logic scripts, you can use database lookups within your JavaScript code.`;
+      }
+
       const systemPrompt = `You are an expert at creating JavaScript logic scripts for e-commerce storefronts. 
 
-AVAILABLE CUSTOMER ATTRIBUTES: ${customerAttributes.map(a => a.attribute_name).join(', ')}${formFieldsContext}
+AVAILABLE CUSTOMER ATTRIBUTES: ${customerAttributes.map(a => a.attribute_name).join(', ')}${formFieldsContext}${customTablesContext}
 
 AVAILABLE TRIGGER POINTS:
 - storefront_load: When customer first visits the store (USE THIS FOR PRICING MODIFICATIONS)
