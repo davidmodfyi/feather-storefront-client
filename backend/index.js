@@ -3262,8 +3262,25 @@ app.post('/api/ai-customize', async (req, res) => {
     WHERE distributor_id = ? AND entity_type = 'orders'
   `).all(req.session.distributor_id);
   
+  // Fetch available custom tables for context
+  const customTables = db.prepare(`
+    SELECT ct.*, 
+           GROUP_CONCAT(
+             ctf.name || ':' || ctf.label || ':' || ctf.data_type || ':' || 
+             COALESCE(ctf.source_table, '') || ':' || COALESCE(ctf.source_attribute, ''),
+             '|'
+           ) as fields_info
+    FROM custom_tables ct
+    LEFT JOIN custom_table_fields ctf ON ct.id = ctf.table_id
+    WHERE ct.distributor_id = ?
+    GROUP BY ct.id, ct.name, ct.description
+    ORDER BY ct.created_at DESC
+  `).all(req.session.distributor_id);
+  
   console.log('🔥 DEBUG: Found custom order fields:', orderCustomFields.map(f => f.attribute_name));
+  console.log('🔥 DEBUG: Found custom tables:', customTables.map(t => t.name));
   console.log('🔥 DEBUG: Full custom fields data:', JSON.stringify(orderCustomFields, null, 2));
+  console.log('🔥 DEBUG: Full custom tables data:', JSON.stringify(customTables, null, 2));
   
   try {
     console.log(`🔥 Starting AI customization for ${distributorSlug}: ${message}`);
@@ -3272,7 +3289,7 @@ app.post('/api/ai-customize', async (req, res) => {
     
     // Use Claude AI to parse the request and generate modifications
     console.log('🔥 Calling parseAIRequestWithClaude...');
-    const aiResponse = await parseAIRequestWithClaude(message, orderCustomFields);
+    const aiResponse = await parseAIRequestWithClaude(message, orderCustomFields, customTables);
     console.log('🔥 AI Response received:', JSON.stringify(aiResponse, null, 2));
     
     // Check if Claude is overloaded
@@ -3384,10 +3401,11 @@ app.post('/api/ai-customize', async (req, res) => {
 });
 
 // Claude AI-powered request parser
-async function parseAIRequestWithClaude(userRequest, orderCustomFields = []) {
+async function parseAIRequestWithClaude(userRequest, orderCustomFields = [], customTables = []) {
   console.log('🔥 parseAIRequestWithClaude called');
   console.log('🔥 userRequest:', userRequest);
   console.log('🔥 orderCustomFields:', orderCustomFields);
+  console.log('🔥 customTables:', customTables);
   console.log('🔥 ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
   console.log('🔥 Processing AI customization request with Claude...');
   
@@ -3411,10 +3429,33 @@ async function parseAIRequestWithClaude(userRequest, orderCustomFields = []) {
     });
   }
   
+  // Build custom tables context
+  let customTablesContext = '';
+  if (customTables.length > 0) {
+    customTablesContext = '\n\nAVAILABLE CUSTOM TABLES:\n';
+    customTables.forEach(table => {
+      customTablesContext += `- "${table.name}" - ${table.description || 'Custom data table'}\n`;
+      if (table.fields_info) {
+        const fields = table.fields_info.split('|').filter(f => f.trim());
+        customTablesContext += '  Fields:\n';
+        fields.forEach(fieldInfo => {
+          const [name, label, dataType, sourceTable, sourceAttribute] = fieldInfo.split(':');
+          customTablesContext += `    • ${name} (${dataType})`;
+          if (sourceTable && sourceAttribute) {
+            customTablesContext += ` - linked to ${sourceTable}.${sourceAttribute}`;
+          }
+          customTablesContext += '\n';
+        });
+      }
+      customTablesContext += '\n';
+    });
+  }
+  
   console.log('🔥 DEBUG: Custom fields context built:', customFieldsContext);
+  console.log('🔥 DEBUG: Custom tables context built:', customTablesContext);
   
   // Enhanced system prompt with styling AND content insertion capabilities  
-  const systemPrompt = `You are an AI assistant that helps customize storefront and cart appearance using CSS styling AND content insertion.${customFieldsContext}
+  const systemPrompt = `You are an AI assistant that helps customize storefront and cart appearance using CSS styling AND content insertion.${customFieldsContext}${customTablesContext}
 
 CAPABILITIES:
 1. STYLING - Modify existing elements with CSS
