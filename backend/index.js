@@ -2043,6 +2043,87 @@ app.get('/api/custom-tables/:tableId/data', (req, res) => {
   }
 });
 
+// Custom Table Fields API - Get field metadata for intelligent field selection
+app.get('/api/custom-tables/:tableId/fields', (req, res) => {
+  console.log('Custom table fields request for table:', req.params.tableId);
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const tableId = req.params.tableId;
+    
+    // Get table info - handle both numeric ID and table name
+    let table;
+    if (isNaN(tableId)) {
+      // tableId is a string (table name)
+      table = db.prepare(`
+        SELECT * FROM custom_tables 
+        WHERE name = ? AND distributor_id = ?
+      `).get(tableId, distributorId);
+    } else {
+      // tableId is numeric (table ID)
+      table = db.prepare(`
+        SELECT * FROM custom_tables 
+        WHERE id = ? AND distributor_id = ?
+      `).get(tableId, distributorId);
+    }
+    
+    if (!table) {
+      return res.status(404).json({ error: 'Custom table not found' });
+    }
+    
+    // Get table fields
+    const fields = db.prepare(`
+      SELECT * FROM custom_table_fields 
+      WHERE table_id = ? 
+      ORDER BY field_order
+    `).all(table.id);
+    
+    // Suggest best display field based on common patterns
+    const suggestedDisplayField = fields.find(field => {
+      const fieldName = field.name.toLowerCase();
+      return fieldName.includes('name') || 
+             fieldName.includes('title') || 
+             fieldName.includes('description') || 
+             fieldName.includes('method') || 
+             fieldName.includes('option') || 
+             fieldName.includes('label');
+    });
+    
+    // Get sample data to help with field selection
+    const sampleData = db.prepare(`
+      SELECT * FROM custom_table_data 
+      WHERE table_id = ? AND distributor_id = ?
+      LIMIT 1
+    `).get(table.id, distributorId);
+    
+    let sampleFields = [];
+    if (sampleData) {
+      try {
+        const parsed = JSON.parse(sampleData.data);
+        sampleFields = Object.keys(parsed).filter(key => key !== 'id' && key !== 'account_id');
+      } catch (e) {
+        console.error('Error parsing sample data:', e);
+      }
+    }
+    
+    res.json({
+      table: table,
+      fields: fields,
+      suggestedDisplayField: suggestedDisplayField?.name || (sampleFields.length > 0 ? sampleFields[0] : 'name'),
+      sampleFieldNames: sampleFields,
+      fieldCount: fields.length
+    });
+    
+  } catch (error) {
+    console.error('Error fetching custom table fields:', error);
+    res.status(500).json({ error: 'Failed to fetch custom table fields' });
+  }
+});
+
 app.get('/api/add-header-logo-column', (req, res) => {
   try {
     // Check if column exists
@@ -3810,18 +3891,32 @@ CUSTOM TABLE DROPDOWN INSERTION FORMAT:
       "insertionZone": "cart-before-total",
       "contentType": "custom-table-dropdown",
       "contentData": {
-        "label": "Shipping Address",
-        "tableId": "ShippingAddress",
-        "displayField": "address_name",
+        "label": "[User-friendly label for the dropdown]",
+        "tableId": "[EXACT table name as created by user]",
+        "displayField": "[Field to show in dropdown - usually name, title, description, or similar]",
         "valueField": "id",
         "containerStyle": {"marginBottom": "1rem"},
         "labelStyle": {"fontWeight": "bold", "marginBottom": "0.5rem"},
         "inputStyle": {"padding": "0.5rem", "border": "1px solid #ccc", "borderRadius": "4px", "width": "100%"}
       },
-      "description": "Added custom table dropdown for shipping addresses"
+      "description": "Added custom table dropdown for [table purpose]"
     }
   ]
 }
+
+CRITICAL CUSTOM TABLE RULES:
+1. **tableId**: Use the EXACT table name the user mentioned (PaymentMethods, Toppings, etc.)
+2. **valueField**: ALWAYS use "id" (this is the row identifier, not the filtering field)
+3. **displayField**: Make an intelligent guess for the display field:
+   - Look for fields containing: name, title, description, method, option, label
+   - For PaymentMethods: try "method", "name", "payment_method", "type"
+   - For Toppings: try "name", "topping", "option", "flavor"
+   - For Suppliers: try "name", "supplier_name", "company", "vendor"
+   - If unsure, use the first non-id, non-account_id field
+4. **Filtering**: The system automatically filters by account_id - DO NOT use account_id as valueField
+5. **Account ID**: The system will automatically filter the dropdown options by the current user's account ID
+
+IMPORTANT: The system will work with ANY custom table name and ANY field names. Make reasonable guesses based on the table name and common field naming patterns.
 
 RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
 
