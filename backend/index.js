@@ -1666,10 +1666,37 @@ app.get('/api/table-builder/custom-:tableId/export', (req, res) => {
       });
     }
     
-    // If we have data, export it
+    // If we have data, convert it to field-based format
     console.log(`Exporting ${customTableData.length} rows from custom table: ${customTable.name}`);
+    
+    // Convert stored JSON data to field-based rows
+    const exportData = customTableData.map(row => {
+      try {
+        // Parse the JSON data stored in the 'data' column
+        const parsedData = JSON.parse(row.data);
+        
+        // Create a clean row with only the field values
+        const cleanRow = {};
+        fields.forEach(field => {
+          cleanRow[field.name] = parsedData[field.name] || '';
+        });
+        
+        return cleanRow;
+      } catch (error) {
+        console.error('Error parsing row data:', error);
+        // If parsing fails, create empty row with field structure
+        const emptyRow = {};
+        fields.forEach(field => {
+          emptyRow[field.name] = '';
+        });
+        return emptyRow;
+      }
+    });
+    
+    console.log(`Converted data sample:`, exportData[0]);
+    
     res.json({
-      data: customTableData,
+      data: exportData,
       exported_at: new Date().toISOString(),
       table_name: customTable.name,
       template: false
