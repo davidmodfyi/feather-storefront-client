@@ -1948,6 +1948,81 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
   }
 });
 
+// Custom Table Data API - Get data for a specific custom table
+app.get('/api/custom-tables/:tableId/data', (req, res) => {
+  console.log('Custom table data request for table:', req.params.tableId);
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    const tableId = req.params.tableId;
+    const accountId = req.query.account_id; // Optional filter by account ID
+    
+    // Get table info
+    const table = db.prepare(`
+      SELECT * FROM custom_tables 
+      WHERE id = ? AND distributor_id = ?
+    `).get(tableId, distributorId);
+    
+    if (!table) {
+      return res.status(404).json({ error: 'Custom table not found' });
+    }
+    
+    // Get table fields
+    const fields = db.prepare(`
+      SELECT * FROM custom_table_fields 
+      WHERE table_id = ? 
+      ORDER BY field_order
+    `).all(tableId);
+    
+    // Get table data
+    let query = `
+      SELECT * FROM custom_table_data 
+      WHERE table_id = ? AND distributor_id = ?
+    `;
+    let params = [tableId, distributorId];
+    
+    // If account_id is provided, filter by it
+    if (accountId) {
+      query += ` AND JSON_EXTRACT(data, '$.account_id') = ?`;
+      params.push(accountId);
+    }
+    
+    query += ` ORDER BY created_at DESC`;
+    
+    const dataRows = db.prepare(query).all(...params);
+    
+    // Parse the JSON data
+    const parsedData = dataRows.map(row => {
+      try {
+        return {
+          id: row.id,
+          ...JSON.parse(row.data),
+          created_at: row.created_at
+        };
+      } catch (e) {
+        console.error('Error parsing table data:', e);
+        return { id: row.id, error: 'Invalid data format' };
+      }
+    });
+    
+    console.log(`Found ${parsedData.length} records for table ${table.name}`);
+    
+    res.json({
+      table: table,
+      fields: fields,
+      data: parsedData
+    });
+    
+  } catch (error) {
+    console.error('Error fetching custom table data:', error);
+    res.status(500).json({ error: 'Failed to fetch custom table data' });
+  }
+});
+
 app.get('/api/add-header-logo-column', (req, res) => {
   try {
     // Check if column exists
@@ -3629,17 +3704,22 @@ CONTENT INSERTION EXAMPLES:
 - "Add [FieldName] field to cart" → INSERT form-field into appropriate cart zone
 - "Add OrderType to the bottom of cart" → INSERT form-field into cart-before-total zone
 - "I added a new custom order header field [Name]. Add it to [location]" → INSERT form-field
+- "Add ShippingAddress table dropdown to cart" → INSERT custom-table-dropdown into cart zone
+- "I made a [TableName] table. Add dropdown to cart" → INSERT custom-table-dropdown
+- "Use [TableName] custom table as dropdown in [location]" → INSERT custom-table-dropdown
 
 CONTENT INSERTION TYPES:
 - "banner" - promotional banners with text/images
 - "message" - informational text blocks
 - "form-field" - input fields, dropdowns, checkboxes
+- "custom-table-dropdown" - dropdowns populated from custom tables
 - "custom-html" - any custom HTML content
 
 IMPORTANT: Custom field requests are ALWAYS content insertion requests:
 - Keywords like "add field", "custom field", "OrderType", "field to cart" = CONTENT INSERTION
 - Requests mentioning Table Builder custom fields = CONTENT INSERTION  
 - "Add [FieldName] to [location]" = CONTENT INSERTION
+- Custom table requests: "table", "dropdown from table", "ShippingAddress table" = CUSTOM TABLE DROPDOWN INSERTION
 
 Parse the user request and determine if it requires STYLING or CONTENT INSERTION:
 
@@ -3698,6 +3778,27 @@ CUSTOM FIELD INSERTION FORMAT:
         "inputStyle": {"padding": "0.5rem", "border": "1px solid #ccc", "borderRadius": "4px"}
       },
       "description": "Added OrderType dropdown field to cart"
+    }
+  ]
+}
+
+CUSTOM TABLE DROPDOWN INSERTION FORMAT:
+{
+  "type": "content",
+  "insertions": [
+    {
+      "insertionZone": "cart-before-total",
+      "contentType": "custom-table-dropdown",
+      "contentData": {
+        "label": "Shipping Address",
+        "tableId": "ShippingAddress",
+        "displayField": "address",
+        "valueField": "id",
+        "containerStyle": {"marginBottom": "1rem"},
+        "labelStyle": {"fontWeight": "bold", "marginBottom": "0.5rem"},
+        "inputStyle": {"padding": "0.5rem", "border": "1px solid #ccc", "borderRadius": "4px", "width": "100%"}
+      },
+      "description": "Added custom table dropdown for shipping addresses"
     }
   ]
 }

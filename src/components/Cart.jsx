@@ -1,6 +1,87 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// Custom Table Dropdown Component
+const CustomTableDropdown = ({ 
+  content, 
+  customTableData, 
+  fetchCustomTableData, 
+  dynamicFormValues, 
+  setDynamicFormValues, 
+  currentUser 
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [options, setOptions] = useState([]);
+  
+  useEffect(() => {
+    const loadTableData = async () => {
+      const tableId = content.data.tableId;
+      const displayField = content.data.displayField || 'name';
+      const valueField = content.data.valueField || 'id';
+      
+      if (!tableId) return;
+      
+      setLoading(true);
+      
+      // Check if we already have the data
+      let tableData = customTableData[tableId];
+      
+      if (!tableData) {
+        // Fetch the data
+        tableData = await fetchCustomTableData(tableId);
+      }
+      
+      if (tableData && tableData.data) {
+        // Convert table data to dropdown options
+        const dropdownOptions = tableData.data.map(row => ({
+          value: row[valueField] || row.id,
+          label: row[displayField] || row.name || `Row ${row.id}`
+        }));
+        setOptions(dropdownOptions);
+      }
+      
+      setLoading(false);
+    };
+    
+    loadTableData();
+  }, [content.data.tableId, customTableData, fetchCustomTableData]);
+  
+  if (loading) {
+    return (
+      <div style={content.data.containerStyle || {marginBottom: '1rem'}} className="dynamic-form-field">
+        <label style={content.data.labelStyle || {fontWeight: 'bold', marginBottom: '0.5rem', display: 'block'}}>
+          {content.data.label}
+        </label>
+        <div style={{padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%'}}>
+          Loading...
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div style={content.data.containerStyle || {marginBottom: '1rem'}} className="dynamic-form-field">
+      <label style={content.data.labelStyle || {fontWeight: 'bold', marginBottom: '0.5rem', display: 'block'}}>
+        {content.data.label}
+      </label>
+      <select 
+        style={content.data.inputStyle || {padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%'}}
+        name={content.data.label}
+        value={dynamicFormValues[content.data.label] || ''}
+        onChange={(e) => setDynamicFormValues(prev => ({
+          ...prev,
+          [content.data.label]: e.target.value
+        }))}
+      >
+        <option value="">Select {content.data.label}</option>
+        {options.map((option, i) => (
+          <option key={i} value={option.value}>{option.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
 export default function Cart({ onLogout, onHome, brandName }) {
   const [cartItems, setCartItems] = useState([]);
   const [distributor, setDistributor] = useState('Storefront');
@@ -9,6 +90,8 @@ export default function Cart({ onLogout, onHome, brandName }) {
   const [customStyles, setCustomStyles] = useState({});
   const [dynamicContent, setDynamicContent] = useState({});
   const [dynamicFormValues, setDynamicFormValues] = useState({});
+  const [customTableData, setCustomTableData] = useState({});
+  const [currentUser, setCurrentUser] = useState({});
   const navigate = useNavigate();
 
  
@@ -16,7 +99,10 @@ export default function Cart({ onLogout, onHome, brandName }) {
     // Fetch user info
     fetch('/api/me', { credentials: 'include' })
       .then(res => res.json())
-      .then(data => setDistributor(data.distributorName || 'Storefront'))
+      .then(data => {
+        setDistributor(data.distributorName || 'Storefront');
+        setCurrentUser(data);
+      })
       .catch(console.error);
 
     // Fetch custom styles
@@ -266,6 +352,29 @@ const handleSubmitOrder = async () => {
     return customStyles[elementSelector] || {};
   };
 
+  // Fetch custom table data
+  const fetchCustomTableData = async (tableId) => {
+    try {
+      const accountId = currentUser.accountId;
+      const url = accountId 
+        ? `/api/custom-tables/${tableId}/data?account_id=${accountId}`
+        : `/api/custom-tables/${tableId}/data`;
+      
+      const response = await fetch(url, { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setCustomTableData(prev => ({
+          ...prev,
+          [tableId]: data
+        }));
+        return data;
+      }
+    } catch (error) {
+      console.error('Error fetching custom table data:', error);
+    }
+    return null;
+  };
+
   // Render dynamic content for a specific zone
   const renderDynamicContent = (zoneName) => {
     const zoneContent = dynamicContent[zoneName] || [];
@@ -322,6 +431,18 @@ const handleSubmitOrder = async () => {
             </div>
           );
         }
+      } else if (content.type === 'custom-table-dropdown') {
+        return (
+          <CustomTableDropdown
+            key={content.id || index}
+            content={content}
+            customTableData={customTableData}
+            fetchCustomTableData={fetchCustomTableData}
+            dynamicFormValues={dynamicFormValues}
+            setDynamicFormValues={setDynamicFormValues}
+            currentUser={currentUser}
+          />
+        );
       } else if (content.type === 'custom-html') {
         return (
           <div 
