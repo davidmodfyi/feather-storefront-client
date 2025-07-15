@@ -1360,88 +1360,98 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
               </div>
             </>
           )}
+          </div>
         </div>
 
         {/* Custom Tables Section */}
-        {customTables.map((table) => (
-          <div key={table.id} className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-            <div 
-              className="px-6 py-5 bg-gradient-to-r from-gray-600 to-gray-700 cursor-pointer hover:from-gray-700 hover:to-gray-800 transition-all duration-200 flex justify-between items-center"
-              onClick={() => setCustomTableExpanded(prev => ({ ...prev, [table.id]: !prev[table.id] }))}
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m8 5 4-4 4 4" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">{table.name}</h2>
-                  <p className="text-gray-100 text-sm">{table.description || 'Custom table'}</p>
-                </div>
-                <div className="text-white/80 text-sm">
-                  {table.data && table.data.length > 0 
-                    ? `${table.data.length} records` 
-                    : 'No data'
-                  }
-                </div>
+        {customTables.length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                </svg>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      exportToCSV(`custom-${table.id}`);
-                    }}
-                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
-                    disabled={loading}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Export to Excel
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      triggerFileUpload(`custom-${table.id}`);
-                    }}
-                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
-                    disabled={loading}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                    </svg>
-                    Upload from Excel
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteCustomTable(table.id);
-                    }}
-                    className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete
-                  </button>
-                </div>
-                <div className="text-white/60">
-                  <svg 
-                    className={`w-5 h-5 transition-transform duration-200 ${
-                      customTableExpanded[table.id] ? 'rotate-90' : ''
-                    }`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Custom Tables</h2>
+                <p className="text-sm text-gray-500">User-created tables with custom field definitions</p>
               </div>
             </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {customTables.map((table) => (
+                  <div key={table.id} className="bg-white rounded-lg border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div 
+                      className="px-4 py-3 bg-purple-50 cursor-pointer hover:bg-purple-100 transition-colors flex justify-between items-center"
+                      onClick={() => setCustomTableExpanded(prev => ({ ...prev, [table.id]: !prev[table.id] }))}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-gray-900">{table.name}</h3>
+                          <p className="text-sm text-gray-500">
+                            {table.data && table.data.length > 0 
+                              ? `${table.data.length} records` 
+                              : 'No data'
+                            } • {table.fields?.length || 0} fields
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            exportToCSV(`custom-${table.id}`);
+                          }}
+                          className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                          disabled={loading}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Export
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerFileUpload(`custom-${table.id}`);
+                          }}
+                          className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                          disabled={loading}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                          </svg>
+                          Import
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCustomTable(table.id);
+                          }}
+                          className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete
+                        </button>
+                        <div className="text-gray-400">
+                          <svg 
+                            className={`w-4 h-4 transition-transform ${customTableExpanded[table.id] ? 'rotate-90' : ''}`} 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
             
             {customTableExpanded[table.id] && (
               <div className="p-6">
@@ -1537,21 +1547,24 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
                 </div>
               </div>
             )}
-          </div>
-        ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-        {/* Add Custom Table Button */}
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={() => setShowCustomTableCreator(true)}
-            className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Add Custom Table
-          </button>
-        </div>
+          {/* Add Custom Table Button */}
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={() => setShowCustomTableCreator(true)}
+              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm hover:shadow-md"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Custom Table
+            </button>
+          </div>
       </div>
 
       {/* Custom Table Creator Modal */}
