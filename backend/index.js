@@ -1845,10 +1845,20 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
     
     // Check if table exists and belongs to distributor
     console.log('Checking if table exists...');
-    const customTable = db.prepare(`
-      SELECT * FROM custom_tables 
-      WHERE id = ? AND distributor_id = ?
-    `).get(tableId, distributorId);
+    let customTable;
+    if (isNaN(tableId)) {
+      // tableId is a string (table name)
+      customTable = db.prepare(`
+        SELECT * FROM custom_tables 
+        WHERE name = ? AND distributor_id = ?
+      `).get(tableId, distributorId);
+    } else {
+      // tableId is numeric (table ID)
+      customTable = db.prepare(`
+        SELECT * FROM custom_tables 
+        WHERE id = ? AND distributor_id = ?
+      `).get(tableId, distributorId);
+    }
     
     console.log('Custom table found:', customTable);
     
@@ -1862,7 +1872,7 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
     const existingField = db.prepare(`
       SELECT * FROM custom_table_fields 
       WHERE table_id = ? AND name = ?
-    `).get(tableId, name);
+    `).get(customTable.id, name);
     
     console.log('Existing field check result:', existingField);
     
@@ -1876,7 +1886,7 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
     const maxOrder = db.prepare(`
       SELECT MAX(field_order) as max_order FROM custom_table_fields 
       WHERE table_id = ?
-    `).get(tableId);
+    `).get(customTable.id);
     
     console.log('Max order result:', maxOrder);
     const fieldOrder = (maxOrder.max_order || 0) + 1;
@@ -1908,7 +1918,7 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
     `);
     
     console.log('Insert parameters:', {
-      tableId,
+      tableId: customTable.id,
       name,
       label: label || name,
       source_table: null,
@@ -1919,7 +1929,7 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
     });
     
     const result = insertField.run(
-      tableId,
+      customTable.id,
       name,
       label || name,
       null, // source_table
@@ -1961,11 +1971,21 @@ app.get('/api/custom-tables/:tableId/data', (req, res) => {
     const tableId = req.params.tableId;
     const accountId = req.query.account_id; // Optional filter by account ID
     
-    // Get table info
-    const table = db.prepare(`
-      SELECT * FROM custom_tables 
-      WHERE id = ? AND distributor_id = ?
-    `).get(tableId, distributorId);
+    // Get table info - handle both numeric ID and table name
+    let table;
+    if (isNaN(tableId)) {
+      // tableId is a string (table name)
+      table = db.prepare(`
+        SELECT * FROM custom_tables 
+        WHERE name = ? AND distributor_id = ?
+      `).get(tableId, distributorId);
+    } else {
+      // tableId is numeric (table ID)
+      table = db.prepare(`
+        SELECT * FROM custom_tables 
+        WHERE id = ? AND distributor_id = ?
+      `).get(tableId, distributorId);
+    }
     
     if (!table) {
       return res.status(404).json({ error: 'Custom table not found' });
@@ -1976,14 +1996,14 @@ app.get('/api/custom-tables/:tableId/data', (req, res) => {
       SELECT * FROM custom_table_fields 
       WHERE table_id = ? 
       ORDER BY field_order
-    `).all(tableId);
+    `).all(table.id);
     
     // Get table data
     let query = `
       SELECT * FROM custom_table_data 
       WHERE table_id = ? AND distributor_id = ?
     `;
-    let params = [tableId, distributorId];
+    let params = [table.id, distributorId];
     
     // If account_id is provided, filter by it
     if (accountId) {
@@ -3792,7 +3812,7 @@ CUSTOM TABLE DROPDOWN INSERTION FORMAT:
       "contentData": {
         "label": "Shipping Address",
         "tableId": "ShippingAddress",
-        "displayField": "address",
+        "displayField": "address_name",
         "valueField": "id",
         "containerStyle": {"marginBottom": "1rem"},
         "labelStyle": {"fontWeight": "bold", "marginBottom": "0.5rem"},

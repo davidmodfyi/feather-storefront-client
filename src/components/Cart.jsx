@@ -19,6 +19,13 @@ const CustomTableDropdown = ({
       const displayField = content.data.displayField || 'name';
       const valueField = content.data.valueField || 'id';
       
+      console.log('🔍 CustomTableDropdown loading data:', {
+        tableId,
+        displayField,
+        valueField,
+        contentData: content.data
+      });
+      
       if (!tableId) return;
       
       setLoading(true);
@@ -31,13 +38,21 @@ const CustomTableDropdown = ({
         tableData = await fetchCustomTableData(tableId);
       }
       
+      console.log('📊 Raw table data:', tableData);
+      
       if (tableData && tableData.data) {
         // Convert table data to dropdown options
-        const dropdownOptions = tableData.data.map(row => ({
-          value: row[valueField] || row.id,
-          label: row[displayField] || row.name || `Row ${row.id}`
-        }));
+        const dropdownOptions = tableData.data.map(row => {
+          console.log('🔄 Processing row:', row);
+          return {
+            value: row[valueField] || row.id,
+            label: row[displayField] || row.name || `Row ${row.id}`
+          };
+        });
+        console.log('📋 Dropdown options generated:', dropdownOptions);
         setOptions(dropdownOptions);
+      } else {
+        console.log('⚠️ No table data found or data is empty');
       }
       
       setLoading(false);
@@ -360,17 +375,27 @@ const handleSubmitOrder = async () => {
         ? `/api/custom-tables/${tableId}/data?account_id=${accountId}`
         : `/api/custom-tables/${tableId}/data`;
       
+      console.log('🔍 Fetching custom table data:', {
+        tableId,
+        accountId,
+        url,
+        currentUser
+      });
+      
       const response = await fetch(url, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Custom table data received:', data);
         setCustomTableData(prev => ({
           ...prev,
           [tableId]: data
         }));
         return data;
+      } else {
+        console.error('❌ Failed to fetch custom table data:', response.status, await response.text());
       }
     } catch (error) {
-      console.error('Error fetching custom table data:', error);
+      console.error('❌ Error fetching custom table data:', error);
     }
     return null;
   };

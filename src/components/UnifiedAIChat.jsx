@@ -19,11 +19,13 @@ export default function UnifiedAIChat({ onLogout, onHome, brandName }) {
     storefrontLogic: [],
     cartLogic: []
   });
+  const [dashboardFormFields, setDashboardFormFields] = useState([]);
   const [expandedPanels, setExpandedPanels] = useState({
     storefrontUI: false,
     cartUI: false,
     storefrontLogic: false,
-    cartLogic: false
+    cartLogic: false,
+    dynamicFormFields: false
   });
   const messagesEndRef = useRef(null);
 
@@ -47,6 +49,8 @@ export default function UnifiedAIChat({ onLogout, onHome, brandName }) {
       .then(res => res.json())
       .then(data => {
         const formFields = [];
+        const dashboardFields = [];
+        
         Object.entries(data).forEach(([zone, content]) => {
           content.forEach(item => {
             if (item.type === 'form-field') {
@@ -56,10 +60,38 @@ export default function UnifiedAIChat({ onLogout, onHome, brandName }) {
                 fieldType: item.data.fieldType,
                 options: item.data.options
               });
+              dashboardFields.push({
+                id: item.id,
+                type: 'form-field',
+                zone: zone,
+                label: item.data.label,
+                fieldType: item.data.fieldType,
+                options: item.data.options,
+                createdAt: item.created_at || new Date().toISOString()
+              });
+            } else if (item.type === 'custom-table-dropdown') {
+              formFields.push({
+                zone: zone,
+                label: item.data.label,
+                fieldType: 'custom-table-dropdown',
+                tableId: item.data.tableId
+              });
+              dashboardFields.push({
+                id: item.id,
+                type: 'custom-table-dropdown',
+                zone: zone,
+                label: item.data.label,
+                tableId: item.data.tableId,
+                displayField: item.data.displayField,
+                valueField: item.data.valueField,
+                createdAt: item.created_at || new Date().toISOString()
+              });
             }
           });
         });
+        
         setDynamicFormFields(formFields);
+        setDashboardFormFields(dashboardFields);
       })
       .catch(console.error);
 
@@ -119,6 +151,9 @@ What would you like to customize today?`,
         pageElements: {}
       };
       
+      // Build dashboard form fields for display
+      const dashboardFields = [];
+      
       // Extract form fields by page
       Object.entries(dynamicData || {}).forEach(([zone, content]) => {
         if (!context.pageElements[zone]) context.pageElements[zone] = [];
@@ -131,6 +166,32 @@ What would you like to customize today?`,
               type: item.data.fieldType,
               hasOptions: !!(item.data.options && item.data.options.length > 0)
             });
+            dashboardFields.push({
+              id: item.id,
+              type: 'form-field',
+              zone: zone,
+              label: item.data.label,
+              fieldType: item.data.fieldType,
+              options: item.data.options,
+              createdAt: item.created_at || new Date().toISOString()
+            });
+          } else if (item.type === 'custom-table-dropdown') {
+            context.existingFormFields.push({
+              zone: zone,
+              label: item.data.label,
+              type: 'custom-table-dropdown',
+              tableId: item.data.tableId
+            });
+            dashboardFields.push({
+              id: item.id,
+              type: 'custom-table-dropdown',
+              zone: zone,
+              label: item.data.label,
+              tableId: item.data.tableId,
+              displayField: item.data.displayField,
+              valueField: item.data.valueField,
+              createdAt: item.created_at || new Date().toISOString()
+            });
           }
           context.pageElements[zone].push({
             type: item.type,
@@ -140,6 +201,7 @@ What would you like to customize today?`,
       });
       
       setCurrentPageContext(context);
+      setDashboardFormFields(dashboardFields);
       console.log('Current page context:', context);
     } catch (error) {
       console.error('Error fetching page context:', error);
@@ -901,6 +963,65 @@ IMPORTANT: For dynamic form fields created via UI customization, access them usi
                           onClick={() => handleDeleteScript(script)}
                           className="text-red-500 hover:text-red-700 text-sm"
                           title="Delete script"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Dynamic Form Fields Panel */}
+        <div className="bg-white border rounded-lg shadow">
+          <div 
+            className="px-4 py-3 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+            onClick={() => togglePanel('dynamicFormFields')}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📝</span>
+              <h3 className="text-lg font-semibold text-gray-800">Dynamic Form Fields</h3>
+              <span className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                {dashboardFormFields.length}
+              </span>
+            </div>
+            <span className="text-gray-400">
+              {expandedPanels.dynamicFormFields ? '▲' : '▼'}
+            </span>
+          </div>
+          {expandedPanels.dynamicFormFields && (
+            <div className="border-t bg-gray-50">
+              <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
+                {dashboardFormFields.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    <p className="text-sm">No form fields yet. Use the chat below to add dynamic form fields!</p>
+                  </div>
+                ) : (
+                  dashboardFormFields.map((field) => (
+                    <div key={field.id} className="bg-white border rounded p-2 flex justify-between items-center hover:shadow-sm">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {field.label} ({field.type === 'custom-table-dropdown' ? 'Table Dropdown' : field.fieldType})
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Zone: {field.zone} • {field.type === 'custom-table-dropdown' ? `Table: ${field.tableId}` : `Options: ${field.options?.length || 0}`} • {new Date(field.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 ml-2">
+                        <button
+                          onClick={() => handleAnalyzeScript(field)}
+                          className="text-blue-500 hover:text-blue-700 text-sm"
+                          title="Inspect field"
+                        >
+                          🔍
+                        </button>
+                        <button
+                          onClick={() => handleDeleteScript(field)}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                          title="Delete field"
                         >
                           ❌
                         </button>
