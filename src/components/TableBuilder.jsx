@@ -1578,6 +1578,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           orderItemsData={orderItemsData}
         />
       )}
+      </div>
     </div>
   );
 }
