@@ -695,20 +695,28 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Accounts Table */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white border-2 border-blue-200 rounded-lg overflow-hidden">
               <div 
-                className="px-4 py-3 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors flex justify-between items-center"
+                className="px-4 py-3 bg-blue-50 border-b border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors flex justify-between items-center"
                 onClick={() => setAccountsExpanded(!accountsExpanded)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Accounts</h3>
-                    <p className="text-sm text-gray-500">{accountsData.length} records</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">ACCOUNTS TABLE</h3>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                          {accountsData.length} records
+                        </span>
+                        <span className="text-gray-400">•</span>
+                        <span>Core data table</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -861,20 +869,28 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         </div>
 
             {/* Products Table */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white border-2 border-emerald-200 rounded-lg overflow-hidden">
               <div 
-                className="px-4 py-3 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors flex justify-between items-center"
+                className="px-4 py-3 bg-emerald-50 border-b border-emerald-200 cursor-pointer hover:bg-emerald-100 transition-colors flex justify-between items-center"
                 onClick={() => setProductsExpanded(!productsExpanded)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Products</h3>
-                    <p className="text-sm text-gray-500">{productsData.length} records</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-emerald-600 rounded flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">PRODUCTS TABLE</h3>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                          {productsData.length} records
+                        </span>
+                        <span className="text-gray-400">•</span>
+                        <span>Core data table</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1029,20 +1045,28 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         </div>
 
             {/* Orders Table */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white border-2 border-orange-200 rounded-lg overflow-hidden">
               <div 
-                className="px-4 py-3 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors flex justify-between items-center"
+                className="px-4 py-3 bg-orange-50 border-b border-orange-200 cursor-pointer hover:bg-orange-100 transition-colors flex justify-between items-center"
                 onClick={() => setOrdersExpanded(!ordersExpanded)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Orders</h3>
-                    <p className="text-sm text-gray-500">{ordersData.length} records</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-orange-600 rounded flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">ORDERS TABLE</h3>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                          {ordersData.length} records
+                        </span>
+                        <span className="text-gray-400">•</span>
+                        <span>Core data table</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1197,20 +1221,28 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
         </div>
 
             {/* Order Items Table */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white border-2 border-indigo-200 rounded-lg overflow-hidden">
               <div 
-                className="px-4 py-3 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors flex justify-between items-center"
+                className="px-4 py-3 bg-indigo-50 border-b border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors flex justify-between items-center"
                 onClick={() => setOrderItemsExpanded(!orderItemsExpanded)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Order Items</h3>
-                    <p className="text-sm text-gray-500">{orderItemsData.length} records</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-indigo-600 rounded flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">ORDER ITEMS TABLE</h3>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                          {orderItemsData.length} records
+                        </span>
+                        <span className="text-gray-400">•</span>
+                        <span>Core data table</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1382,25 +1414,33 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {customTables.map((table) => (
-                  <div key={table.id} className="bg-white rounded-lg border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div key={table.id} className="bg-white border-2 border-purple-200 rounded-lg overflow-hidden">
                     <div 
-                      className="px-4 py-3 bg-purple-50 cursor-pointer hover:bg-purple-100 transition-colors flex justify-between items-center"
+                      className="px-4 py-3 bg-purple-50 border-b border-purple-200 cursor-pointer hover:bg-purple-100 transition-colors flex justify-between items-center"
                       onClick={() => setCustomTableExpanded(prev => ({ ...prev, [table.id]: !prev[table.id] }))}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-                          </svg>
-                        </div>
-                        <div>
-                          <h3 className="font-medium text-gray-900">{table.name}</h3>
-                          <p className="text-sm text-gray-500">
-                            {table.data && table.data.length > 0 
-                              ? `${table.data.length} records` 
-                              : 'No data'
-                            } • {table.fields?.length || 0} fields
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 bg-purple-600 rounded flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{table.name.toUpperCase()} TABLE</h3>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                {table.data && table.data.length > 0 
+                                  ? `${table.data.length} records` 
+                                  : 'No data'
+                                }
+                              </span>
+                              <span className="text-gray-400">•</span>
+                              <span>{table.fields?.length || 0} fields</span>
+                              <span className="text-gray-400">•</span>
+                              <span>Custom table</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
