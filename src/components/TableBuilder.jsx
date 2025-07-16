@@ -1399,7 +1399,7 @@ export default function TableBuilder({ onLogout, onHome, brandName }) {
 
         {/* Custom Tables Section */}
         {customTables.length > 0 && (
-          <div className="mb-10">
+          <div className="mb-10 mt-12">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                 <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
