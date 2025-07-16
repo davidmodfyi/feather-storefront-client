@@ -1960,9 +1960,15 @@ app.post('/api/custom-tables/:tableId/add-field', (req, res) => {
 
 // Custom Table Data API - Get data for a specific custom table
 app.get('/api/custom-tables/:tableId/data', (req, res) => {
-  console.log('Custom table data request for table:', req.params.tableId);
+  console.log('🔍 CUSTOM TABLE DATA API CALLED');
+  console.log('🔍 Request params:', req.params);
+  console.log('🔍 Query params:', req.query);
+  console.log('🔍 Session distributor_id:', req.session.distributor_id);
+  console.log('🔍 Table ID requested:', req.params.tableId);
+  console.log('🔍 Account ID filter:', req.query.account_id);
   
   if (!req.session.distributor_id) {
+    console.log('🔍 ❌ Authentication failed - no distributor_id in session');
     return res.status(401).json({ error: 'Not authenticated' });
   }
   
@@ -1973,21 +1979,30 @@ app.get('/api/custom-tables/:tableId/data', (req, res) => {
     
     // Get table info - handle both numeric ID and table name
     let table;
+    console.log('🔍 Looking up table:', tableId, 'for distributor:', distributorId);
+    
     if (isNaN(tableId)) {
       // tableId is a string (table name)
+      console.log('🔍 Searching by table name (string)');
       table = db.prepare(`
         SELECT * FROM custom_tables 
         WHERE name = ? AND distributor_id = ?
       `).get(tableId, distributorId);
     } else {
       // tableId is numeric (table ID)
+      console.log('🔍 Searching by table ID (numeric)');
       table = db.prepare(`
         SELECT * FROM custom_tables 
         WHERE id = ? AND distributor_id = ?
       `).get(tableId, distributorId);
     }
     
+    console.log('🔍 Table lookup result:', table);
+    
     if (!table) {
+      console.log('🔍 ❌ Table not found! Available tables:');
+      const allTables = db.prepare(`SELECT * FROM custom_tables WHERE distributor_id = ?`).all(distributorId);
+      console.log('🔍 Available tables:', allTables.map(t => `"${t.name}" (ID: ${t.id})`));
       return res.status(404).json({ error: 'Custom table not found' });
     }
     
@@ -2013,29 +2028,39 @@ app.get('/api/custom-tables/:tableId/data', (req, res) => {
     
     query += ` ORDER BY created_at DESC`;
     
+    console.log('🔍 Executing query:', query);
+    console.log('🔍 Query params:', params);
+    
     const dataRows = db.prepare(query).all(...params);
+    console.log('🔍 Raw data rows from database:', dataRows.length, 'rows');
     
     // Parse the JSON data
     const parsedData = dataRows.map(row => {
       try {
-        return {
+        const parsed = {
           id: row.id,
           ...JSON.parse(row.data),
           created_at: row.created_at
         };
+        console.log('🔍 Parsed row:', parsed);
+        return parsed;
       } catch (e) {
-        console.error('Error parsing table data:', e);
+        console.error('🔍 Error parsing table data for row:', row.id, e);
         return { id: row.id, error: 'Invalid data format' };
       }
     });
     
-    console.log(`Found ${parsedData.length} records for table ${table.name}`);
+    console.log(`🔍 ✅ Returning ${parsedData.length} records for table ${table.name}`);
+    console.log('🔍 Final response data:', parsedData);
     
-    res.json({
+    const responseData = {
       table: table,
       fields: fields,
       data: parsedData
-    });
+    };
+    
+    console.log('🔍 Complete API response:', JSON.stringify(responseData, null, 2));
+    res.json(responseData);
     
   } catch (error) {
     console.error('Error fetching custom table data:', error);
@@ -3945,6 +3970,7 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
       `).all(req.session.distributor_id);
       
       if (allTables.length > 0) {
+        console.log('🔍 DEBUG: Found custom tables:', allTables.map(t => t.name));
         enhancedTablesContext = '\n\nREAL CUSTOM TABLES WITH EXACT FIELD NAMES:\n';
         
         for (const table of allTables) {
@@ -3962,6 +3988,8 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
             LIMIT 1
           `).get(table.id, req.session.distributor_id);
           
+          console.log(`🔍 DEBUG: Table "${table.name}" has ${fields.length} fields and ${sampleData ? 'has' : 'NO'} sample data`);
+          
           enhancedTablesContext += `TABLE: "${table.name}" (ID: ${table.id})\n`;
           enhancedTablesContext += `Description: ${table.description || 'Custom table'}\n`;
           enhancedTablesContext += `EXACT FIELD NAMES:\n`;
@@ -3976,6 +4004,7 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
             try {
               const parsed = JSON.parse(sampleData.data);
               const actualFields = Object.keys(parsed);
+              console.log(`🔍 DEBUG: Sample data fields for "${table.name}":`, actualFields);
               enhancedTablesContext += `ACTUAL DATA FIELDS: ${actualFields.join(', ')}\n`;
               
               // Suggest best display field
@@ -3987,10 +4016,14 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
                 field.toLowerCase().includes('option')
               ) || actualFields.filter(f => f !== 'id' && f !== 'account_id')[0];
               
+              console.log(`🔍 DEBUG: Suggested display field for "${table.name}": "${displayField}"`);
               enhancedTablesContext += `SUGGESTED DISPLAY FIELD: "${displayField}"\n`;
             } catch (e) {
-              console.error('Error parsing sample data:', e);
+              console.error('🔍 DEBUG: Error parsing sample data for table:', table.name, e);
             }
+          } else {
+            console.log(`🔍 DEBUG: No sample data found for table "${table.name}"`);
+            enhancedTablesContext += `NO SAMPLE DATA - Check if table has data for account_id filtering\n`;
           }
           
           enhancedTablesContext += `USAGE: tableId: "${table.name}", displayField: "[use exact field name above]", valueField: "id"\n\n`;
@@ -4069,6 +4102,38 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
         console.log('🔥 DEBUG: Found Add to Cart element selector:', addToCartMatch[1]);
       } else {
         console.log('🔥 DEBUG: WARNING - Add to Cart button request but no add-to-cart element selector found!');
+      }
+    }
+    
+    // Log specific patterns for custom table dropdown requests
+    if (userRequest.toLowerCase().includes('table') || userRequest.toLowerCase().includes('dropdown')) {
+      console.log('🔥 DEBUG: CUSTOM TABLE REQUEST DETECTED!');
+      console.log('🔥 DEBUG: Original user request:', userRequest);
+      console.log('🔥 DEBUG: Enhanced tables context was:', enhancedTablesContext.substring(0, 500) + '...');
+      console.log('🔥 DEBUG: Looking for custom-table-dropdown in response...');
+      
+      // Check if Claude generated a custom table dropdown
+      if (claudeResponse.includes('custom-table-dropdown')) {
+        console.log('🔥 DEBUG: ✅ Claude generated custom-table-dropdown response!');
+        
+        // Extract the tableId, displayField, and valueField from the response
+        const tableIdMatch = claudeResponse.match(/"tableId"\s*:\s*"([^"]*)"/i);
+        const displayFieldMatch = claudeResponse.match(/"displayField"\s*:\s*"([^"]*)"/i);
+        const valueFieldMatch = claudeResponse.match(/"valueField"\s*:\s*"([^"]*)"/i);
+        
+        console.log('🔥 DEBUG: Generated tableId:', tableIdMatch ? tableIdMatch[1] : 'NOT FOUND');
+        console.log('🔥 DEBUG: Generated displayField:', displayFieldMatch ? displayFieldMatch[1] : 'NOT FOUND');
+        console.log('🔥 DEBUG: Generated valueField:', valueFieldMatch ? valueFieldMatch[1] : 'NOT FOUND');
+        
+        // Validate against available tables
+        if (enhancedTablesContext) {
+          const availableTables = enhancedTablesContext.match(/TABLE: "([^"]*)"/g);
+          console.log('🔥 DEBUG: Available tables in context:', availableTables);
+        }
+      } else {
+        console.log('🔥 DEBUG: ❌ WARNING - Table request but no custom-table-dropdown found in response!');
+        console.log('🔥 DEBUG: Response type check - contains "content":', claudeResponse.includes('"content"'));
+        console.log('🔥 DEBUG: Response type check - contains "form-field":', claudeResponse.includes('form-field'));
       }
     }
     
