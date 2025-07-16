@@ -6889,7 +6889,7 @@ JAVASCRIPT CONTEXT AVAILABLE:
 - customTables: Access to custom table data
 - orderHistory: Customer's order history
 
-RESPONSE FORMAT:
+RESPONSE FORMAT (MUST BE VALID JSON):
 {
   "response": "Human-readable explanation of the pricing rule",
   "rules": [
@@ -6902,60 +6902,115 @@ RESPONSE FORMAT:
   ]
 }
 
-USER REQUEST: ${userRequest}
-
 Generate appropriate pricing logic in JavaScript that can be executed in the pricing engine.`;
 
   try {
-    // For now, return a mock response until we implement Claude API
-    // In production, this would call the Claude API with the system prompt
+    console.log('🎯 Calling Claude API for pricing logic generation...');
     
-    const mockResponse = {
-      response: `I understand you want to create a pricing rule: "${userRequest}". 
-      
-I would generate JavaScript code that:
-- Uses the available customer and product context
-- Applies the requested pricing logic
-- Handles edge cases and validation
-- Integrates with custom tables if needed
+    // Call Claude API using the same pattern as ai-customize endpoint
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: `${systemPrompt}\n\nUser request: ${userRequest}`
+        }]
+      })
+    });
 
-However, the Claude API integration for pricing is not yet implemented. This is a placeholder response.`,
-      rules: [
-        {
+    if (!response.ok) {
+      const errorText = await response.text();
+      
+      // Check for 529 overload error
+      if (response.status === 529 || errorText.includes('overloaded_error')) {
+        console.log('🎯 Claude API overloaded, returning fallback response');
+        return {
+          response: "Claude API is currently overloaded. Please try again in a moment.",
+          rules: []
+        };
+      }
+      
+      throw new Error(`Claude API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const claudeResponse = data.content[0].text;
+    
+    console.log('🎯 Raw Claude response:', claudeResponse);
+    
+    // Parse Claude's JSON response
+    let pricingData;
+    try {
+      // Extract JSON from Claude's response (it might have extra text)
+      const jsonMatch = claudeResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        pricingData = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON found in Claude response');
+      }
+    } catch (parseError) {
+      console.error('🎯 Error parsing Claude response:', parseError);
+      // Return a fallback response
+      pricingData = {
+        response: `I created a pricing rule based on: "${userRequest}". ${claudeResponse}`,
+        rules: [{
           description: `Pricing rule: ${userRequest}`,
           trigger_point: 'storefront_load',
-          script_content: `// Generated pricing logic for: ${userRequest}
-// This is a placeholder - actual implementation would generate real JavaScript
-console.log('Pricing rule executed:', '${userRequest}');
-return { priceModification: 0, reason: 'Placeholder rule' };`,
+          script_content: `// Generated pricing logic for: ${userRequest}\n// ${claudeResponse.slice(0, 200)}...\nreturn { priceModification: 0, reason: 'Generated rule' };`,
           active: true
-        }
-      ]
-    };
+        }]
+      };
+    }
     
-    // Save the rule to the database
+    // Save the rules to the database
     const distributorId = pricingContext.distributor_id;
-    const rule = mockResponse.rules[0];
+    const savedRules = [];
     
-    const result = db.prepare(`
-      INSERT INTO logic_scripts (distributor_id, trigger_point, description, script_content, active, original_prompt)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      distributorId,
-      rule.trigger_point,
-      rule.description,
-      rule.script_content,
-      rule.active ? 1 : 0,
-      userRequest
-    );
+    if (pricingData.rules && pricingData.rules.length > 0) {
+      for (const rule of pricingData.rules) {
+        const result = db.prepare(`
+          INSERT INTO logic_scripts (distributor_id, trigger_point, description, script_content, active, original_prompt)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(
+          distributorId,
+          rule.trigger_point || 'storefront_load',
+          rule.description,
+          rule.script_content,
+          rule.active ? 1 : 0,
+          userRequest
+        );
+        
+        console.log('🎯 Pricing rule saved with ID:', result.lastInsertRowid);
+        savedRules.push({
+          ...rule,
+          id: result.lastInsertRowid
+        });
+      }
+      
+      // Clear pricing engine cache since we added new rules
+      pricingEngine.clearCache();
+    }
     
-    console.log('🎯 Pricing rule saved with ID:', result.lastInsertRowid);
-    
-    return mockResponse;
+    return {
+      response: pricingData.response,
+      rules: savedRules
+    };
     
   } catch (error) {
     console.error('🎯 Error generating pricing logic:', error);
-    throw error;
+    
+    // Return fallback response instead of throwing error
+    return {
+      response: `I encountered an error while generating the pricing rule. Error: ${error.message}. Please try rephrasing your request.`,
+      rules: []
+    };
   }
 }
 
