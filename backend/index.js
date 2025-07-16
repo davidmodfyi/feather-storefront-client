@@ -3008,7 +3008,7 @@ Respond with ONLY the classification: ui, logic, or both`
       `).all(req.session.distributor_id);
 
       // Use existing UI AI function
-      const aiResponse = await parseAIRequestWithClaude(message, orderCustomFields);
+      const aiResponse = await parseAIRequestWithClaude(req, message, orderCustomFields);
       
       // Process UI response (reuse existing logic)
       let modifications = [];
@@ -3507,7 +3507,7 @@ app.post('/api/ai-customize', async (req, res) => {
     
     // Use Claude AI to parse the request and generate modifications
     console.log('🔥 Calling parseAIRequestWithClaude...');
-    const aiResponse = await parseAIRequestWithClaude(message, orderCustomFields, customTables);
+    const aiResponse = await parseAIRequestWithClaude(req, message, orderCustomFields, customTables);
     console.log('🔥 AI Response received:', JSON.stringify(aiResponse, null, 2));
     
     // Check if Claude is overloaded
@@ -3619,7 +3619,7 @@ app.post('/api/ai-customize', async (req, res) => {
 });
 
 // Claude AI-powered request parser
-async function parseAIRequestWithClaude(userRequest, orderCustomFields = [], customTables = []) {
+async function parseAIRequestWithClaude(req, userRequest, orderCustomFields = [], customTables = []) {
   console.log('🔥 parseAIRequestWithClaude called');
   console.log('🔥 userRequest:', userRequest);
   console.log('🔥 orderCustomFields:', orderCustomFields);
@@ -3905,20 +3905,103 @@ CUSTOM TABLE DROPDOWN INSERTION FORMAT:
 }
 
 CRITICAL CUSTOM TABLE RULES:
-1. **tableId**: Use the EXACT table name the user mentioned (PaymentMethods, Toppings, etc.)
+1. **tableId**: Use the EXACT table name from the "REAL CUSTOM TABLES" section above
 2. **valueField**: ALWAYS use "id" (this is the row identifier, not the filtering field)
-3. **displayField**: Make an intelligent guess for the display field:
-   - Look for fields containing: name, title, description, method, option, label
-   - For PaymentMethods: try "method", "name", "payment_method", "type"
-   - For Toppings: try "name", "topping", "option", "flavor"
-   - For Suppliers: try "name", "supplier_name", "company", "vendor"
-   - If unsure, use the first non-id, non-account_id field
+3. **displayField**: Use the EXACT field name from the "ACTUAL DATA FIELDS" or "SUGGESTED DISPLAY FIELD" above
+   - DO NOT GUESS field names - use only the field names listed in the table structure above
+   - If "SUGGESTED DISPLAY FIELD" is provided, use that exact name
+   - If no suggestion, use the first field from "ACTUAL DATA FIELDS" (excluding id, account_id)
 4. **Filtering**: The system automatically filters by account_id - DO NOT use account_id as valueField
 5. **Account ID**: The system will automatically filter the dropdown options by the current user's account ID
 
-IMPORTANT: The system will work with ANY custom table name and ANY field names. Make reasonable guesses based on the table name and common field naming patterns.
+CRITICAL: If table structure is provided above, use EXACT field names from that data. DO NOT guess or make up field names.
 
 RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
+
+  // Smart table discovery - look up actual table structures if user mentions custom tables
+  let enhancedTablesContext = '';
+  
+  try {
+    // Check if user request mentions any table-related keywords
+    const tableKeywords = [
+      'table', 'dropdown', 'custom table', 'made a', 'created a',
+      // Common table names users might create
+      'PaymentMethod', 'Payment', 'Shipping', 'Address', 'Supplier', 'Category', 'Topping',
+      'Customer', 'Product', 'Order', 'Invoice', 'Contact', 'Location', 'Department',
+      'Method', 'Option', 'Choice', 'List', 'Menu'
+    ];
+    const mentionsTable = tableKeywords.some(keyword => 
+      userRequest.toLowerCase().includes(keyword.toLowerCase())
+    );
+    
+    if (mentionsTable) {
+      console.log('🔍 User mentioned table-related keywords, looking up actual table structures...');
+      
+      // Get all available custom tables for this distributor
+      const allTables = db.prepare(`
+        SELECT * FROM custom_tables 
+        WHERE distributor_id = ?
+        ORDER BY name
+      `).all(req.session.distributor_id);
+      
+      if (allTables.length > 0) {
+        enhancedTablesContext = '\n\nREAL CUSTOM TABLES WITH EXACT FIELD NAMES:\n';
+        
+        for (const table of allTables) {
+          // Get the actual field structure for each table
+          const fields = db.prepare(`
+            SELECT * FROM custom_table_fields 
+            WHERE table_id = ? 
+            ORDER BY field_order
+          `).all(table.id);
+          
+          // Get sample data to show field content
+          const sampleData = db.prepare(`
+            SELECT * FROM custom_table_data 
+            WHERE table_id = ? AND distributor_id = ?
+            LIMIT 1
+          `).get(table.id, req.session.distributor_id);
+          
+          enhancedTablesContext += `TABLE: "${table.name}" (ID: ${table.id})\n`;
+          enhancedTablesContext += `Description: ${table.description || 'Custom table'}\n`;
+          enhancedTablesContext += `EXACT FIELD NAMES:\n`;
+          
+          // Add database field structure
+          fields.forEach(field => {
+            enhancedTablesContext += `  • ${field.name} (${field.data_type})${field.is_key ? ' [KEY]' : ''}\n`;
+          });
+          
+          // Add sample data field names if available
+          if (sampleData) {
+            try {
+              const parsed = JSON.parse(sampleData.data);
+              const actualFields = Object.keys(parsed);
+              enhancedTablesContext += `ACTUAL DATA FIELDS: ${actualFields.join(', ')}\n`;
+              
+              // Suggest best display field
+              const displayField = actualFields.find(field => 
+                field.toLowerCase().includes('name') || 
+                field.toLowerCase().includes('title') || 
+                field.toLowerCase().includes('description') ||
+                field.toLowerCase().includes('method') ||
+                field.toLowerCase().includes('option')
+              ) || actualFields.filter(f => f !== 'id' && f !== 'account_id')[0];
+              
+              enhancedTablesContext += `SUGGESTED DISPLAY FIELD: "${displayField}"\n`;
+            } catch (e) {
+              console.error('Error parsing sample data:', e);
+            }
+          }
+          
+          enhancedTablesContext += `USAGE: tableId: "${table.name}", displayField: "[use exact field name above]", valueField: "id"\n\n`;
+        }
+        
+        console.log('🔍 Enhanced tables context built:', enhancedTablesContext);
+      }
+    }
+  } catch (error) {
+    console.error('Error during table discovery:', error);
+  }
 
   try {
     console.log('🔥 About to make Claude API call...');
@@ -3930,7 +4013,7 @@ RETURN ONLY VALID JSON FOR THE DETECTED REQUEST TYPE:`;
       max_tokens: 1000,
       messages: [{
         role: 'user',
-        content: systemPrompt
+        content: `${systemPrompt}${enhancedTablesContext}\n\nUser request: ${userRequest}`
       }]
     };
     console.log('🔥 DEBUG: System prompt being sent to Claude:');
