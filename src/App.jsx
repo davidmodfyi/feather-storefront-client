@@ -13,6 +13,7 @@ import UnifiedAIChat from './components/UnifiedAIChat';
 import LogicScriptsManagement from './components/LogicScriptsManagement';
 import Integrations from './components/Integrations';
 import CustomerConfigPage from './components/CustomerConfigPage';
+import AIPricingEngine from './components/AIPricingEngine';
 
 // Header Component with Logo
 function Header({ brandName }) {
@@ -271,6 +272,20 @@ function App({ distributorSlug }) {
               onHome={handleHome} 
               brandName={brandName} 
             />
+          } 
+        />
+        <Route 
+          path="/backoffice/ai-pricing" 
+          element={
+            userType === 'Customer' 
+              ? <Navigate to="/" replace /> 
+              : (
+                <AIPricingEngine 
+                  onLogout={handleLogout} 
+                  onHome={handleHome} 
+                  brandName={brandName} 
+                />
+              )
           } 
         />
         <Route

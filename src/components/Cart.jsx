@@ -41,12 +41,38 @@ const CustomTableDropdown = ({
       console.log('📊 Raw table data:', tableData);
       
       if (tableData && tableData.data) {
-        // Convert table data to dropdown options
+        // Convert table data to dropdown options with intelligent fallbacks
         const dropdownOptions = tableData.data.map(row => {
           console.log('🔄 Processing row:', row);
+          
+          // Try to find the best display value using fallback logic
+          let displayValue = row[displayField];
+          if (!displayValue) {
+            // Fallback: try common field names
+            const commonFields = ['name', 'title', 'description', 'method', 'option', 'label', 'type'];
+            for (const field of commonFields) {
+              if (row[field]) {
+                displayValue = row[field];
+                console.log(`🔄 Using fallback field '${field}' for display:`, displayValue);
+                break;
+              }
+            }
+          }
+          
+          // Final fallback: use first non-id, non-account_id field
+          if (!displayValue) {
+            const availableFields = Object.keys(row).filter(key => 
+              key !== 'id' && key !== 'account_id' && key !== 'created_at'
+            );
+            if (availableFields.length > 0) {
+              displayValue = row[availableFields[0]];
+              console.log(`🔄 Using first available field '${availableFields[0]}' for display:`, displayValue);
+            }
+          }
+          
           return {
             value: row[valueField] || row.id,
-            label: row[displayField] || row.name || `Row ${row.id}`
+            label: displayValue || `Row ${row.id}`
           };
         });
         console.log('📋 Dropdown options generated:', dropdownOptions);

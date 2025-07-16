@@ -12,6 +12,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
     { name: "Manage Customers", path: "/backoffice/customers" },
     { name: "Branding", path: "/backoffice/branding" },
     { name: "AI Storefront Assistant", path: "/backoffice/ai-assistant" },
+    { name: "AI Pricing & Promo Engine", path: "/backoffice/ai-pricing" },
     { name: "Table Builder", path: "/backoffice/table-builder" },
     { name: "Integrations", path: "/backoffice/integrations" }
   ];
@@ -34,6 +35,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
               option.name === "Manage Customers" ? 'bg-blue-50' : 
               option.name === "Branding" ? 'bg-green-50' : 
               option.name === "AI Storefront Assistant" ? 'bg-purple-50' : 
+              option.name === "AI Pricing & Promo Engine" ? 'bg-yellow-50' : 
               option.name === "Table Builder" ? 'bg-cyan-50' : 
               option.name === "Integrations" ? 'bg-orange-50' : ''
             }`}
@@ -44,6 +46,8 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
                 navigate("/backoffice/branding");
               } else if (option.name === "AI Storefront Assistant") {
                 navigate("/backoffice/ai-assistant");
+              } else if (option.name === "AI Pricing & Promo Engine") {
+                navigate("/backoffice/ai-pricing");
               } else if (option.name === "Table Builder") {
                 navigate("/backoffice/table-builder");
               } else if (option.name === "Integrations") {
@@ -73,6 +77,16 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
             {option.name === "Table Builder" && (
               <div className="flex items-center gap-2">
                 <p className="text-sm text-gray-600">Configure Master Data Attributes, powered by Claude</p>
+                <img 
+                  src="/claudelogo.png" 
+                  alt="Claude" 
+                  className="w-4 h-4 opacity-75" 
+                />
+              </div>
+            )}
+            {option.name === "AI Pricing & Promo Engine" && (
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-gray-600">Intelligent pricing rules with full contextual awareness, powered by Claude</p>
                 <img 
                   src="/claudelogo.png" 
                   alt="Claude" 

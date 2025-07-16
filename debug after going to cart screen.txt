@@ -1,0 +1,194 @@
+
+Add to cart request
+Session data: Session {
+  cookie: {
+    path: '/',
+    _expires: null,
+    originalMaxAge: null,
+    httpOnly: true,
+    secure: true,
+    domain: '.featherstorefront.com',
+    sameSite: 'none'
+  },
+  user_id: 4,
+  distributor_id: 'dist001',
+  distributorName: 'Ocean Wave Foods',
+  userType: 'Customer',
+  accountId: 'ocean001'
+}
+Added new cart item for user 4, product 2, quantity 1
+Cart request
+Session data: Session {
+  cookie: {
+    path: '/',
+    _expires: null,
+    originalMaxAge: null,
+    httpOnly: true,
+    secure: true,
+    domain: '.featherstorefront.com',
+    sameSite: 'none'
+  },
+  user_id: 4,
+  distributor_id: 'dist001',
+  distributorName: 'Ocean Wave Foods',
+  userType: 'Customer',
+  accountId: 'ocean001'
+}
+Found 1 cart items for user 4
+=== Processing product: OWF-OIL-002 Original price: 32.5
+All scripts found: []
+Storefront scripts count: 0
+Final price for OWF-OIL-002 : 32.5
+User info request
+Dynamic content request
+Cart request
+Session data: Session {
+  cookie: {
+    path: '/',
+    _expires: null,
+    originalMaxAge: null,
+    httpOnly: true,
+    secure: true,
+    domain: '.featherstorefront.com',
+    sameSite: 'none'
+  },
+  user_id: 4,
+  distributor_id: 'dist001',
+  distributorName: 'Ocean Wave Foods',
+  userType: 'Customer',
+  accountId: 'ocean001'
+}
+Found 1 cart items for user 4
+=== Processing product: OWF-OIL-002 Original price: 32.5
+All scripts found: []
+Storefront scripts count: 0
+Final price for OWF-OIL-002 : 32.5
+🔥 DEBUG: /api/styles GET request received
+🔥 DEBUG: Session distributor_id: dist001
+🔥 DEBUG: Checking distributor_styles table...
+🔥 DEBUG: Found 0 styles in distributor_styles table
+🔥 DEBUG: distributor_styles content: []
+🔥 DEBUG: Checking styles table...
+🔥 DEBUG: Found 0 styles in styles table
+🔥 DEBUG: styles table content: []
+🔥 DEBUG: Final styleMap being returned: {}
+🔥 DEBUG: Total styles being returned: 0
+Serving index.html for path: /favicon.ico
+🔍 CUSTOM TABLE DATA API CALLED
+🔍 Request params: { tableId: 'PayMeans' }
+🔍 Query params: { account_id: 'ocean001' }
+🔍 Session distributor_id: dist001
+🔍 Table ID requested: PayMeans
+🔍 Account ID filter: ocean001
+🔍 Looking up table: PayMeans for distributor: dist001
+🔍 Searching by table name (string)
+🔍 Table lookup result: {
+  id: 3,
+  distributor_id: 'dist001',
+  name: 'PayMeans',
+  description: '',
+  created_at: '2025-07-16 03:19:52',
+  updated_at: '2025-07-16 03:19:52'
+}
+🔍 Executing query: 
+      SELECT * FROM custom_table_data 
+      WHERE table_id = ? AND distributor_id = ?
+     AND JSON_EXTRACT(data, '$.account_id') = ? ORDER BY created_at DESC
+🔍 Query params: [ 3, 'dist001', 'ocean001' ]
+🔍 Raw data rows from database: 0 rows
+🔍 ✅ Returning 0 records for table PayMeans
+🔍 Final response data: []
+🔍 Complete API response: {
+  "table": {
+    "id": 3,
+    "distributor_id": "dist001",
+    "name": "PayMeans",
+    "description": "",
+    "created_at": "2025-07-16 03:19:52",
+    "updated_at": "2025-07-16 03:19:52"
+  },
+  "fields": [
+    {
+      "id": 14,
+      "table_id": 3,
+      "name": "AccountID",
+      "label": "AccountID",
+      "source_table": "accounts",
+      "source_attribute": "id",
+      "data_type": "text",
+      "is_key": 1,
+      "field_order": 0
+    },
+    {
+      "id": 15,
+      "table_id": 3,
+      "name": "Method",
+      "label": "Method",
+      "source_table": null,
+      "source_attribute": null,
+      "data_type": "text",
+      "is_key": 0,
+      "field_order": 1
+    }
+  ],
+  "data": []
+}
+🔍 CUSTOM TABLE DATA API CALLED
+🔍 Request params: { tableId: 'PayMeans' }
+🔍 Query params: { account_id: 'ocean001' }
+🔍 Session distributor_id: dist001
+🔍 Table ID requested: PayMeans
+🔍 Account ID filter: ocean001
+🔍 Looking up table: PayMeans for distributor: dist001
+🔍 Searching by table name (string)
+🔍 Table lookup result: {
+  id: 3,
+  distributor_id: 'dist001',
+  name: 'PayMeans',
+  description: '',
+  created_at: '2025-07-16 03:19:52',
+  updated_at: '2025-07-16 03:19:52'
+}
+🔍 Executing query: 
+      SELECT * FROM custom_table_data 
+      WHERE table_id = ? AND distributor_id = ?
+     AND JSON_EXTRACT(data, '$.account_id') = ? ORDER BY created_at DESC
+🔍 Query params: [ 3, 'dist001', 'ocean001' ]
+🔍 Raw data rows from database: 0 rows
+🔍 ✅ Returning 0 records for table PayMeans
+🔍 Final response data: []
+🔍 Complete API response: {
+  "table": {
+    "id": 3,
+    "distributor_id": "dist001",
+    "name": "PayMeans",
+    "description": "",
+    "created_at": "2025-07-16 03:19:52",
+    "updated_at": "2025-07-16 03:19:52"
+  },
+  "fields": [
+    {
+      "id": 14,
+      "table_id": 3,
+      "name": "AccountID",
+      "label": "AccountID",
+      "source_table": "accounts",
+      "source_attribute": "id",
+      "data_type": "text",
+      "is_key": 1,
+      "field_order": 0
+    },
+    {
+      "id": 15,
+      "table_id": 3,
+      "name": "Method",
+      "label": "Method",
+      "source_table": null,
+      "source_attribute": null,
+      "data_type": "text",
+      "is_key": 0,
+      "field_order": 1
+    }
+  ],
+  "data": []
+}

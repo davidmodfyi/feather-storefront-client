@@ -1,0 +1,505 @@
+🔥 AI Customization request received
+🔥 Request body: {
+  "message": "I created a table PaymentMeans. It has the payment method and keys on the account ID. I want it to match the account ID to the logged in user and present those options as a drop-down menu in the cart.",
+  "distributorSlug": "oceanwave",
+  "currentPageContext": {
+    "existingFormFields": [],
+    "existingStyles": [],
+    "pageElements": {}
+  }
+}
+🔥 Session info: { distributor_id: 'dist001', userType: 'Admin', user_id: 1 }
+🔥 Extracted message: I created a table PaymentMeans. It has the payment method and keys on the account ID. I want it to match the account ID to the logged in user and present those options as a drop-down menu in the cart.
+🔥 Extracted distributorSlug: oceanwave
+🔥 DEBUG: Found custom order fields: [
+  'delivery_instructions',
+  'po_number',
+  'delivery_window',
+  'requires_signature',
+  'priority_level'
+]
+🔥 DEBUG: Found custom tables: [ 'PayMeans', 'Categories', 'ShippingAddress' ]
+🔥 DEBUG: Full custom fields data: [
+  {
+    "attribute_name": "delivery_instructions",
+    "attribute_label": "Delivery Instructions",
+    "data_type": "text",
+    "validation_rules": "{\"max_length\": 500}"
+  },
+  {
+    "attribute_name": "po_number",
+    "attribute_label": "PO Number",
+    "data_type": "text",
+    "validation_rules": "{\"max_length\": 50}"
+  },
+  {
+    "attribute_name": "delivery_window",
+    "attribute_label": "Delivery Window",
+    "data_type": "select",
+    "validation_rules": "{\"options\": [\"Morning\", \"Afternoon\", \"Evening\", \"Anytime\"]}"
+  },
+  {
+    "attribute_name": "requires_signature",
+    "attribute_label": "Requires Signature",
+    "data_type": "boolean",
+    "validation_rules": "{}"
+  },
+  {
+    "attribute_name": "priority_level",
+    "attribute_label": "Priority Level",
+    "data_type": "number",
+    "validation_rules": "{\"min\": 1, \"max\": 5}"
+  }
+]
+🔥 DEBUG: Full custom tables data: [
+  {
+    "id": 3,
+    "distributor_id": "dist001",
+    "name": "PayMeans",
+    "description": "",
+    "created_at": "2025-07-16 03:19:52",
+    "updated_at": "2025-07-16 03:19:52",
+    "fields_info": "AccountID:AccountID:text:accounts:id|Method:Method:text::"
+  },
+  {
+    "id": 2,
+    "distributor_id": "dist001",
+    "name": "Categories",
+    "description": "Product categories for organization",
+    "created_at": "2025-07-15 21:01:37",
+    "updated_at": "2025-07-15 21:01:37",
+    "fields_info": "account_id:Account ID:text::|category_name:Category Name:text::|description:Description:text::|id:ID:number::|priority:Priority:number::"
+  },
+  {
+    "id": 1,
+    "distributor_id": "dist001",
+    "name": "ShippingAddress",
+    "description": "Customer shipping addresses",
+    "created_at": "2025-07-15 19:18:40",
+    "updated_at": "2025-07-15 19:18:40",
+    "fields_info": "account_id:Account ID:text::|address_name:Address Name:text::|city:City:text::|id:ID:number::|is_default:Default Address:boolean::|state:State:text::|street:Street:text::|zip:ZIP Code:text::"
+  }
+]
+🔥 Starting AI customization for oceanwave: I created a table PaymentMeans. It has the payment method and keys on the account ID. I want it to match the account ID to the logged in user and present those options as a drop-down menu in the cart.
+🔥 Using unified frontend with database-driven styling
+🔥 Calling parseAIRequestWithClaude...
+🔥 parseAIRequestWithClaude called
+🔥 userRequest: I created a table PaymentMeans. It has the payment method and keys on the account ID. I want it to match the account ID to the logged in user and present those options as a drop-down menu in the cart.
+🔥 orderCustomFields: [
+  {
+    attribute_name: 'delivery_instructions',
+    attribute_label: 'Delivery Instructions',
+    data_type: 'text',
+    validation_rules: '{"max_length": 500}'
+  },
+  {
+    attribute_name: 'po_number',
+    attribute_label: 'PO Number',
+    data_type: 'text',
+    validation_rules: '{"max_length": 50}'
+  },
+  {
+    attribute_name: 'delivery_window',
+    attribute_label: 'Delivery Window',
+    data_type: 'select',
+    validation_rules: '{"options": ["Morning", "Afternoon", "Evening", "Anytime"]}'
+  },
+  {
+    attribute_name: 'requires_signature',
+    attribute_label: 'Requires Signature',
+    data_type: 'boolean',
+    validation_rules: '{}'
+  },
+  {
+    attribute_name: 'priority_level',
+    attribute_label: 'Priority Level',
+    data_type: 'number',
+    validation_rules: '{"min": 1, "max": 5}'
+  }
+]
+🔥 customTables: [
+  {
+    id: 3,
+    distributor_id: 'dist001',
+    name: 'PayMeans',
+    description: '',
+    created_at: '2025-07-16 03:19:52',
+    updated_at: '2025-07-16 03:19:52',
+    fields_info: 'AccountID:AccountID:text:accounts:id|Method:Method:text::'
+  },
+  {
+    id: 2,
+    distributor_id: 'dist001',
+    name: 'Categories',
+    description: 'Product categories for organization',
+    created_at: '2025-07-15 21:01:37',
+    updated_at: '2025-07-15 21:01:37',
+    fields_info: 'account_id:Account ID:text::|category_name:Category Name:text::|description:Description:text::|id:ID:number::|priority:Priority:number::'
+  },
+  {
+    id: 1,
+    distributor_id: 'dist001',
+    name: 'ShippingAddress',
+    description: 'Customer shipping addresses',
+    created_at: '2025-07-15 19:18:40',
+    updated_at: '2025-07-15 19:18:40',
+    fields_info: 'account_id:Account ID:text::|address_name:Address Name:text::|city:City:text::|id:ID:number::|is_default:Default Address:boolean::|state:State:text::|street:Street:text::|zip:ZIP Code:text::'
+  }
+]
+🔥 ANTHROPIC_API_KEY exists: true
+🔥 Processing AI customization request with Claude...
+🔥 DEBUG: Custom fields context built: 
+AVAILABLE CUSTOM ORDER FIELDS:
+- "delivery_instructions" (text)
+- "po_number" (text)
+- "delivery_window" (select) - Options: [Morning, Afternoon, Evening, Anytime]
+- "requires_signature" (boolean)
+- "priority_level" (number)
+🔥 DEBUG: Custom tables context built: 
+AVAILABLE CUSTOM TABLES:
+- "PayMeans" - Custom data table
+  Fields:
+    • AccountID (text) - linked to accounts.id
+    • Method (text)
+- "Categories" - Product categories for organization
+  Fields:
+    • account_id (text)
+    • category_name (text)
+    • description (text)
+    • id (number)
+    • priority (number)
+- "ShippingAddress" - Customer shipping addresses
+  Fields:
+    • account_id (text)
+    • address_name (text)
+    • city (text)
+    • id (number)
+    • is_default (boolean)
+    • state (text)
+    • street (text)
+    • zip (text)
+🔍 User mentioned table-related keywords, looking up actual table structures...
+🔍 DEBUG: Found custom tables: [ 'Categories', 'PayMeans', 'ShippingAddress' ]
+🔍 DEBUG: Table "Categories" has 5 fields and has sample data
+🔍 DEBUG: Sample data fields for "Categories": [ 'id', 'account_id', 'category_name', 'description', 'priority' ]
+🔍 DEBUG: Suggested display field for "Categories": "category_name"
+🔍 DEBUG: Table "PayMeans" has 2 fields and has sample data
+🔍 DEBUG: Sample data fields for "PayMeans": [ 'AccountID', 'Method' ]
+🔍 DEBUG: Suggested display field for "PayMeans": "Method"
+🔍 DEBUG: Table "ShippingAddress" has 8 fields and has sample data
+🔍 DEBUG: Sample data fields for "ShippingAddress": [
+  'id',
+  'account_id',
+  'address_name',
+  'street',
+  'city',
+  'state',
+  'zip',
+  'is_default'
+]
+🔍 DEBUG: Suggested display field for "ShippingAddress": "address_name"
+🔍 Enhanced tables context built: 
+REAL CUSTOM TABLES WITH EXACT FIELD NAMES:
+TABLE: "Categories" (ID: 2)
+Description: Product categories for organization
+EXACT FIELD NAMES:
+  • id (number) [KEY]
+  • account_id (text)
+  • category_name (text)
+  • description (text)
+  • priority (number)
+ACTUAL DATA FIELDS: id, account_id, category_name, description, priority
+SUGGESTED DISPLAY FIELD: "category_name"
+USAGE: tableId: "Categories", displayField: "[use exact field name above]", valueField: "id"
+TABLE: "PayMeans" (ID: 3)
+Description: Custom table
+EXACT FIELD NAMES:
+  • AccountID (text) [KEY]
+  • Method (text)
+ACTUAL DATA FIELDS: AccountID, Method
+SUGGESTED DISPLAY FIELD: "Method"
+USAGE: tableId: "PayMeans", displayField: "[use exact field name above]", valueField: "id"
+TABLE: "ShippingAddress" (ID: 1)
+Description: Customer shipping addresses
+EXACT FIELD NAMES:
+  • id (number) [KEY]
+  • account_id (text)
+  • address_name (text)
+  • street (text)
+  • city (text)
+  • state (text)
+  • zip (text)
+  • is_default (boolean)
+ACTUAL DATA FIELDS: id, account_id, address_name, street, city, state, zip, is_default
+SUGGESTED DISPLAY FIELD: "address_name"
+USAGE: tableId: "ShippingAddress", displayField: "[use exact field name above]", valueField: "id"
+🔥 About to make Claude API call...
+🔥 API Key length: 108
+🔥 System prompt length: 11458
+🔥 DEBUG: System prompt being sent to Claude:
+🔥 DEBUG: Prompt length: 11458
+🔥 DEBUG: Prompt contains custom fields: true
+🔥 DEBUG: User request in prompt: I created a table PaymentMeans. It has the payment method and keys on the account ID. I want it to match the account ID to the logged in user and present those options as a drop-down menu in the cart.
+🔥 Response received. Status: 200
+🔥 Response headers: {
+  'anthropic-organization-id': '589efb44-db23-4385-9507-d50b7f66d183',
+  'anthropic-ratelimit-input-tokens-limit': '50000',
+  'anthropic-ratelimit-input-tokens-remaining': '47000',
+  'anthropic-ratelimit-input-tokens-reset': '2025-07-16T03:30:46Z',
+  'anthropic-ratelimit-output-tokens-limit': '10000',
+  'anthropic-ratelimit-output-tokens-remaining': '10000',
+  'anthropic-ratelimit-output-tokens-reset': '2025-07-16T03:30:46Z',
+  'anthropic-ratelimit-requests-limit': '50',
+  'anthropic-ratelimit-requests-remaining': '49',
+  'anthropic-ratelimit-requests-reset': '2025-07-16T03:30:43Z',
+  'anthropic-ratelimit-tokens-limit': '60000',
+  'anthropic-ratelimit-tokens-remaining': '57000',
+  'anthropic-ratelimit-tokens-reset': '2025-07-16T03:30:46Z',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '95fe6c23ac51104d-ORD',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-type': 'application/json',
+  date: 'Wed, 16 Jul 2025 03:30:45 GMT',
+  'request-id': 'req_011CR9zRHWZBj4WUN1ExvZgD',
+  server: 'cloudflare',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  'transfer-encoding': 'chunked',
+  via: '1.1 google',
+  'x-robots-tag': 'none'
+}
+🔥 DEBUG: Response data: {
+  "id": "msg_01ECtzvzewcRWrSqg95Loiqe",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-3-5-haiku-20241022",
+  "content": [
+    {
+      "type": "text",
+      "text": "{\n  \"type\": \"content\",\n  \"insertions\": [\n    {\n      \"insertionZone\": \"cart-before-total\",\n      \"contentType\": \"custom-table-dropdown\",\n      \"contentData\": {\n        \"label\": \"Payment Method\",\n        \"tableId\": \"PayMeans\",\n        \"displayField\": \"Method\",\n        \"valueField\": \"id\",\n        \"containerStyle\": {\"marginBottom\": \"1rem\"},\n        \"labelStyle\": {\"fontWeight\": \"bold\", \"marginBottom\": \"0.5rem\"},\n        \"inputStyle\": {\n          \"padding\": \"0.5rem\", \n          \"border\": \"1px solid #ccc\", \n          \"borderRadius\": \"4px\", \n          \"width\": \"100%\"\n        }\n      },\n      \"description\": \"Added PaymentMeans dropdown filtered by logged-in user's account ID\"\n    }\n  ]\n}"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 3728,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 221,
+    "service_tier": "standard"
+  }
+}
+🔥 DEBUG: Raw Claude response text:
+🔥 DEBUG: Response length: 688
+🔥 DEBUG: Response content: {
+  "type": "content",
+  "insertions": [
+    {
+      "insertionZone": "cart-before-total",
+      "contentType": "custom-table-dropdown",
+      "contentData": {
+        "label": "Payment Method",
+        "tableId": "PayMeans",
+        "displayField": "Method",
+        "valueField": "id",
+        "containerStyle": {"marginBottom": "1rem"},
+        "labelStyle": {"fontWeight": "bold", "marginBottom": "0.5rem"},
+        "inputStyle": {
+          "padding": "0.5rem", 
+          "border": "1px solid #ccc", 
+          "borderRadius": "4px", 
+          "width": "100%"
+        }
+      },
+      "description": "Added PaymentMeans dropdown filtered by logged-in user's account ID"
+    }
+  ]
+}
+🔥 DEBUG: Response contains "type": true
+🔥 DEBUG: Response contains "content": true
+🔥 DEBUG: Response contains "insertions": true
+🔥 DEBUG: Response contains "elementSelector": false
+🔥 DEBUG: Response contains "add-to-cart-button": false
+🔥 DEBUG: CUSTOM TABLE REQUEST DETECTED!
+🔥 DEBUG: Original user request: I created a table PaymentMeans. It has the payment method and keys on the account ID. I want it to match the account ID to the logged in user and present those options as a drop-down menu in the cart.
+🔥 DEBUG: Enhanced tables context was: 
+REAL CUSTOM TABLES WITH EXACT FIELD NAMES:
+TABLE: "Categories" (ID: 2)
+Description: Product categories for organization
+EXACT FIELD NAMES:
+  • id (number) [KEY]
+  • account_id (text)
+  • category_name (text)
+  • description (text)
+  • priority (number)
+ACTUAL DATA FIELDS: id, account_id, category_name, description, priority
+SUGGESTED DISPLAY FIELD: "category_name"
+USAGE: tableId: "Categories", displayField: "[use exact field name above]", valueField: "id"
+TABLE: "PayMeans" (ID: 3)
+Description...
+🔥 DEBUG: Looking for custom-table-dropdown in response...
+🔥 DEBUG: ✅ Claude generated custom-table-dropdown response!
+🔥 DEBUG: Generated tableId: PayMeans
+🔥 DEBUG: Generated displayField: Method
+🔥 DEBUG: Generated valueField: id
+🔥 DEBUG: Available tables in context: [
+  'TABLE: "Categories"',
+  'TABLE: "PayMeans"',
+  'TABLE: "ShippingAddress"'
+]
+🔥 DEBUG: Calling parseClaudeResponse...
+🔥 DEBUG: parseClaudeResponse called with: {
+  "type": "content",
+  "insertions": [
+    {
+      "insertionZone": "cart-before-total",
+      "contentType": "custom-table-dropdown",
+      "contentData": {
+        "label": "Payment Method",
+     ...
+🔥 DEBUG: Searching for JSON in response...
+🔥 DEBUG: Found JSON match: {
+  "type": "content",
+  "insertions": [
+    {
+      "insertionZone": "cart-before-total",
+      "contentType": "custom-table-dropdown",
+      "contentData": {
+        "label": "Payment Method",
+     ...
+🔥 DEBUG: Successfully parsed JSON: {
+  "type": "content",
+  "insertions": [
+    {
+      "insertionZone": "cart-before-total",
+      "contentType": "custom-table-dropdown",
+      "contentData": {
+        "label": "Payment Method",
+        "tableId": "PayMeans",
+        "displayField": "Method",
+        "valueField": "id",
+        "containerStyle": {
+          "marginBottom": "1rem"
+        },
+        "labelStyle": {
+          "fontWeight": "bold",
+          "marginBottom": "0.5rem"
+        },
+        "inputStyle": {
+          "padding": "0.5rem",
+          "border": "1px solid #ccc",
+          "borderRadius": "4px",
+          "width": "100%"
+        }
+      },
+      "description": "Added PaymentMeans dropdown filtered by logged-in user's account ID"
+    }
+  ]
+}
+🔥 DEBUG: New format detected with type: content
+🔥 DEBUG: parseClaudeResponse returned: {
+  "type": "content",
+  "insertions": [
+    {
+      "insertionZone": "cart-before-total",
+      "contentType": "custom-table-dropdown",
+      "contentData": {
+        "label": "Payment Method",
+        "tableId": "PayMeans",
+        "displayField": "Method",
+        "valueField": "id",
+        "containerStyle": {
+          "marginBottom": "1rem"
+        },
+        "labelStyle": {
+          "fontWeight": "bold",
+          "marginBottom": "0.5rem"
+        },
+        "inputStyle": {
+          "padding": "0.5rem",
+          "border": "1px solid #ccc",
+          "borderRadius": "4px",
+          "width": "100%"
+        }
+      },
+      "description": "Added PaymentMeans dropdown filtered by logged-in user's account ID"
+    }
+  ]
+}
+🔥 AI Response received: {
+  "type": "content",
+  "insertions": [
+    {
+      "insertionZone": "cart-before-total",
+      "contentType": "custom-table-dropdown",
+      "contentData": {
+        "label": "Payment Method",
+        "tableId": "PayMeans",
+        "displayField": "Method",
+        "valueField": "id",
+        "containerStyle": {
+          "marginBottom": "1rem"
+        },
+        "labelStyle": {
+          "fontWeight": "bold",
+          "marginBottom": "0.5rem"
+        },
+        "inputStyle": {
+          "padding": "0.5rem",
+          "border": "1px solid #ccc",
+          "borderRadius": "4px",
+          "width": "100%"
+        }
+      },
+      "description": "Added PaymentMeans dropdown filtered by logged-in user's account ID"
+    }
+  ]
+}
+🔥 DEBUG: Processing AI response type: object
+🔥 DEBUG: AI response is array: false
+🔥 DEBUG: AI response has type property: content
+🔥 DEBUG: AI response structure: {
+  "type": "content",
+  "insertions": [
+    {
+      "insertionZone": "cart-before-total",
+      "contentType": "custom-table-dropdown",
+      "contentData": {
+        "label": "Payment Method",
+        "tableId": "PayMeans",
+        "displayField": "Method",
+        "valueField": "id",
+        "containerStyle": {
+          "marginBottom": "1rem"
+        },
+        "labelStyle": {
+          "fontWeight": "bold",
+          "marginBottom": "0.5rem"
+        },
+        "inputStyle": {
+          "padding": "0.5rem",
+          "border": "1px solid #ccc",
+          "borderRadius": "4px",
+          "width": "100%"
+        }
+      },
+      "description": "Added PaymentMeans dropdown filtered by logged-in user's account ID"
+    }
+  ]
+}
+🔥 DEBUG: Using new content format
+🔥 DEBUG: Extracted insertions: 1
+🔥 DEBUG: Final counts - modifications: 0 insertions: 1
+Successfully applied content insertion: Added PaymentMeans dropdown filtered by logged-in user's account ID
+Applied content insertion: Added PaymentMeans dropdown filtered by logged-in user's account ID
+Dynamic content request
+🔥 DEBUG: /api/styles GET request received
+🔥 DEBUG: Session distributor_id: dist001
+🔥 DEBUG: Checking distributor_styles table...
+🔥 DEBUG: Found 0 styles in distributor_styles table
+🔥 DEBUG: distributor_styles content: []
+🔥 DEBUG: Checking styles table...
+🔥 DEBUG: Found 0 styles in styles table
+🔥 DEBUG: styles table content: []
+🔥 DEBUG: Final styleMap being returned: {}
+🔥 DEBUG: Total styles being returned: 0

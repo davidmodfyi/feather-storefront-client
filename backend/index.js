@@ -6683,6 +6683,282 @@ app.post('/api/ftp/list', async (req, res) => {
   }
 });
 
+// ===== AI PRICING & PROMO ENGINE ENDPOINTS =====
+
+// Get pricing context data for AI
+app.get('/api/pricing-context', (req, res) => {
+  console.log('🎯 Pricing context request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get customer attributes
+    const customerAttributes = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'accounts'
+    `).all(distributorId);
+    
+    // Get product attributes
+    const productAttributes = db.prepare(`
+      SELECT * FROM custom_attributes_definitions 
+      WHERE distributor_id = ? AND entity_type = 'products'
+    `).all(distributorId);
+    
+    // Get custom tables
+    const customTables = db.prepare(`
+      SELECT * FROM custom_tables 
+      WHERE distributor_id = ?
+    `).all(distributorId);
+    
+    // Get order history sample (last 100 orders)
+    const orderHistory = db.prepare(`
+      SELECT orders.*, accounts.name as customer_name
+      FROM orders 
+      LEFT JOIN accounts ON orders.account_id = accounts.id
+      WHERE orders.distributor_id = ?
+      ORDER BY orders.created_at DESC
+      LIMIT 100
+    `).all(distributorId);
+    
+    const contextData = {
+      customerAttributes,
+      productAttributes,
+      customTables,
+      orderHistory
+    };
+    
+    console.log('🎯 Pricing context data:', {
+      customerAttributes: customerAttributes.length,
+      productAttributes: productAttributes.length,
+      customTables: customTables.length,
+      orderHistory: orderHistory.length
+    });
+    
+    res.json(contextData);
+  } catch (error) {
+    console.error('🎯 Error fetching pricing context:', error);
+    res.status(500).json({ error: 'Failed to fetch pricing context' });
+  }
+});
+
+// Get existing pricing rules
+app.get('/api/pricing-rules', (req, res) => {
+  console.log('🎯 Pricing rules request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    // Get pricing-related logic scripts
+    const pricingRules = db.prepare(`
+      SELECT * FROM logic_scripts 
+      WHERE distributor_id = ? AND (
+        description LIKE '%price%' OR 
+        description LIKE '%discount%' OR 
+        description LIKE '%promo%' OR
+        script_content LIKE '%price%' OR
+        script_content LIKE '%discount%'
+      )
+      ORDER BY created_at DESC
+    `).all(distributorId);
+    
+    // Get price history (if we implement price tracking)
+    // For now, return empty array
+    const priceHistory = [];
+    
+    console.log('🎯 Found pricing rules:', pricingRules.length);
+    
+    res.json({
+      rules: pricingRules,
+      history: priceHistory
+    });
+  } catch (error) {
+    console.error('🎯 Error fetching pricing rules:', error);
+    res.status(500).json({ error: 'Failed to fetch pricing rules' });
+  }
+});
+
+// AI Pricing Engine - Process pricing requests
+app.post('/api/ai-pricing', async (req, res) => {
+  console.log('🎯 AI Pricing request received');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const { message, contextData } = req.body;
+    const distributorId = req.session.distributor_id;
+    
+    console.log('🎯 Processing pricing request:', message);
+    
+    // Build comprehensive context for pricing AI
+    const pricingContext = {
+      distributor_id: distributorId,
+      customer_attributes: contextData.customerAttributes || [],
+      product_attributes: contextData.productAttributes || [],
+      custom_tables: contextData.customTables || [],
+      order_history: contextData.orderHistory || [],
+      current_session: {
+        user_id: req.session.user_id,
+        account_id: req.session.accountId,
+        distributor_id: distributorId
+      }
+    };
+    
+    // Generate pricing logic using AI
+    const pricingResponse = await generatePricingLogic(message, pricingContext);
+    
+    console.log('🎯 AI Pricing response:', pricingResponse);
+    
+    res.json({
+      response: pricingResponse.response,
+      rules: pricingResponse.rules || [],
+      changes: pricingResponse.changes || []
+    });
+    
+  } catch (error) {
+    console.error('🎯 Error processing pricing request:', error);
+    res.status(500).json({ 
+      error: 'Failed to process pricing request',
+      response: "I encountered an error while processing your pricing request. Please try again."
+    });
+  }
+});
+
+// Delete pricing rule
+app.delete('/api/pricing-rules/:id', (req, res) => {
+  console.log('🎯 Delete pricing rule request:', req.params.id);
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const ruleId = req.params.id;
+    const distributorId = req.session.distributor_id;
+    
+    const result = db.prepare(`
+      DELETE FROM logic_scripts 
+      WHERE id = ? AND distributor_id = ?
+    `).run(ruleId, distributorId);
+    
+    if (result.changes > 0) {
+      console.log('🎯 Pricing rule deleted successfully');
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Pricing rule not found' });
+    }
+  } catch (error) {
+    console.error('🎯 Error deleting pricing rule:', error);
+    res.status(500).json({ error: 'Failed to delete pricing rule' });
+  }
+});
+
+// AI Pricing Logic Generation Function
+async function generatePricingLogic(userRequest, pricingContext) {
+  console.log('🎯 Generating pricing logic for:', userRequest);
+  
+  // Build comprehensive system prompt for pricing AI
+  const systemPrompt = `You are an expert pricing engine AI. Generate JavaScript pricing logic based on user requests.
+
+AVAILABLE CONTEXT:
+- Customer Attributes: ${JSON.stringify(pricingContext.customer_attributes, null, 2)}
+- Product Attributes: ${JSON.stringify(pricingContext.product_attributes, null, 2)}
+- Custom Tables: ${JSON.stringify(pricingContext.custom_tables, null, 2)}
+- Current Session: ${JSON.stringify(pricingContext.current_session, null, 2)}
+
+PRICING CAPABILITIES:
+- Customer-specific pricing (account attributes, price levels)
+- Product-based rules (categories, attributes, SKUs)
+- Quantity discounts and bulk pricing
+- Contract-specific pricing overrides
+- Seasonal and time-based promotions
+
+JAVASCRIPT CONTEXT AVAILABLE:
+- customer: Current customer object with attributes
+- product: Current product object with attributes
+- cart: Current cart with items and totals
+- customTables: Access to custom table data
+- orderHistory: Customer's order history
+
+RESPONSE FORMAT:
+{
+  "response": "Human-readable explanation of the pricing rule",
+  "rules": [
+    {
+      "description": "Rule description",
+      "trigger_point": "storefront_load",
+      "script_content": "JavaScript code for the pricing rule",
+      "active": true
+    }
+  ]
+}
+
+USER REQUEST: ${userRequest}
+
+Generate appropriate pricing logic in JavaScript that can be executed in the pricing engine.`;
+
+  try {
+    // For now, return a mock response until we implement Claude API
+    // In production, this would call the Claude API with the system prompt
+    
+    const mockResponse = {
+      response: `I understand you want to create a pricing rule: "${userRequest}". 
+      
+I would generate JavaScript code that:
+- Uses the available customer and product context
+- Applies the requested pricing logic
+- Handles edge cases and validation
+- Integrates with custom tables if needed
+
+However, the Claude API integration for pricing is not yet implemented. This is a placeholder response.`,
+      rules: [
+        {
+          description: `Pricing rule: ${userRequest}`,
+          trigger_point: 'storefront_load',
+          script_content: `// Generated pricing logic for: ${userRequest}
+// This is a placeholder - actual implementation would generate real JavaScript
+console.log('Pricing rule executed:', '${userRequest}');
+return { priceModification: 0, reason: 'Placeholder rule' };`,
+          active: true
+        }
+      ]
+    };
+    
+    // Save the rule to the database
+    const distributorId = pricingContext.distributor_id;
+    const rule = mockResponse.rules[0];
+    
+    const result = db.prepare(`
+      INSERT INTO logic_scripts (distributor_id, trigger_point, description, script_content, active, original_prompt)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      distributorId,
+      rule.trigger_point,
+      rule.description,
+      rule.script_content,
+      rule.active ? 1 : 0,
+      userRequest
+    );
+    
+    console.log('🎯 Pricing rule saved with ID:', result.lastInsertRowid);
+    
+    return mockResponse;
+    
+  } catch (error) {
+    console.error('🎯 Error generating pricing logic:', error);
+    throw error;
+  }
+}
+
 // Serve the frontend in production
 // Add this near the bottom of your index.js file, before app.listen()
 if (process.env.NODE_ENV === 'production') {
