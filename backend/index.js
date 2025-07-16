@@ -2022,8 +2022,32 @@ app.get('/api/custom-tables/:tableId/data', (req, res) => {
     
     // If account_id is provided, filter by it
     if (accountId) {
-      query += ` AND JSON_EXTRACT(data, '$.account_id') = ?`;
+      // Dynamically detect the account field name from the table fields
+      let accountField = fields.find(field => 
+        field.source_table === 'accounts' && field.source_attribute === 'id'
+      );
+      
+      // If not found by source table, try by field name patterns
+      if (!accountField) {
+        accountField = fields.find(field => {
+          const fieldName = field.name.toLowerCase();
+          return fieldName === 'accountid' || 
+                 fieldName === 'account_id' || 
+                 fieldName === 'account' ||
+                 fieldName.includes('account');
+        });
+      }
+      
+      const accountFieldName = accountField ? accountField.name : 'account_id';
+      console.log('🔍 Account field detection:', {
+        accountField: accountField,
+        accountFieldName: accountFieldName,
+        allFields: fields.map(f => f.name)
+      });
+      
+      query += ` AND JSON_EXTRACT(data, '$.${accountFieldName}') = ?`;
       params.push(accountId);
+      console.log('🔍 Using account field name:', accountFieldName);
     }
     
     query += ` ORDER BY created_at DESC`;
