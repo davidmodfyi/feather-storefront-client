@@ -5597,9 +5597,53 @@ app.get('/api/items', (req, res) => {
   
   // NEW: Apply pricing engine (synchronous)
   const customer = req.session.user || {};
+  console.log('🎯 Applying pricing engine to', products.length, 'products for distributor:', distributorId);
   const productsWithPricing = pricingEngine.applyProductsPricing(products, distributorId, customer);
+  console.log('🎯 Pricing engine completed. First product before/after:');
+  if (products.length > 0 && productsWithPricing.length > 0) {
+    console.log('Before:', products[0].sku, products[0].unitPrice);
+    console.log('After:', productsWithPricing[0].sku, productsWithPricing[0].unitPrice);
+  }
   
   res.json(productsWithPricing);
+});
+
+// Debug endpoint to check pricing rules
+app.get('/api/debug/pricing-rules', (req, res) => {
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const distributorId = req.session.distributor_id;
+    
+    const allRules = db.prepare(`
+      SELECT id, trigger_point, description, script_content, active, created_at
+      FROM logic_scripts 
+      WHERE distributor_id = ?
+      ORDER BY created_at DESC
+    `).all(distributorId);
+    
+    const activeRules = db.prepare(`
+      SELECT id, trigger_point, description, script_content, active, created_at
+      FROM logic_scripts 
+      WHERE distributor_id = ? AND active = 1
+      ORDER BY created_at DESC
+    `).all(distributorId);
+    
+    console.log('🎯 Debug: Found', allRules.length, 'total rules,', activeRules.length, 'active rules for distributor:', distributorId);
+    
+    res.json({
+      distributorId,
+      totalRules: allRules.length,
+      activeRules: activeRules.length,
+      allRules,
+      activeRules
+    });
+  } catch (error) {
+    console.error('Error fetching pricing rules:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Accounts endpoint
