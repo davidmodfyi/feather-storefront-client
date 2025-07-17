@@ -6905,7 +6905,7 @@ if (/* your matching logic here */) {
 // Return unchanged if doesn't match
 return product;
 
-RESPONSE FORMAT (MUST BE VALID JSON):
+RESPONSE FORMAT - YOU MUST RETURN VALID JSON ONLY:
 {
   "response": "Human-readable explanation of what the pricing rule does",
   "rules": [
@@ -6918,9 +6918,11 @@ RESPONSE FORMAT (MUST BE VALID JSON):
   ]
 }
 
-IMPORTANT: 
-- Your JavaScript must be complete and executable. No regex parsing will be done - your code IS the pricing logic.
-- Always use "trigger_point": "storefront_load" - this is the only trigger point the pricing engine recognizes.`;
+CRITICAL REQUIREMENTS:
+- Return ONLY valid JSON - no extra text before or after
+- Your JavaScript must be complete and executable
+- Always use "trigger_point": "storefront_load" 
+- No regex parsing will be done - your code IS the pricing logic`;
 
   try {
     console.log('🎯 Calling Claude API for pricing logic generation...');
@@ -6962,14 +6964,19 @@ IMPORTANT:
     const claudeResponse = data.content[0].text;
     
     console.log('🎯 Raw Claude response:', claudeResponse);
+    console.log('🎯 Claude response length:', claudeResponse.length);
+    console.log('🎯 Claude response first 500 chars:', claudeResponse.substring(0, 500));
     
     // Parse Claude's JSON response
     let pricingData;
     try {
       // Extract JSON from Claude's response (it might have extra text)
       const jsonMatch = claudeResponse.match(/\{[\s\S]*\}/);
+      console.log('🎯 JSON match found:', !!jsonMatch);
       if (jsonMatch) {
+        console.log('🎯 Extracted JSON:', jsonMatch[0].substring(0, 200) + '...');
         pricingData = JSON.parse(jsonMatch[0]);
+        console.log('🎯 Successfully parsed pricing data:', pricingData);
       } else {
         throw new Error('No JSON found in Claude response');
       }
