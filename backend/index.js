@@ -6946,7 +6946,7 @@ CRITICAL INSTRUCTIONS:
 4. If it doesn't match, return the original product unchanged
 5. Handle ALL natural language requests - you understand intent, not just keywords
 
-JAVASCRIPT TEMPLATE STRUCTURE:
+JAVASCRIPT TEMPLATE STRUCTURE (EXECUTABLE CODE - NOT FUNCTION DECLARATION):
 // Check if this product matches the criteria for this pricing rule
 if (/* your matching logic here */) {
   // Apply the price modification
@@ -6960,6 +6960,8 @@ if (/* your matching logic here */) {
 }
 // Return unchanged if doesn't match
 return product;
+
+CRITICAL: Generate EXECUTABLE CODE that returns a result immediately, NOT a function declaration.
 
 RESPONSE FORMAT - YOU MUST RETURN VALID JSON ONLY:
 {
