@@ -6867,7 +6867,7 @@ async function generatePricingLogic(userRequest, pricingContext) {
   console.log('🎯 Generating pricing logic for:', userRequest);
   
   // Build comprehensive system prompt for pricing AI
-  const systemPrompt = `You are an expert pricing engine AI. Generate JavaScript pricing logic based on user requests.
+  const systemPrompt = `You are an expert pricing engine AI. Generate complete JavaScript pricing logic based on user requests.
 
 AVAILABLE CONTEXT:
 - Customer Attributes: ${JSON.stringify(pricingContext.customer_attributes, null, 2)}
@@ -6875,34 +6875,50 @@ AVAILABLE CONTEXT:
 - Custom Tables: ${JSON.stringify(pricingContext.custom_tables, null, 2)}
 - Current Session: ${JSON.stringify(pricingContext.current_session, null, 2)}
 
-PRICING CAPABILITIES:
-- Customer-specific pricing (account attributes, price levels)
-- Product-based rules (categories, attributes, SKUs)
-- Quantity discounts and bulk pricing
-- Contract-specific pricing overrides
-- Seasonal and time-based promotions
-
-JAVASCRIPT CONTEXT AVAILABLE:
+JAVASCRIPT EXECUTION CONTEXT:
+Your generated code will have access to these variables:
 - customer: Current customer object with attributes
-- product: Current product object with attributes
+- product: Current product being priced (has: sku, name, category, brand, unitPrice, etc.)
 - cart: Current cart with items and totals
 - customTables: Access to custom table data
 - orderHistory: Customer's order history
 
+CRITICAL INSTRUCTIONS:
+1. Generate COMPLETE JavaScript code that directly modifies pricing
+2. Your code must check if the product matches the criteria (SKU, category, customer type, etc.)
+3. If it matches, return a modified product object with the new unitPrice
+4. If it doesn't match, return the original product unchanged
+5. Handle ALL natural language requests - you understand intent, not just keywords
+
+JAVASCRIPT TEMPLATE STRUCTURE:
+// Check if this product matches the criteria for this pricing rule
+if (/* your matching logic here */) {
+  // Apply the price modification
+  return {
+    ...product,
+    unitPrice: /* your new price calculation */,
+    originalPrice: product.unitPrice,
+    pricingRule: 'Your rule description',
+    onSale: true // if applicable
+  };
+}
+// Return unchanged if doesn't match
+return product;
+
 RESPONSE FORMAT (MUST BE VALID JSON):
 {
-  "response": "Human-readable explanation of the pricing rule",
+  "response": "Human-readable explanation of what the pricing rule does",
   "rules": [
     {
-      "description": "Rule description",
+      "description": "Clear description of the pricing rule",
       "trigger_point": "storefront_load",
-      "script_content": "JavaScript code for the pricing rule",
+      "script_content": "Complete JavaScript code following the template above",
       "active": true
     }
   ]
 }
 
-Generate appropriate pricing logic in JavaScript that can be executed in the pricing engine.`;
+IMPORTANT: Your JavaScript must be complete and executable. No regex parsing will be done - your code IS the pricing logic.`;
 
   try {
     console.log('🎯 Calling Claude API for pricing logic generation...');

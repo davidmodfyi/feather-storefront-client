@@ -122,121 +122,8 @@ class PricingEngine {
     return { allowed: true };
   }
 
-  // Check if a product matches the criteria in a pricing rule description
-  productMatchesCriteria(product, description) {
-    const lowerDesc = description.toLowerCase();
-    const lowerSku = product.sku.toLowerCase();
-    const lowerName = (product.name || '').toLowerCase();
-    const lowerCategory = (product.category || '').toLowerCase();
-    const lowerBrand = (product.brand || '').toLowerCase();
-
-    // Check for "all products" or "all items"
-    if (lowerDesc.includes('all product') || lowerDesc.includes('all item')) {
-      return true;
-    }
-
-    // Check for specific SKU match
-    if (lowerDesc.includes(lowerSku)) {
-      return true;
-    }
-
-    // Check for brand match (e.g., "Apply 20% discount to Nike products")
-    if (lowerBrand && lowerDesc.includes(lowerBrand)) {
-      return true;
-    }
-
-    // Check for category match (e.g., "Apply $10 off all Electronics")
-    if (lowerCategory && lowerDesc.includes(lowerCategory)) {
-      return true;
-    }
-
-    // Check for name match
-    if (lowerName && lowerDesc.includes(lowerName)) {
-      return true;
-    }
-
-    // Check for comma-separated SKU list (e.g., "Apply discount to SKU-001, SKU-002, SKU-003")
-    const skuMatches = lowerDesc.match(/sku[:\s]*([a-z0-9\-,\s]+)/i);
-    if (skuMatches) {
-      const skuList = skuMatches[1].split(',').map(s => s.trim().toLowerCase());
-      if (skuList.includes(lowerSku)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  // Parse and apply pricing rule from description
-  applyPricingRule(originalPrice, description) {
-    const lowerDesc = description.toLowerCase();
-    
-    try {
-      // 1. Percentage discount (e.g., "Apply 20% discount", "20% off")
-      const percentMatch = lowerDesc.match(/(\d+(?:\.\d+)?)%\s*(?:discount|off)/);
-      if (percentMatch) {
-        const discountPercent = parseFloat(percentMatch[1]);
-        const newPrice = originalPrice * (1 - discountPercent / 100);
-        return {
-          newPrice: Math.max(0, newPrice),
-          type: 'percentage_discount',
-          value: discountPercent
-        };
-      }
-
-      // 2. Dollar amount off (e.g., "$5 off", "Apply $10 discount")
-      const dollarOffMatch = lowerDesc.match(/\$(\d+(?:\.\d{2})?)\s*(?:off|discount)/);
-      if (dollarOffMatch) {
-        const discountAmount = parseFloat(dollarOffMatch[1]);
-        const newPrice = originalPrice - discountAmount;
-        return {
-          newPrice: Math.max(0, newPrice),
-          type: 'dollar_discount',
-          value: discountAmount
-        };
-      }
-
-      // 3. Set specific price (e.g., "Set price to $25.99", "Price at $15")
-      const setPriceMatch = lowerDesc.match(/(?:set price to|price at|new price)\s*\$(\d+(?:\.\d{2})?)/);
-      if (setPriceMatch) {
-        const newPrice = parseFloat(setPriceMatch[1]);
-        return {
-          newPrice: Math.max(0, newPrice),
-          type: 'set_price',
-          value: newPrice
-        };
-      }
-
-      // 4. Percentage markup (e.g., "Add 15% markup", "15% markup")
-      const markupMatch = lowerDesc.match(/(?:add\s*)?(\d+(?:\.\d+)?)%\s*markup/);
-      if (markupMatch) {
-        const markupPercent = parseFloat(markupMatch[1]);
-        const newPrice = originalPrice * (1 + markupPercent / 100);
-        return {
-          newPrice: newPrice,
-          type: 'percentage_markup',
-          value: markupPercent
-        };
-      }
-
-      // 5. Dollar amount added (e.g., "Add $5", "$3 additional")
-      const dollarAddMatch = lowerDesc.match(/(?:add\s*)?\$(\d+(?:\.\d{2})?)\s*(?:additional)?/);
-      if (dollarAddMatch) {
-        const addAmount = parseFloat(dollarAddMatch[1]);
-        const newPrice = originalPrice + addAmount;
-        return {
-          newPrice: newPrice,
-          type: 'dollar_addition',
-          value: addAmount
-        };
-      }
-
-    } catch (error) {
-      console.error('Error parsing pricing rule:', error);
-    }
-
-    return null; // No pricing rule found
-  }
+  // LEGACY METHODS REMOVED - Claude's JavaScript handles all pricing logic directly
+  // No more regex parsing needed! Claude understands natural language and generates appropriate JavaScript.
 
   // Apply pricing modifications to a single product (distributor-specific, SYNC)
   applyProductPricing(product, distributorId, customer = {}) {
@@ -252,39 +139,87 @@ class PricingEngine {
       console.log('First script description:', storefrontScripts[0].description);
     }
 
-    var modifiedPrice = product.unitPrice;
-    var appliedRules = [];
+    let modifiedProduct = { ...product };
+    const appliedRules = [];
 
     for (const script of storefrontScripts) {
       try {
-        // Check if this script applies to this product
-        if (this.productMatchesCriteria(product, script.description)) {
-          console.log('Product', product.sku, 'matches criteria for script:', script.description);
+        console.log('🎯 Executing pricing script:', script.description);
+        console.log('🎯 Script content:', script.script_content);
+        
+        // Create execution context for Claude's JavaScript
+        const scriptContext = {
+          customer: customer || {},
+          product: modifiedProduct,
+          cart: { items: [], total: 0, subtotal: 0 }, // Will be enhanced later
+          customTables: {}, // Will be enhanced later
+          orderHistory: [], // Will be enhanced later
+          distributor_id: distributorId
+        };
+
+        // Execute Claude's JavaScript directly
+        const scriptFunction = new Function(
+          'customer', 
+          'product', 
+          'cart', 
+          'customTables',
+          'orderHistory',
+          'distributor_id',
+          `
+          try {
+            ${script.script_content}
+          } catch (error) {
+            console.error('Pricing script execution error:', error);
+            return product; // Return unchanged if error
+          }
+          `
+        );
+
+        // Execute the script with the current product
+        const result = scriptFunction(
+          scriptContext.customer,
+          scriptContext.product,
+          scriptContext.cart,
+          scriptContext.customTables,
+          scriptContext.orderHistory,
+          scriptContext.distributor_id
+        );
+
+        // Check if the script returned a modified product
+        if (result && typeof result === 'object' && result.sku === product.sku) {
+          console.log('🎯 Script returned modified product:', {
+            sku: result.sku,
+            originalPrice: modifiedProduct.unitPrice,
+            newPrice: result.unitPrice,
+            pricingRule: result.pricingRule
+          });
           
-          const pricingResult = this.applyPricingRule(modifiedPrice, script.description);
-          if (pricingResult) {
-            modifiedPrice = pricingResult.newPrice;
+          // Track the applied rule
+          if (result.unitPrice !== modifiedProduct.unitPrice) {
             appliedRules.push({
               description: script.description,
-              type: pricingResult.type,
-              value: pricingResult.value,
-              oldPrice: product.unitPrice,
-              newPrice: modifiedPrice
+              type: 'claude_generated',
+              oldPrice: modifiedProduct.unitPrice,
+              newPrice: result.unitPrice,
+              pricingRule: result.pricingRule || script.description
             });
-            console.log('Applied pricing rule to', product.sku, ':', pricingResult.type, pricingResult.value, '-> new price:', modifiedPrice);
           }
+          
+          modifiedProduct = result;
+        } else {
+          console.log('🎯 Script returned unchanged product or invalid result');
         }
+
       } catch (error) {
-        console.error(`Error applying pricing script ${script.id}:`, error);
+        console.error(`🎯 Error executing pricing script ${script.id}:`, error);
+        // Continue with other scripts even if one fails
       }
     }
 
-    console.log('Final price for', product.sku, ':', modifiedPrice);
+    console.log('Final price for', product.sku, ':', modifiedProduct.unitPrice);
     
     return {
-      ...product,
-      unitPrice: modifiedPrice,
-      originalPrice: product.unitPrice !== modifiedPrice ? product.unitPrice : undefined,
+      ...modifiedProduct,
       appliedPricingRules: appliedRules.length > 0 ? appliedRules : undefined
     };
   }
