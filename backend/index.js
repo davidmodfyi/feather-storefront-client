@@ -6934,10 +6934,19 @@ AVAILABLE CONTEXT:
 JAVASCRIPT EXECUTION CONTEXT:
 Your generated code will have access to these variables:
 - customer: Current customer object with attributes
-- product: Current product being priced (has: sku, name, category, brand, unitPrice, etc.)
-- cart: Current cart with items and totals
-- customTables: Access to custom table data
+- product: Current product being priced (has: sku, name, category, brand, unitPrice, quantity, etc.)
+- cart: Current cart object with:
+  * cart.items: Array of all cart items [{sku, name, quantity, unitPrice, category, brand}, ...]
+  * cart.totalQuantity: Total quantity of all items in cart
+  * cart.totalItems: Number of different items in cart
+  * cart.subtotal: Total value of cart before discounts
+- customTables: Access to custom table data  
 - orderHistory: Customer's order history
+
+QUANTITY-BASED PRICING EXAMPLES:
+- Volume discount: if (cart.totalQuantity >= 10) { /* apply discount */ }
+- Single SKU volume: if (product.quantity >= 5) { /* apply discount */ }
+- Multi-SKU volume: let oilCount = cart.items.filter(i => i.sku.includes('OIL')).reduce((sum, i) => sum + i.quantity, 0); if (oilCount >= 10) { /* discount */ }
 
 CRITICAL INSTRUCTIONS:
 1. Generate COMPLETE JavaScript code that directly modifies pricing

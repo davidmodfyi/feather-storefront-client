@@ -236,16 +236,128 @@ class PricingEngine {
     return modifiedProducts;
   }
 
-  // Apply pricing to cart items (distributor-specific, SYNC)
+  // Apply pricing to cart items with full cart context (distributor-specific, SYNC)
   applyCartPricing(cartItems, distributorId, customer = {}) {
+    console.log('🛒 Applying cart pricing with full context for', cartItems.length, 'items');
+    
+    // Build comprehensive cart context for quantity-based rules
+    const cartContext = {
+      items: cartItems.map(item => ({
+        sku: item.sku,
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        category: item.category,
+        brand: item.brand
+      })),
+      totalQuantity: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      totalItems: cartItems.length,
+      subtotal: cartItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
+    };
+    
+    console.log('🛒 Cart context:', {
+      totalQuantity: cartContext.totalQuantity,
+      totalItems: cartContext.totalItems,
+      itemSkus: cartContext.items.map(i => `${i.sku}(${i.quantity})`).join(', ')
+    });
+
     const modifiedItems = [];
     
     for (const item of cartItems) {
-      const modifiedItem = this.applyProductPricing(item, distributorId, customer);
+      const modifiedItem = this.applyProductPricingWithCart(item, distributorId, customer, cartContext);
       modifiedItems.push(modifiedItem);
     }
     
     return modifiedItems;
+  }
+
+  // Apply pricing to a single product with full cart context
+  applyProductPricingWithCart(product, distributorId, customer = {}, cartContext = {}) {
+    console.log('🛒 Processing cart item:', product.sku, 'qty:', product.quantity, 'price:', product.unitPrice);
+    
+    const scripts = this.getActiveLogicScripts(distributorId);
+    const storefrontScripts = scripts['storefront_load'] || [];
+    
+    let modifiedProduct = { ...product };
+    const appliedRules = [];
+
+    for (const script of storefrontScripts) {
+      try {
+        console.log('🛒 Executing cart pricing script:', script.description);
+        
+        // Enhanced execution context with full cart data
+        const scriptContext = {
+          customer: customer || {},
+          product: modifiedProduct,
+          cart: cartContext, // Full cart context with quantities
+          customTables: {}, // Will be enhanced later
+          orderHistory: [], // Will be enhanced later
+          distributor_id: distributorId
+        };
+
+        // Execute Claude's JavaScript directly
+        const scriptFunction = new Function(
+          'customer', 
+          'product', 
+          'cart', 
+          'customTables',
+          'orderHistory',
+          'distributor_id',
+          `
+          try {
+            ${script.script_content}
+          } catch (error) {
+            console.error('Cart pricing script execution error:', error);
+            return product; // Return unchanged if error
+          }
+          `
+        );
+
+        const result = scriptFunction(
+          scriptContext.customer,
+          scriptContext.product,
+          scriptContext.cart,
+          scriptContext.customTables,
+          scriptContext.orderHistory,
+          scriptContext.distributor_id
+        );
+
+        // Check if the script returned a modified product
+        if (result && typeof result === 'object' && result.sku === product.sku) {
+          console.log('🛒 Cart script modified product:', {
+            sku: result.sku,
+            originalPrice: modifiedProduct.unitPrice,
+            newPrice: result.unitPrice,
+            pricingRule: result.pricingRule
+          });
+          
+          // Track the applied rule
+          if (result.unitPrice !== modifiedProduct.unitPrice) {
+            appliedRules.push({
+              description: script.description,
+              type: 'claude_cart_rule',
+              oldPrice: modifiedProduct.unitPrice,
+              newPrice: result.unitPrice,
+              pricingRule: result.pricingRule || script.description
+            });
+          }
+          
+          modifiedProduct = result;
+        } else {
+          console.log('🛒 Cart script returned unchanged product');
+        }
+
+      } catch (error) {
+        console.error(`🛒 Error executing cart pricing script ${script.id}:`, error);
+      }
+    }
+
+    console.log('🛒 Final cart item price for', product.sku, ':', modifiedProduct.unitPrice);
+    
+    return {
+      ...modifiedProduct,
+      appliedPricingRules: appliedRules.length > 0 ? appliedRules : undefined
+    };
   }
 
   // Validate an action (like add to cart, quantity change, etc.) for a distributor (SYNC)
