@@ -76,12 +76,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
             )}
             {option.name === "Table Builder" && (
               <div className="flex items-center gap-2">
-                <p className="text-sm text-gray-600">Configure Master Data Attributes, powered by Claude</p>
-                <img 
-                  src="/claudelogo.png" 
-                  alt="Claude" 
-                  className="w-4 h-4 opacity-75" 
-                />
+                <p className="text-sm text-gray-600">Configure Master Data Attributes</p>
               </div>
             )}
             {option.name === "AI Pricing & Promo Engine" && (
