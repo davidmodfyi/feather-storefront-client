@@ -6975,14 +6975,16 @@ IMPORTANT:
       }
     } catch (parseError) {
       console.error('🎯 Error parsing Claude response:', parseError);
-      // Return a fallback response
+      console.error('🎯 Raw Claude response was:', claudeResponse);
+      
+      // Return a fallback with valid JavaScript that does nothing
       pricingData = {
-        response: `I created a pricing rule based on: "${userRequest}". ${claudeResponse}`,
+        response: `I encountered an error parsing the pricing rule response. Please try creating the rule again with a simpler request.`,
         rules: [{
-          description: `Pricing rule: ${userRequest}`,
+          description: `Failed parsing: ${userRequest}`,
           trigger_point: 'storefront_load',
-          script_content: `// Generated pricing logic for: ${userRequest}\n// ${claudeResponse.slice(0, 200)}...\nreturn { priceModification: 0, reason: 'Generated rule' };`,
-          active: true
+          script_content: `// Error parsing Claude response for: ${userRequest}\n// Please recreate this rule\nreturn product; // Return unchanged`,
+          active: false // Don't activate broken rules
         }]
       };
     }
