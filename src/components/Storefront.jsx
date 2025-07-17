@@ -414,75 +414,28 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     });
   };
 
-  // Apply price modifications from storefront_load scripts
+  // Products have pricing applied by backend, but check if we need sale indicators
 const getProductPricing = (item) => {
-  console.log('🔍 Getting product pricing for:', item.sku, 'original price:', item.unitPrice);
+  console.log('🔍 Product already priced by backend:', item.sku, 'price:', item.unitPrice);
   
-  let modifiedProduct = { ...item };
-  
-  // Execute storefront_load scripts to get price modifications
-  const storefrontScripts = logicScripts['storefront_load'] || [];
-  console.log('📋 Storefront_load scripts found:', storefrontScripts.length);
-  
-  for (const script of storefrontScripts) {
-    if (!script.active) continue;
-    
-    console.log('🔄 Processing script:', script.id);
-    console.log('📝 Script content:', script.script_content);
-
-    try {
-      // Create execution context for Claude's JavaScript
-      const customer = {}; // Will be enhanced later
-      const cartContext = {
-        items: Object.values(cart),
-        total: 0,
-        subtotal: 0
-      };
-      const customTables = {}; // Will be enhanced later
-      const orderHistory = []; // Will be enhanced later
-      
-      // Execute Claude's JavaScript directly - same as backend pricing engine
-      const scriptFunction = new Function(
-        'customer', 'product', 'cart', 'customTables', 'orderHistory',
-        `
-        try {
-          ${script.script_content}
-        } catch (error) {
-          console.error('Pricing script execution error:', error);
-          return product; // Return unchanged if error
-        }
-        `
-      );
-      
-      const result = scriptFunction(customer, modifiedProduct, cartContext, customTables, orderHistory);
-      
-      console.log('✅ Claude script result:', result);
-      
-      // Check if the script returned a modified product (Claude's format)
-      if (result && typeof result === 'object' && result.sku === item.sku) {
-        console.log('💰 Product modified by Claude script:', {
-          sku: result.sku,
-          originalPrice: modifiedProduct.unitPrice,
-          newPrice: result.unitPrice,
-          onSale: result.onSale,
-          pricingRule: result.pricingRule
-        });
-        modifiedProduct = result;
-      }
-      
-    } catch (error) {
-      console.error('❌ Error executing pricing script', script.id, ':', error);
-    }
+  // If backend already set sale indicators, use them
+  if (item.onSale !== undefined || item.pricingRule !== undefined || item.originalPrice !== undefined) {
+    console.log('🎯 Backend provided sale indicators:', {
+      onSale: item.onSale,
+      pricingRule: item.pricingRule,
+      originalPrice: item.originalPrice
+    });
+    return item;
   }
   
-  console.log('🏁 Final product pricing for', item.sku, ':', modifiedProduct);
-  return modifiedProduct;
+  // If no sale indicators but price seems modified (for backward compatibility)
+  // Note: This is a simple heuristic - backend should ideally provide sale indicators
+  return item;
 };
 
 // Convenience function for backward compatibility
 const getDisplayPrice = (item) => {
-  const pricedProduct = getProductPricing(item);
-  return pricedProduct.unitPrice;
+  return item.unitPrice;
 };
 	
   return (
