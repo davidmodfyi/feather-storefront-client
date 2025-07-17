@@ -2289,7 +2289,7 @@ app.get('/api/logic-scripts', async (req, res) => {
     const distributorId = req.session.distributor_id;
     
     const stmt = db.prepare(`
-      SELECT id, trigger_point, description, sequence_order, active, created_at
+      SELECT id, trigger_point, description, script_content, sequence_order, active, created_at
       FROM logic_scripts 
       WHERE distributor_id = ?`);
     const scripts = stmt.all(distributorId);
