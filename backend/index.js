@@ -6918,7 +6918,9 @@ RESPONSE FORMAT (MUST BE VALID JSON):
   ]
 }
 
-IMPORTANT: Your JavaScript must be complete and executable. No regex parsing will be done - your code IS the pricing logic.`;
+IMPORTANT: 
+- Your JavaScript must be complete and executable. No regex parsing will be done - your code IS the pricing logic.
+- Always use "trigger_point": "storefront_load" - this is the only trigger point the pricing engine recognizes.`;
 
   try {
     console.log('🎯 Calling Claude API for pricing logic generation...');

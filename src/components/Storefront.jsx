@@ -409,10 +409,10 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   };
 
   // Apply price modifications from storefront_load scripts
-const getDisplayPrice = (item) => {
-  console.log('🔍 Getting display price for:', item.sku, 'original price:', item.unitPrice);
+const getProductPricing = (item) => {
+  console.log('🔍 Getting product pricing for:', item.sku, 'original price:', item.unitPrice);
   
-  let modifiedPrice = item.unitPrice;
+  let modifiedProduct = { ...item };
   
   // Execute storefront_load scripts to get price modifications
   const storefrontScripts = logicScripts['storefront_load'] || [];
@@ -425,50 +425,43 @@ const getDisplayPrice = (item) => {
     console.log('📝 Script content:', script.script_content);
 
     try {
-      // Create a product copy with both unitPrice and price fields
-      const productWithPrice = {
-        ...item,
-        price: item.unitPrice  // Add the price field that the script expects
-      };
-      
-      // Create products array that the script can modify
-      const products = [productWithPrice];
-      
-      // Create cart context
+      // Create execution context for Claude's JavaScript
+      const customer = {}; // Will be enhanced later
       const cartContext = {
         items: Object.values(cart),
-        total: Object.values(cart).reduce((sum, cartItem) => sum + (cartItem.unitPrice * cartItem.quantity), 0),
-        subtotal: Object.values(cart).reduce((sum, cartItem) => sum + (cartItem.unitPrice * cartItem.quantity), 0)
+        total: 0,
+        subtotal: 0
       };
+      const customTables = {}; // Will be enhanced later
+      const orderHistory = []; // Will be enhanced later
       
-      console.log('📦 Products before script:', products);
-      
-      // Execute script with proper context
+      // Execute Claude's JavaScript directly - same as backend pricing engine
       const scriptFunction = new Function(
-        'customer', 'cart', 'products', 'currentProduct',
-        script.script_content
+        'customer', 'product', 'cart', 'customTables', 'orderHistory',
+        `
+        try {
+          ${script.script_content}
+        } catch (error) {
+          console.error('Pricing script execution error:', error);
+          return product; // Return unchanged if error
+        }
+        `
       );
       
-      const result = scriptFunction(
-        customer, 
-        cartContext, 
-        products,  // Pass the modifiable products array
-        productWithPrice
-      );
+      const result = scriptFunction(customer, modifiedProduct, cartContext, customTables, orderHistory);
       
-      console.log('✅ Script result:', result);
-      console.log('📦 Products after script:', products);
+      console.log('✅ Claude script result:', result);
       
-      // Check if the script modified the products array
-      if (products && products.length > 0 && products[0].price !== undefined) {
-        console.log('💰 Price modified via products array from', item.unitPrice, 'to', products[0].price);
-        modifiedPrice = products[0].price;
-      }
-      
-      // Also check for direct price modification
-      if (result && result.modifyPrice !== undefined) {
-        console.log('💰 Price modified via result:', result.modifyPrice);
-        modifiedPrice = result.modifyPrice;
+      // Check if the script returned a modified product (Claude's format)
+      if (result && typeof result === 'object' && result.sku === item.sku) {
+        console.log('💰 Product modified by Claude script:', {
+          sku: result.sku,
+          originalPrice: modifiedProduct.unitPrice,
+          newPrice: result.unitPrice,
+          onSale: result.onSale,
+          pricingRule: result.pricingRule
+        });
+        modifiedProduct = result;
       }
       
     } catch (error) {
@@ -476,8 +469,14 @@ const getDisplayPrice = (item) => {
     }
   }
   
-  console.log('🏁 Final price for', item.sku, ':', modifiedPrice);
-  return modifiedPrice;
+  console.log('🏁 Final product pricing for', item.sku, ':', modifiedProduct);
+  return modifiedProduct;
+};
+
+// Convenience function for backward compatibility
+const getDisplayPrice = (item) => {
+  const pricedProduct = getProductPricing(item);
+  return pricedProduct.unitPrice;
 };
 	
   return (
@@ -568,9 +567,17 @@ const getDisplayPrice = (item) => {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" style={getCustomStyle('product-grid')}>
               {filteredItems.map(item => {
-            const displayPrice = getDisplayPrice(item);
+            const pricedProduct = getProductPricing(item);
+            const displayPrice = pricedProduct.unitPrice;
             return (
-              <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow" style={getCustomStyle('product-card')}>
+              <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow relative" style={getCustomStyle('product-card')}>
+                {/* Sale Badge */}
+                {pricedProduct.onSale && (
+                  <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold z-10">
+                    SALE
+                  </div>
+                )}
+                
                 <div className="cursor-pointer" onClick={() => openProductDetails(item)}>
                   {item.image_url && (
                     <div className="mb-3">
@@ -585,11 +592,18 @@ const getDisplayPrice = (item) => {
                   <h2 className="text-xl font-bold mb-2 hover:text-blue-600" style={getCustomStyle('product-title')}>{item.name}</h2>
                   <p className="mb-1 text-gray-600" style={getCustomStyle('product-sku')}>SKU: {item.sku}</p>
                   <p className="mb-3 text-lg font-semibold" style={getCustomStyle('product-price')}>
-                    ${displayPrice.toFixed(2)}
+                    <span className={pricedProduct.onSale ? 'text-green-600 font-bold' : ''}>
+                      ${displayPrice.toFixed(2)}
+                    </span>
                     {displayPrice !== item.unitPrice && (
                       <span className="ml-2 text-sm text-gray-500 line-through">${item.unitPrice.toFixed(2)}</span>
                     )}
                   </p>
+                  {pricedProduct.onSale && pricedProduct.pricingRule && (
+                    <p className="mb-2 text-xs text-green-600 font-medium">
+                      🎉 {pricedProduct.pricingRule}
+                    </p>
+                  )}
                   {item.description && (
                     <p className="mb-3 text-sm text-gray-700 line-clamp-2" style={getCustomStyle('product-description')}>{item.description}</p>
                   )}
@@ -679,12 +693,31 @@ const getDisplayPrice = (item) => {
                 <div>
                   <p className="text-gray-600 mb-2">SKU: {selectedItem.sku}</p>
                   <p className="text-gray-600 mb-2">Category: {selectedItem.category}</p>
-                  <p className="text-2xl font-bold mb-4">
-                    ${getDisplayPrice(selectedItem).toFixed(2)}
-                    {getDisplayPrice(selectedItem) !== selectedItem.unitPrice && (
-                      <span className="ml-2 text-lg text-gray-500 line-through">${selectedItem.unitPrice.toFixed(2)}</span>
-                    )}
-                  </p>
+                  {(() => {
+                    const pricedProduct = getProductPricing(selectedItem);
+                    return (
+                      <>
+                        <p className="text-2xl font-bold mb-4">
+                          <span className={pricedProduct.onSale ? 'text-green-600' : ''}>
+                            ${pricedProduct.unitPrice.toFixed(2)}
+                          </span>
+                          {pricedProduct.unitPrice !== selectedItem.unitPrice && (
+                            <span className="ml-2 text-lg text-gray-500 line-through">${selectedItem.unitPrice.toFixed(2)}</span>
+                          )}
+                          {pricedProduct.onSale && (
+                            <span className="ml-3 bg-green-500 text-white px-2 py-1 rounded-full text-sm font-bold">
+                              ON SALE
+                            </span>
+                          )}
+                        </p>
+                        {pricedProduct.onSale && pricedProduct.pricingRule && (
+                          <p className="mb-4 text-sm text-green-600 font-medium bg-green-50 p-2 rounded">
+                            🎉 {pricedProduct.pricingRule}
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
                   
                   {selectedItem.description && (
                     <div className="mb-6">
