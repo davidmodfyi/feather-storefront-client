@@ -69,9 +69,11 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   // Fetch logic scripts
   const fetchLogicScripts = async () => {
     try {
+      console.log('🔄 Fetching logic scripts...');
       const response = await fetch('/api/logic-scripts', { credentials: 'include' });
       if (response.ok) {
         const scripts = await response.json();
+        console.log('📋 All logic scripts loaded:', scripts);
         
         // Group scripts by trigger point
         const scriptsByTrigger = {};
@@ -81,6 +83,9 @@ export default function Storefront({ onLogout, onHome, brandName }) {
           }
           scriptsByTrigger[script.trigger_point].push(script);
         });
+        
+        console.log('📋 Scripts grouped by trigger point:', scriptsByTrigger);
+        console.log('📋 Storefront_load scripts:', scriptsByTrigger['storefront_load']?.length || 0);
         
         setLogicScripts(scriptsByTrigger);
       }
@@ -161,6 +166,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
       executeLogicScripts('storefront_load');
     }
   }, [loading, items, logicScripts]);
+
   
   useEffect(() => {
     document.title = `${distributor} - Storefront`;
