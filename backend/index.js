@@ -5598,8 +5598,20 @@ app.get('/api/items', (req, res) => {
   // NEW: Apply pricing engine (synchronous)
   const customer = req.session.user || {};
   console.log('🎯 Applying pricing engine to', products.length, 'products for distributor:', distributorId);
-  const productsWithPricing = pricingEngine.applyProductsPricing(products, distributorId, customer);
-  console.log('🎯 Pricing engine completed. First product before/after:');
+  console.log('🎯 PricingEngine object:', typeof pricingEngine, !!pricingEngine);
+  
+  let productsWithPricing;
+  try {
+    productsWithPricing = pricingEngine.applyProductsPricing(products, distributorId, customer);
+    console.log('🎯 Pricing engine completed successfully');
+  } catch (error) {
+    console.error('🎯 ERROR in pricing engine:', error);
+    console.error('🎯 Error stack:', error.stack);
+    // Fallback to original products if pricing fails
+    productsWithPricing = products;
+  }
+  
+  console.log('🎯 First product before/after:');
   if (products.length > 0 && productsWithPricing.length > 0) {
     console.log('Before:', products[0].sku, products[0].unitPrice);
     console.log('After:', productsWithPricing[0].sku, productsWithPricing[0].unitPrice);
