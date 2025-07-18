@@ -52,7 +52,7 @@ export default function CustomerHomepage({ brandName, onLogout, onHome }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <CustomerHeader brandName={brandName} onLogout={onLogout} onHome={onHome} />
+      <CustomerHeader brandName={brandName} onLogout={onLogout} onHome={onHome} onCartCountChange={() => {}} />
 
       {/* Hero Section */}
       <section className="relative h-96 lg:h-[500px] overflow-hidden">

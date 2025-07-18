@@ -134,6 +134,7 @@ export default function Cart({ onLogout, onHome, brandName }) {
   const [dynamicFormValues, setDynamicFormValues] = useState({});
   const [customTableData, setCustomTableData] = useState({});
   const [currentUser, setCurrentUser] = useState({});
+  const [refreshCartCount, setRefreshCartCount] = useState(null);
   const navigate = useNavigate();
 
  
@@ -283,6 +284,11 @@ useEffect(() => {
       })
       .then(() => {
         setCartItems([]);
+        
+        // Refresh cart count in header
+        if (refreshCartCount) {
+          refreshCartCount();
+        }
       })
       .catch(error => {
         console.error('Error clearing cart:', error);
@@ -510,7 +516,12 @@ const handleSubmitOrder = async () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <CustomerHeader brandName={brandName} onLogout={onLogout} onHome={onHome} />
+      <CustomerHeader 
+        brandName={brandName} 
+        onLogout={onLogout} 
+        onHome={onHome} 
+        onCartCountChange={setRefreshCartCount}
+      />
       
       <div className="p-6" style={getCustomStyle('cart-page-background')}>
         {/* Dynamic content zone: header-top */}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function CustomerHeader({ brandName, onLogout, onHome }) {
+export default function CustomerHeader({ brandName, onLogout, onHome, onCartCountChange }) {
   const navigate = useNavigate();
   const [config, setConfig] = useState(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -11,6 +11,11 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
   useEffect(() => {
     fetchConfig();
     fetchCartCount();
+    
+    // Expose fetchCartCount to parent component
+    if (onCartCountChange) {
+      onCartCountChange(fetchCartCount);
+    }
     
     // Refresh cart count when the component mounts or when user returns to page
     const handleVisibilityChange = () => {
@@ -24,7 +29,7 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [onCartCountChange]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -52,11 +57,14 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
         const totalItems = Array.isArray(cartItems) ? cartItems.reduce((total, item) => total + item.quantity, 0) : 0;
         console.log('🔍 Total cart items:', totalItems);
         setCartItemCount(totalItems);
+        return totalItems;
       } else {
         console.log('🔍 Cart fetch failed:', response.status);
+        return 0;
       }
     } catch (error) {
       console.error('Error fetching cart count:', error);
+      return 0;
     }
   };
 
