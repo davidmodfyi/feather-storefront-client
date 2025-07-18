@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import CustomerHeader from './CustomerHeader';
 
 // Custom Table Dropdown Component
 const CustomTableDropdown = ({ 
@@ -508,21 +509,19 @@ const handleSubmitOrder = async () => {
   };
 
   return (
-    <div className="p-6" style={getCustomStyle('cart-page-background')}>
-      {/* Dynamic content zone: header-top */}
-      {renderDynamicContent('cart-header-top')}
+    <div className="min-h-screen bg-gray-50">
+      <CustomerHeader brandName={brandName} onLogout={onLogout} onHome={onHome} />
+      
+      <div className="p-6" style={getCustomStyle('cart-page-background')}>
+        {/* Dynamic content zone: header-top */}
+        {renderDynamicContent('cart-header-top')}
 
-		<div className="flex justify-between mb-4 ml-14" style={getCustomStyle('cart-header-nav')}>
-		  <h1 className="text-2xl font-bold" style={getCustomStyle('cart-page-title')}>{distributor} - My Cart</h1>
-        <div className="flex gap-2">
-          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded" style={getCustomStyle('cart-home-button')}>Home</button>
-          <button onClick={goToStorefront} className="px-3 py-1 bg-blue-500 text-white rounded" style={getCustomStyle('cart-continue-shopping-button')}>Continue Shopping</button>
-          <button onClick={handleLogout} className="px-3 py-1 bg-red-500 text-white rounded" style={getCustomStyle('cart-logout-button')}>Logout</button>
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold" style={getCustomStyle('cart-page-title')}>{distributor} - My Cart</h1>
         </div>
-      </div>
 
-      {/* Dynamic content zone: header-bottom */}
-      {renderDynamicContent('cart-header-bottom')}
+        {/* Dynamic content zone: header-bottom */}
+        {renderDynamicContent('cart-header-bottom')}
       
       {loading ? (
         <div className="text-center py-8" style={getCustomStyle('cart-loading-container')}>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import CustomerHeader from './CustomerHeader';
 
 export default function Storefront({ onLogout, onHome, brandName }) {
   const [items, setItems] = useState([]);
@@ -543,37 +544,19 @@ const getDisplayPrice = (item) => {
 };
 	
   return (
-    <div className="p-6" style={getCustomStyle('page-background')}>
-      {/* Dynamic content zone: header-top */}
-      {renderDynamicContent('storefront-header-top')}
+    <div className="min-h-screen bg-gray-50">
+      <CustomerHeader brandName={brandName} onLogout={onLogout} onHome={onHome} />
       
-      {/* Header with logo */}
-      {headerLogo && (
-        <div className="absolute top-2 left-2" style={{ maxWidth: '40px', maxHeight: '40px' }}>
-          <img 
-            src={headerLogo} 
-            alt={distributor} 
-            className="h-auto w-full object-contain"
-          />
+      <div className="p-6" style={getCustomStyle('page-background')}>
+        {/* Dynamic content zone: header-top */}
+        {renderDynamicContent('storefront-header-top')}
+        
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
         </div>
-      )}
-      
-      <div className="flex justify-between mb-4 ml-20" style={getCustomStyle('header-nav')}>
-        <h1 className="text-2xl font-bold">{distributor} - Storefront</h1>
-        <div className="flex gap-2 items-center">
-          <button onClick={onHome} className="px-3 py-1 bg-gray-400 text-white rounded">Home</button>
-          <button 
-            onClick={goToCart} 
-            className="px-3 py-1 bg-blue-500 text-white rounded flex items-center gap-1"
-          >
-            🛒 My Cart ({getCartItemCount()})
-          </button>
-          <button onClick={handleLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
-        </div>
-      </div>
 
-      {/* Dynamic content zone: header-bottom */}
-      {renderDynamicContent('storefront-header-bottom')}
+        {/* Dynamic content zone: header-bottom */}
+        {renderDynamicContent('storefront-header-bottom')}
       
       {/* Dynamic content zone: before-categories */}
       {renderDynamicContent('storefront-before-categories')}
