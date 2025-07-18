@@ -41,6 +41,7 @@ export default function HomepageBranding() {
       });
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 Fetched config:', data);
         if (data.hero_images && typeof data.hero_images === 'string') {
           data.hero_images = JSON.parse(data.hero_images);
         }
@@ -57,6 +58,8 @@ export default function HomepageBranding() {
     setIsSaving(true);
     setSaveMessage('');
     
+    console.log('🔍 Saving config:', config);
+    
     try {
       const response = await fetch('/api/homepage-config', {
         method: 'POST',
@@ -67,11 +70,14 @@ export default function HomepageBranding() {
         body: JSON.stringify(config)
       });
 
+      const responseData = await response.json();
+      console.log('🔍 Save response:', responseData);
+
       if (response.ok) {
         setSaveMessage('Configuration saved successfully!');
         setTimeout(() => setSaveMessage(''), 3000);
       } else {
-        setSaveMessage('Error saving configuration');
+        setSaveMessage(`Error saving configuration: ${responseData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error saving config:', error);
