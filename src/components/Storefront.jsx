@@ -850,6 +850,7 @@ const getDisplayPrice = (item) => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

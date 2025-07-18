@@ -688,6 +688,7 @@ const handleSubmitOrder = async () => {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }
