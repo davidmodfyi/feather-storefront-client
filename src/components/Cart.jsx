@@ -597,10 +597,10 @@ const handleSubmitOrder = async () => {
                   <div className="flex items-center gap-3" style={getCustomStyle('cart-quantity-controls')}>
                     <span className="text-sm font-medium" style={getCustomStyle('cart-quantity-label')}>Quantity:</span>
                     {/* Clean quantity selector for cart */}
-                    <div className="flex items-center border border-gray-300 rounded-md bg-white">
+                    <div className="flex items-center border border-gray-300 rounded-md bg-white h-9">
                       <button 
                         onClick={() => handleQuantityChange(item.cart_item_id, (quantities[item.cart_item_id] || item.quantity) - 1)}
-                        className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-r border-gray-300"
+                        className="w-8 h-9 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-r border-gray-300"
                         style={getCustomStyle('cart-quantity-button')}
                       >
                         −
@@ -611,13 +611,13 @@ const handleSubmitOrder = async () => {
                         min="1"
                         value={quantities[item.cart_item_id] || item.quantity}
                         onChange={(e) => handleQuantityChange(item.cart_item_id, parseInt(e.target.value) || 1)}
-                        className="w-12 h-8 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
+                        className="w-12 h-9 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
                         style={getCustomStyle('cart-quantity-input')}
                       />
                       
                       <button 
                         onClick={() => handleQuantityChange(item.cart_item_id, (quantities[item.cart_item_id] || item.quantity) + 1)}
-                        className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-l border-gray-300"
+                        className="w-8 h-9 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-l border-gray-300"
                         style={getCustomStyle('cart-quantity-button')}
                       >
                         +

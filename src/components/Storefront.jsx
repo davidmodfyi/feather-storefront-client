@@ -645,12 +645,12 @@ const getDisplayPrice = (item) => {
                 </div>
                 
                 {/* Centered quantity selector and Add to Cart button on same line */}
-                <div className="flex items-center justify-center gap-3 mt-3">
+                <div className="flex items-center justify-center mt-3">
                   {/* Clean quantity selector */}
-                  <div className="flex items-center border border-gray-300 rounded-md bg-white">
+                  <div className="flex items-center border border-gray-300 rounded-l-md bg-white h-9">
                     <button 
                       onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) - 1)}
-                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-r border-gray-300"
+                      className="w-8 h-9 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-r border-gray-300"
                       style={getCustomStyle('quantity-button')}
                     >
                       −
@@ -661,23 +661,27 @@ const getDisplayPrice = (item) => {
                       min="1"
                       value={quantities[item.id] || 1}
                       onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                      className="w-12 h-8 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
+                      className="w-12 h-9 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
                       style={getCustomStyle('quantity-input')}
                     />
                     
                     <button 
                       onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) + 1)}
-                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-l border-gray-300"
+                      className="w-8 h-9 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-l border-gray-300"
                       style={getCustomStyle('quantity-button')}
                     >
                       +
                     </button>
                   </div>
                   
-                  {/* Smaller Add to Cart button */}
+                  {/* Add to Cart button touching the quantity selector */}
                   <button 
                     onClick={() => handleAddToCart(item)}
-                    className={`px-3 py-2 text-sm ${getButtonClass(item.id)} text-white rounded-md`}
+                    className={`px-3 h-9 text-sm text-white rounded-r-md flex items-center justify-center ${
+                      !isItemInCart(item.id) ? 'bg-black hover:bg-gray-800' : 
+                      cart[item.id]?.quantity !== (quantities[item.id] || 1) ? 'bg-yellow-600 hover:bg-yellow-700' : 
+                      'bg-blue-600 hover:bg-blue-700'
+                    }`}
                     style={getCustomStyle('add-to-cart-button')}
                   >
                     {getButtonText(item.id)}
@@ -768,10 +772,10 @@ const getDisplayPrice = (item) => {
                   <div className="flex items-center gap-3 mb-4">
                     <span className="text-sm font-medium">Quantity:</span>
                     {/* Clean quantity selector for modal */}
-                    <div className="flex items-center border border-gray-300 rounded-md bg-white">
+                    <div className="flex items-center border border-gray-300 rounded-l-md bg-white h-9">
                       <button 
                         onClick={() => handleQuantityChange(selectedItem.id, (quantities[selectedItem.id] || 1) - 1)}
-                        className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-r border-gray-300"
+                        className="w-8 h-9 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-r border-gray-300"
                       >
                         −
                       </button>
@@ -781,27 +785,32 @@ const getDisplayPrice = (item) => {
                         min="1"
                         value={quantities[selectedItem.id] || 1}
                         onChange={(e) => handleQuantityChange(selectedItem.id, parseInt(e.target.value) || 1)}
-                        className="w-12 h-8 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
+                        className="w-12 h-9 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
                       />
                       
                       <button 
                         onClick={() => handleQuantityChange(selectedItem.id, (quantities[selectedItem.id] || 1) + 1)}
-                        className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-l border-gray-300"
+                        className="w-8 h-9 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-l border-gray-300"
                       >
                         +
                       </button>
                     </div>
+                    
+                    {/* Add to Cart button touching the quantity selector in modal */}
+                    <button 
+                      onClick={() => {
+                        handleAddToCart(selectedItem);
+                        closeProductDetails();
+                      }}
+                      className={`px-3 h-9 text-sm text-white rounded-r-md flex items-center justify-center ${
+                        !isItemInCart(selectedItem.id) ? 'bg-black hover:bg-gray-800' : 
+                        cart[selectedItem.id]?.quantity !== (quantities[selectedItem.id] || 1) ? 'bg-yellow-600 hover:bg-yellow-700' : 
+                        'bg-blue-600 hover:bg-blue-700'
+                      }`}
+                    >
+                      {getButtonText(selectedItem.id)}
+                    </button>
                   </div>
-                  
-                  <button 
-                    onClick={() => {
-                      handleAddToCart(selectedItem);
-                      closeProductDetails();
-                    }}
-                    className={`w-full mt-2 px-4 py-2 ${getButtonClass(selectedItem.id)} text-white rounded`}
-                  >
-                    {getButtonText(selectedItem.id)}
-                  </button>
                 </div>
               </div>
             </div>
