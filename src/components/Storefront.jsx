@@ -440,8 +440,18 @@ export default function Storefront({ onLogout, onHome, brandName }) {
       'product-description': { textAlign: 'center' },
       'product-category': { textAlign: 'center' },
       'product-description-title': { textAlign: 'center' },
-      'quantity-input': { textAlign: 'center', fontWeight: 'bold' },
-      'cart-quantity-input': { textAlign: 'center', fontWeight: 'bold' }
+      'quantity-input': { 
+        textAlign: 'center', 
+        fontWeight: 'bold',
+        WebkitAppearance: 'none',
+        MozAppearance: 'textfield'
+      },
+      'cart-quantity-input': { 
+        textAlign: 'center', 
+        fontWeight: 'bold',
+        WebkitAppearance: 'none',
+        MozAppearance: 'textfield'
+      }
     };
     
     // Custom styles override defaults (AI Assistant functionality preserved)
@@ -686,7 +696,11 @@ const getDisplayPrice = (item) => {
                       value={quantities[item.id] || 1}
                       onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
                       className="w-12 h-9 text-center font-bold border-0 bg-transparent focus:outline-none focus:ring-0"
-                      style={getCustomStyle('quantity-input')}
+                      style={{
+                        ...getCustomStyle('quantity-input'),
+                        WebkitAppearance: 'none',
+                        MozAppearance: 'textfield'
+                      }}
                     />
                     
                     <button 
@@ -810,6 +824,10 @@ const getDisplayPrice = (item) => {
                         value={quantities[selectedItem.id] || 1}
                         onChange={(e) => handleQuantityChange(selectedItem.id, parseInt(e.target.value) || 1)}
                         className="w-12 h-9 text-center font-bold border-0 bg-transparent focus:outline-none focus:ring-0"
+                        style={{
+                          WebkitAppearance: 'none',
+                          MozAppearance: 'textfield'
+                        }}
                       />
                       
                       <button 
