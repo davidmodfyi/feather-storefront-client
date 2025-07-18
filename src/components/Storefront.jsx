@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Storefront({ onLogout, onHome, brandName }) {
   const [items, setItems] = useState([]);
@@ -10,6 +10,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [headerLogo, setHeaderLogo] = useState(null);
   const [customStyles, setCustomStyles] = useState({});
@@ -188,17 +189,17 @@ export default function Storefront({ onLogout, onHome, brandName }) {
       .then(data => {
         setItems(data);
         
-        // Initialize quantities for all items to 1
+        // Initialize quantities for all items to 1, but this will be overridden by cart data
         const initialQuantities = {};
         data.forEach(item => {
           initialQuantities[item.id] = 1;
         });
         setQuantities(initialQuantities);
+        
+        // Fetch cart items AFTER setting initial quantities
+        fetchCart();
       })
       .catch(console.error);
-    
-    // Fetch cart items
-    fetchCart();
     
     // Fetch logic scripts
     fetchLogicScripts();
@@ -211,6 +212,12 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     }
   }, [loading, items, logicScripts]);
 
+  // Refresh cart data when returning to storefront (for "Continue Shopping" scenario)
+  useEffect(() => {
+    console.log('🔄 Storefront component effect triggered, refreshing cart...');
+    fetchCart();
+  }, [location?.pathname]); // Dependency on location path to trigger when navigating back
+
   
   useEffect(() => {
     document.title = `${distributor} - Storefront`;
@@ -218,25 +225,34 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   
   // Fetch cart items from the server
   const fetchCart = () => {
+    console.log('🛒 Fetching cart data...');
     fetch('/api/cart', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch cart');
         return res.json();
       })
       .then(data => {
+        console.log('🛒 Cart data received:', data);
+        
         // Convert array to object with product_id as key
         const cartObj = {};
+        const cartQuantities = {};
+        
         data.forEach(item => {
           cartObj[item.id] = {
             ...item,
             quantity: item.quantity
           };
-          
-          // Update quantities state to match cart
-          setQuantities(prev => ({
-            ...prev,
-            [item.id]: item.quantity
-          }));
+          cartQuantities[item.id] = item.quantity;
+        });
+        
+        console.log('🛒 Cart quantities to apply:', cartQuantities);
+        
+        // Update quantities state to match cart - use setQuantities with a function to ensure we get the current state
+        setQuantities(prev => {
+          const newQuantities = { ...prev, ...cartQuantities };
+          console.log('🛒 Updated quantities state:', newQuantities);
+          return newQuantities;
         });
         
         setCart(cartObj);
