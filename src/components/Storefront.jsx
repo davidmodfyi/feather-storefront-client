@@ -439,7 +439,9 @@ export default function Storefront({ onLogout, onHome, brandName }) {
       'product-price': { textAlign: 'center' },
       'product-description': { textAlign: 'center' },
       'product-category': { textAlign: 'center' },
-      'product-description-title': { textAlign: 'center' }
+      'product-description-title': { textAlign: 'center' },
+      'quantity-input': { textAlign: 'center', fontWeight: 'bold' },
+      'cart-quantity-input': { textAlign: 'center', fontWeight: 'bold' }
     };
     
     // Custom styles override defaults (AI Assistant functionality preserved)
@@ -683,7 +685,7 @@ const getDisplayPrice = (item) => {
                       min="1"
                       value={quantities[item.id] || 1}
                       onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                      className="w-12 h-9 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
+                      className="w-12 h-9 text-center font-bold border-0 bg-transparent focus:outline-none focus:ring-0"
                       style={getCustomStyle('quantity-input')}
                     />
                     
@@ -807,7 +809,7 @@ const getDisplayPrice = (item) => {
                         min="1"
                         value={quantities[selectedItem.id] || 1}
                         onChange={(e) => handleQuantityChange(selectedItem.id, parseInt(e.target.value) || 1)}
-                        className="w-12 h-9 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
+                        className="w-12 h-9 text-center font-bold border-0 bg-transparent focus:outline-none focus:ring-0"
                       />
                       
                       <button 

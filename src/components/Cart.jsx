@@ -611,7 +611,7 @@ const handleSubmitOrder = async () => {
                         min="1"
                         value={quantities[item.cart_item_id] || item.quantity}
                         onChange={(e) => handleQuantityChange(item.cart_item_id, parseInt(e.target.value) || 1)}
-                        className="w-12 h-9 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
+                        className="w-12 h-9 text-center font-bold border-0 bg-transparent focus:outline-none focus:ring-0"
                         style={getCustomStyle('cart-quantity-input')}
                       />
                       
