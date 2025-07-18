@@ -10,6 +10,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
   // Options for the backoffice dashboard
   const options = [
     { name: "Manage Customers", path: "/backoffice/customers" },
+    { name: "Homepage & Branding", path: "/backoffice/homepage-branding" },
     { name: "Branding", path: "/backoffice/branding" },
     { name: "AI Storefront Assistant", path: "/backoffice/ai-assistant" },
     { name: "AI Pricing & Promo Engine", path: "/backoffice/ai-pricing" },
@@ -33,6 +34,7 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
             key={option.name} 
             className={`border p-6 rounded shadow hover:shadow-md transition-shadow cursor-pointer ${
               option.name === "Manage Customers" ? 'bg-blue-50' : 
+              option.name === "Homepage & Branding" ? 'bg-indigo-50' : 
               option.name === "Branding" ? 'bg-green-50' : 
               option.name === "AI Storefront Assistant" ? 'bg-purple-50' : 
               option.name === "AI Pricing & Promo Engine" ? 'bg-yellow-50' : 
@@ -42,6 +44,8 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
             onClick={() => {
               if (option.name === "Manage Customers") {
                 navigate("/backoffice/customers");
+              } else if (option.name === "Homepage & Branding") {
+                navigate("/backoffice/homepage-branding");
               } else if (option.name === "Branding") {
                 navigate("/backoffice/branding");
               } else if (option.name === "AI Storefront Assistant") {
@@ -60,6 +64,9 @@ export default function BackofficeOptions({ onLogout, onHome, brandName }) {
             <h2 className="text-xl font-semibold mb-2">{option.name}</h2>
             {option.name === "Manage Customers" && (
               <p className="text-sm text-gray-600">View and manage your customer accounts</p>
+            )}
+            {option.name === "Homepage & Branding" && (
+              <p className="text-sm text-gray-600">Configure customer homepage experience with carousel, banners, and branding</p>
             )}
             {option.name === "Branding" && (
               <p className="text-sm text-gray-600">Customize your logo and appearance</p>

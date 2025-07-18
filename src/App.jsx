@@ -14,6 +14,8 @@ import LogicScriptsManagement from './components/LogicScriptsManagement';
 import Integrations from './components/Integrations';
 import CustomerConfigPage from './components/CustomerConfigPage';
 import AIPricingEngine from './components/AIPricingEngine';
+import HomepageBranding from './components/HomepageBranding';
+import CustomerHomepage from './components/CustomerHomepage';
 
 // Header Component with Logo
 function Header({ brandName }) {
@@ -67,37 +69,7 @@ function PortalPage({ brandName, onLogout, userType }) {
   }, []);
   
   if (userType === 'Customer') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
-        <Header brandName={brandName} />
-        {logo ? (
-          <img src={logo} alt={brandName} className="mb-4 max-h-32 object-contain" />
-        ) : (
-          <h1 className="text-2xl font-bold mb-4">{brandName || 'Feather Storefront'}</h1>
-        )}
-        <p className="mb-6">?</p>
-        <div className="flex gap-4">
-          <button 
-            onClick={() => navigate('/storefront')}
-            className="px-6 py-3 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold rounded border border-blue-200"
-          >
-            Storefront
-          </button>
-          <button 
-            onClick={() => navigate('/orders')}
-            className="px-6 py-3 bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold rounded border border-purple-200"
-          >
-            Order History
-          </button>
-          <button 
-            onClick={onLogout}
-            className="px-6 py-3 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded border border-red-200"
-          >
-            Log Out
-          </button>
-        </div>
-      </div>
-    );
+    return <CustomerHomepage brandName={brandName} onLogout={onLogout} onHome={onHome} />;
   }
   
   return (
@@ -376,6 +348,19 @@ function App({ distributorSlug }) {
                 <>
                   <Header brandName={brandName} />
                   <Integrations brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
+                </>
+              )
+          }
+        />
+        <Route
+          path="/backoffice/homepage-branding"
+          element={
+            userType === 'Customer' 
+              ? <Navigate to="/" replace /> 
+              : (
+                <>
+                  <Header brandName={brandName} />
+                  <HomepageBranding brandName={brandName} onLogout={handleLogout} onHome={handleHome} />
                 </>
               )
           }

@@ -7207,9 +7207,144 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Homepage Configuration API Endpoints
+app.get('/api/homepage-config', (req, res) => {
+  console.log('📄 Homepage config request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const config = db.prepare(`
+      SELECT * FROM homepage_config 
+      WHERE distributor_id = ?
+    `).get(req.session.distributor_id);
+    
+    if (!config) {
+      // Create default config if it doesn't exist
+      const defaultConfig = {
+        distributor_id: req.session.distributor_id,
+        banner_message: 'END OF SEASON SOON',
+        banner_link_text: 'LAST CHANCE',
+        banner_bg_color: '#000000',
+        banner_text_color: '#ffffff',
+        countdown_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        logo_url: '',
+        logo_alt_text: 'Logo',
+        hero_title: 'ENGINEERED FOR EVERYDAY',
+        hero_description: 'Our latest collection balances functionality and aesthetics in the space of traditional workwear, lifestyle and activewear.',
+        hero_button_text: 'SHOP NOW',
+        hero_button_bg_color: '#ffffff',
+        hero_button_text_color: '#000000',
+        hero_images: JSON.stringify(['/placeholder-hero.jpg']),
+        title_font: 'Arial, sans-serif',
+        title_font_size: '48px',
+        title_font_weight: 'bold',
+        body_font: 'Arial, sans-serif',
+        body_font_size: '16px',
+        overlay_bg_color: 'rgba(0, 0, 0, 0.3)'
+      };
+      
+      const stmt = db.prepare(`
+        INSERT INTO homepage_config (
+          distributor_id, banner_message, banner_link_text, banner_bg_color, banner_text_color,
+          countdown_end_date, logo_url, logo_alt_text, hero_title, hero_description,
+          hero_button_text, hero_button_bg_color, hero_button_text_color, hero_images,
+          title_font, title_font_size, title_font_weight, body_font, body_font_size, overlay_bg_color
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      stmt.run(
+        defaultConfig.distributor_id, defaultConfig.banner_message, defaultConfig.banner_link_text,
+        defaultConfig.banner_bg_color, defaultConfig.banner_text_color, defaultConfig.countdown_end_date,
+        defaultConfig.logo_url, defaultConfig.logo_alt_text, defaultConfig.hero_title,
+        defaultConfig.hero_description, defaultConfig.hero_button_text, defaultConfig.hero_button_bg_color,
+        defaultConfig.hero_button_text_color, defaultConfig.hero_images, defaultConfig.title_font,
+        defaultConfig.title_font_size, defaultConfig.title_font_weight, defaultConfig.body_font,
+        defaultConfig.body_font_size, defaultConfig.overlay_bg_color
+      );
+      
+      res.json(defaultConfig);
+    } else {
+      // Parse JSON fields
+      const configData = {
+        ...config,
+        hero_images: JSON.parse(config.hero_images || '[]')
+      };
+      res.json(configData);
+    }
+  } catch (error) {
+    console.error('Error fetching homepage config:', error);
+    res.status(500).json({ error: 'Failed to fetch homepage configuration' });
+  }
+});
 
+app.post('/api/homepage-config', (req, res) => {
+  console.log('💾 Homepage config save request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const config = req.body;
+    
+    // Prepare the update statement
+    const stmt = db.prepare(`
+      UPDATE homepage_config SET
+        banner_message = ?, banner_link_text = ?, banner_bg_color = ?, banner_text_color = ?,
+        countdown_end_date = ?, logo_url = ?, logo_alt_text = ?, hero_title = ?, hero_description = ?,
+        hero_button_text = ?, hero_button_bg_color = ?, hero_button_text_color = ?, hero_images = ?,
+        title_font = ?, title_font_size = ?, title_font_weight = ?, body_font = ?, body_font_size = ?,
+        overlay_bg_color = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE distributor_id = ?
+    `);
+    
+    const result = stmt.run(
+      config.banner_message, config.banner_link_text, config.banner_bg_color, config.banner_text_color,
+      config.countdown_end_date, config.logo_url, config.logo_alt_text, config.hero_title,
+      config.hero_description, config.hero_button_text, config.hero_button_bg_color,
+      config.hero_button_text_color, JSON.stringify(config.hero_images || []),
+      config.title_font, config.title_font_size, config.title_font_weight,
+      config.body_font, config.body_font_size, config.overlay_bg_color,
+      req.session.distributor_id
+    );
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Homepage configuration not found' });
+    }
+    
+    res.json({ success: true, message: 'Homepage configuration updated successfully' });
+  } catch (error) {
+    console.error('Error saving homepage config:', error);
+    res.status(500).json({ error: 'Failed to save homepage configuration' });
+  }
+});
 
-
+app.post('/api/homepage-upload', upload.single('image'), (req, res) => {
+  console.log('🖼️ Homepage image upload request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image file provided' });
+  }
+  
+  try {
+    const imageUrl = `/uploads/${req.file.filename}`;
+    res.json({ 
+      success: true, 
+      imageUrl: imageUrl,
+      message: 'Image uploaded successfully' 
+    });
+  } catch (error) {
+    console.error('Error uploading homepage image:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
 
 // Start the server
 app.listen(PORT, () => {
