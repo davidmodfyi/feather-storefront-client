@@ -16,6 +16,7 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   const [logicScripts, setLogicScripts] = useState({});
   const [customer, setCustomer] = useState({});
   const [dynamicContent, setDynamicContent] = useState({});
+  const [realtimePricing, setRealtimePricing] = useState({});
 
   // Function to execute logic scripts
   const executeLogicScripts = async (triggerPoint, context = {}) => {
@@ -91,6 +92,49 @@ export default function Storefront({ onLogout, onHome, brandName }) {
       }
     } catch (error) {
       console.error('Error fetching logic scripts:', error);
+    }
+  };
+
+  // Update real-time pricing for a specific item
+  const updateRealtimePricing = async (itemId, newQuantity) => {
+    try {
+      console.log('🔄 Calculating real-time pricing for item:', itemId, 'quantity:', newQuantity);
+      
+      const response = await fetch('/api/calculate-pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          items: [{ product_id: itemId, quantity: newQuantity }]
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('💰 Real-time pricing response:', data);
+        
+        if (data.success && data.items && data.items.length > 0) {
+          const pricedItem = data.items[0];
+          
+          // Update the real-time pricing state
+          setRealtimePricing(prev => ({
+            ...prev,
+            [itemId]: {
+              unitPrice: pricedItem.unitPrice,
+              originalPrice: pricedItem.originalPrice,
+              onSale: pricedItem.onSale,
+              pricingRule: pricedItem.pricingRule,
+              quantity: newQuantity
+            }
+          }));
+          
+          console.log('✅ Real-time pricing updated for', itemId, ':', pricedItem.unitPrice);
+        }
+      } else {
+        console.error('Failed to calculate real-time pricing:', response.status);
+      }
+    } catch (error) {
+      console.error('Error calculating real-time pricing:', error);
     }
   };
 
@@ -229,6 +273,9 @@ export default function Storefront({ onLogout, onHome, brandName }) {
         ...prev,
         [itemId]: newQuantity
       }));
+      
+      // Call real-time pricing API to update prices immediately
+      await updateRealtimePricing(itemId, newQuantity);
     }
   }
 
@@ -418,6 +465,19 @@ export default function Storefront({ onLogout, onHome, brandName }) {
 const getProductPricing = (item) => {
   console.log('🔍 Product already priced by backend:', item.sku, 'price:', item.unitPrice);
   
+  // Check if we have real-time pricing for this item
+  const realtimePrice = realtimePricing[item.id];
+  if (realtimePrice && realtimePrice.quantity === (quantities[item.id] || 1)) {
+    console.log('⚡ Using real-time pricing for', item.sku, ':', realtimePrice);
+    return {
+      ...item,
+      unitPrice: realtimePrice.unitPrice,
+      originalPrice: realtimePrice.originalPrice || item.unitPrice,
+      onSale: realtimePrice.onSale,
+      pricingRule: realtimePrice.pricingRule
+    };
+  }
+  
   // If backend already set sale indicators, use them
   if (item.onSale !== undefined || item.pricingRule !== undefined || item.originalPrice !== undefined) {
     console.log('🎯 Backend provided sale indicators:', {
@@ -554,8 +614,8 @@ const getDisplayPrice = (item) => {
                     <span className={pricedProduct.onSale ? 'text-green-600 font-bold' : ''}>
                       ${displayPrice.toFixed(2)}
                     </span>
-                    {displayPrice !== item.unitPrice && (
-                      <span className="ml-2 text-sm text-gray-500 line-through">${item.unitPrice.toFixed(2)}</span>
+                    {pricedProduct.originalPrice && pricedProduct.originalPrice !== displayPrice && (
+                      <span className="ml-2 text-sm text-gray-500 line-through">${pricedProduct.originalPrice.toFixed(2)}</span>
                     )}
                   </p>
                   {pricedProduct.onSale && pricedProduct.pricingRule && (
@@ -660,8 +720,8 @@ const getDisplayPrice = (item) => {
                           <span className={pricedProduct.onSale ? 'text-green-600' : ''}>
                             ${pricedProduct.unitPrice.toFixed(2)}
                           </span>
-                          {pricedProduct.unitPrice !== selectedItem.unitPrice && (
-                            <span className="ml-2 text-lg text-gray-500 line-through">${selectedItem.unitPrice.toFixed(2)}</span>
+                          {pricedProduct.originalPrice && pricedProduct.originalPrice !== pricedProduct.unitPrice && (
+                            <span className="ml-2 text-lg text-gray-500 line-through">${pricedProduct.originalPrice.toFixed(2)}</span>
                           )}
                           {pricedProduct.onSale && (
                             <span className="ml-3 bg-green-500 text-white px-2 py-1 rounded-full text-sm font-bold">

@@ -5658,6 +5658,72 @@ app.get('/api/debug/pricing-rules', (req, res) => {
   }
 });
 
+// Real-time pricing calculation endpoint
+app.post('/api/calculate-pricing', (req, res) => {
+  console.log('🔄 Real-time pricing calculation request');
+  
+  if (!req.session.distributor_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  try {
+    const { items } = req.body; // Array of {product_id, quantity}
+    const distributorId = req.session.distributor_id;
+    const customer = req.session.user || {};
+    
+    console.log('🔄 Calculating pricing for items:', items);
+    
+    // Get full product details for the items
+    const productIds = items.map(item => item.product_id);
+    const placeholders = productIds.map(() => '?').join(',');
+    
+    const products = db.prepare(`
+      SELECT * FROM products 
+      WHERE id IN (${placeholders}) AND distributor_id = ?
+    `).all(...productIds, distributorId);
+    
+    // Create cart items with quantities
+    const cartItems = items.map(item => {
+      const product = products.find(p => p.id === item.product_id);
+      if (!product) return null;
+      
+      return {
+        ...product,
+        quantity: item.quantity,
+        cart_item_id: `temp_${item.product_id}` // Temporary ID for calculation
+      };
+    }).filter(Boolean);
+    
+    console.log('🔄 Built cart items for pricing:', cartItems.map(i => `${i.sku}(${i.quantity})`));
+    
+    // Apply cart pricing with full context
+    const pricedItems = pricingEngine.applyCartPricing(cartItems, distributorId, customer);
+    
+    // Return pricing results
+    const pricingResults = pricedItems.map(item => ({
+      product_id: item.id,
+      sku: item.sku,
+      quantity: item.quantity,
+      originalPrice: item.originalPrice || item.unitPrice,
+      unitPrice: item.unitPrice,
+      onSale: item.onSale,
+      pricingRule: item.pricingRule,
+      appliedPricingRules: item.appliedPricingRules
+    }));
+    
+    console.log('🔄 Pricing calculation complete:', pricingResults.length, 'items');
+    
+    res.json({
+      items: pricingResults,
+      success: true
+    });
+    
+  } catch (error) {
+    console.error('🔄 Error calculating pricing:', error);
+    res.status(500).json({ error: 'Failed to calculate pricing' });
+  }
+});
+
 // Accounts endpoint
 app.get('/api/accounts', (req, res) => {
   console.log('Accounts request');

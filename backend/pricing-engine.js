@@ -194,7 +194,7 @@ class PricingEngine {
             pricingRule: result.pricingRule
           });
           
-          // Track the applied rule
+          // Track the applied rule and set original price
           if (result.unitPrice !== modifiedProduct.unitPrice) {
             appliedRules.push({
               description: script.description,
@@ -203,6 +203,11 @@ class PricingEngine {
               newPrice: result.unitPrice,
               pricingRule: result.pricingRule || script.description
             });
+            
+            // Ensure we preserve the original price
+            if (!result.originalPrice) {
+              result.originalPrice = modifiedProduct.unitPrice;
+            }
           }
           
           modifiedProduct = result;
@@ -331,7 +336,7 @@ class PricingEngine {
             pricingRule: result.pricingRule
           });
           
-          // Track the applied rule
+          // Track the applied rule and set original price
           if (result.unitPrice !== modifiedProduct.unitPrice) {
             appliedRules.push({
               description: script.description,
@@ -340,6 +345,11 @@ class PricingEngine {
               newPrice: result.unitPrice,
               pricingRule: result.pricingRule || script.description
             });
+            
+            // Ensure we preserve the original price
+            if (!result.originalPrice) {
+              result.originalPrice = modifiedProduct.unitPrice;
+            }
           }
           
           modifiedProduct = result;
