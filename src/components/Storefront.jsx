@@ -431,7 +431,23 @@ export default function Storefront({ onLogout, onHome, brandName }) {
     console.log('🎨 getCustomStyle called for:', elementSelector);
     console.log('🎨 Available custom styles:', Object.keys(customStyles));
     console.log('🎨 Style for', elementSelector, ':', customStyles[elementSelector]);
-    return customStyles[elementSelector] || {};
+    
+    // Default styles for product content - center-aligned by default
+    const defaultStyles = {
+      'product-title': { textAlign: 'center' },
+      'product-sku': { textAlign: 'center' },
+      'product-price': { textAlign: 'center' },
+      'product-description': { textAlign: 'center' },
+      'product-category': { textAlign: 'center' },
+      'product-description-title': { textAlign: 'center' }
+    };
+    
+    // Custom styles override defaults (AI Assistant functionality preserved)
+    const customStyle = customStyles[elementSelector] || {};
+    const defaultStyle = defaultStyles[elementSelector] || {};
+    
+    // Merge default with custom (custom takes precedence)
+    return { ...defaultStyle, ...customStyle };
   };
 
   // Render dynamic content for a specific zone
@@ -734,13 +750,13 @@ const getDisplayPrice = (item) => {
                 </div>
                 
                 <div>
-                  <p className="text-gray-600 mb-2">SKU: {selectedItem.sku}</p>
-                  <p className="text-gray-600 mb-2">Category: {selectedItem.category}</p>
+                  <p className="text-gray-600 mb-2" style={getCustomStyle('product-sku')}>SKU: {selectedItem.sku}</p>
+                  <p className="text-gray-600 mb-2" style={getCustomStyle('product-category')}>Category: {selectedItem.category}</p>
                   {(() => {
                     const pricedProduct = getProductPricing(selectedItem);
                     return (
                       <>
-                        <p className="text-2xl font-bold mb-4">
+                        <p className="text-2xl font-bold mb-4" style={getCustomStyle('product-price')}>
                           <span className={pricedProduct.onSale ? 'text-green-600' : ''}>
                             ${pricedProduct.unitPrice.toFixed(2)}
                           </span>
@@ -764,8 +780,8 @@ const getDisplayPrice = (item) => {
                   
                   {selectedItem.description && (
                     <div className="mb-6">
-                      <h3 className="text-lg font-semibold mb-2">Description</h3>
-                      <p className="text-gray-700">{selectedItem.description}</p>
+                      <h3 className="text-lg font-semibold mb-2" style={getCustomStyle('product-description-title')}>Description</h3>
+                      <p className="text-gray-700" style={getCustomStyle('product-description')}>{selectedItem.description}</p>
                     </div>
                   )}
                   
