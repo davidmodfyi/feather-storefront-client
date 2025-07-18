@@ -695,12 +695,20 @@ const getDisplayPrice = (item) => {
                       min="1"
                       value={quantities[item.id] || 1}
                       onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                      className="w-12 h-9 text-center font-bold border-0 bg-transparent focus:outline-none focus:ring-0"
+                      className="w-12 h-9 text-center font-bold border-0 bg-transparent focus:outline-none focus:ring-0 quantity-input-custom"
                       style={{
                         ...getCustomStyle('quantity-input'),
                         WebkitAppearance: 'none',
-                        MozAppearance: 'textfield'
+                        MozAppearance: 'textfield',
+                        appearance: 'none',
+                        textAlign: 'center',
+                        paddingLeft: '0px',
+                        paddingRight: '0px',
+                        margin: '0px',
+                        lineHeight: '1',
+                        fontSize: '14px'
                       }}
+                      onWheel={(e) => e.preventDefault()}
                     />
                     
                     <button 
@@ -823,7 +831,7 @@ const getDisplayPrice = (item) => {
                         min="1"
                         value={quantities[selectedItem.id] || 1}
                         onChange={(e) => handleQuantityChange(selectedItem.id, parseInt(e.target.value) || 1)}
-                        className="w-12 h-9 text-center font-bold border-0 bg-transparent focus:outline-none focus:ring-0"
+                        className="w-12 h-9 text-center font-bold border-0 bg-transparent focus:outline-none focus:ring-0 quantity-input-custom"
                         style={{
                           WebkitAppearance: 'none',
                           MozAppearance: 'textfield'
