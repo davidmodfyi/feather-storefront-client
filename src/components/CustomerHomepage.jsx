@@ -47,9 +47,14 @@ export default function CustomerHomepage({ brandName, onLogout, onHome }) {
         credentials: 'include'
       });
       if (response.ok) {
-        const data = await response.json();
-        const totalItems = data.cart?.reduce((total, item) => total + item.quantity, 0) || 0;
+        const cartItems = await response.json();
+        console.log('🔍 Cart items fetched:', cartItems);
+        // The API returns cart items directly as an array
+        const totalItems = Array.isArray(cartItems) ? cartItems.reduce((total, item) => total + item.quantity, 0) : 0;
+        console.log('🔍 Total cart items:', totalItems);
         setCartItemCount(totalItems);
+      } else {
+        console.log('🔍 Cart fetch failed:', response.status);
       }
     } catch (error) {
       console.error('Error fetching cart count:', error);
