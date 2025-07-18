@@ -621,7 +621,7 @@ const getDisplayPrice = (item) => {
             const pricedProduct = getProductPricing(item);
             const displayPrice = pricedProduct.unitPrice;
             return (
-              <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow relative" style={getCustomStyle('product-card')}>
+              <div key={item.id} className="border p-4 rounded shadow hover:shadow-md transition-shadow relative flex flex-col h-full" style={getCustomStyle('product-card')}>
                 {/* Sale Badge */}
                 {pricedProduct.onSale && (
                   <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold z-10">
@@ -629,7 +629,8 @@ const getDisplayPrice = (item) => {
                   </div>
                 )}
                 
-                <div className="cursor-pointer" onClick={() => openProductDetails(item)}>
+                {/* Content that can grow */}
+                <div className="flex-1 cursor-pointer" onClick={() => openProductDetails(item)}>
                   {item.image_url && (
                     <div className="mb-3">
                       <img 
@@ -642,19 +643,24 @@ const getDisplayPrice = (item) => {
                   )}
                   <h2 className="text-xl font-bold mb-2 hover:text-blue-600" style={getCustomStyle('product-title')}>{item.name}</h2>
                   <p className="mb-1 text-gray-600" style={getCustomStyle('product-sku')}>SKU: {item.sku}</p>
-                  <p className="mb-3 text-lg font-semibold" style={getCustomStyle('product-price')}>
-                    <span className={pricedProduct.onSale ? 'text-green-600 font-bold' : ''}>
-                      ${displayPrice.toFixed(2)}
-                    </span>
-                    {pricedProduct.originalPrice && pricedProduct.originalPrice !== displayPrice && (
-                      <span className="ml-2 text-sm text-gray-500 line-through">${pricedProduct.originalPrice.toFixed(2)}</span>
+                  
+                  {/* Price row with inline sale text */}
+                  <div className="mb-3">
+                    <div className="text-lg font-semibold text-center" style={getCustomStyle('product-price')}>
+                      <span className={pricedProduct.onSale ? 'text-green-600 font-bold' : ''}>
+                        ${displayPrice.toFixed(2)}
+                      </span>
+                      {pricedProduct.originalPrice && pricedProduct.originalPrice !== displayPrice && (
+                        <span className="ml-2 text-sm text-gray-500 line-through">${pricedProduct.originalPrice.toFixed(2)}</span>
+                      )}
+                    </div>
+                    {pricedProduct.onSale && pricedProduct.pricingRule && (
+                      <p className="text-xs text-green-600 font-medium text-left mt-1">
+                        🎉 {pricedProduct.pricingRule}
+                      </p>
                     )}
-                  </p>
-                  {pricedProduct.onSale && pricedProduct.pricingRule && (
-                    <p className="mb-2 text-xs text-green-600 font-medium">
-                      🎉 {pricedProduct.pricingRule}
-                    </p>
-                  )}
+                  </div>
+                  
                   {item.description && (
                     <p className="mb-3 text-sm text-gray-700 line-clamp-2" style={getCustomStyle('product-description')}>{item.description}</p>
                   )}
