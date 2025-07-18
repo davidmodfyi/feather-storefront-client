@@ -358,8 +358,12 @@ export default function Storefront({ onLogout, onHome, brandName }) {
         fetchCart();
         
         // Refresh cart count in header
-        if (refreshCartCount) {
-          refreshCartCount();
+        if (refreshCartCount && typeof refreshCartCount === 'function') {
+          try {
+            refreshCartCount();
+          } catch (error) {
+            console.error('Error refreshing cart count:', error);
+          }
         }
       })
       .catch(error => {
