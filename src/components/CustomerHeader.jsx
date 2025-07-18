@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function CustomerHeader({ brandName, onLogout, onHome, onCartCountChange }) {
@@ -24,14 +24,14 @@ export default function CustomerHeader({ brandName, onLogout, onHome, onCartCoun
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchCartCount]);
+  }, []); // Remove fetchCartCount from dependency to avoid circular reference
 
   // Expose fetchCartCount to parent component in a separate effect
   useEffect(() => {
     if (onCartCountChange && typeof onCartCountChange === 'function') {
       onCartCountChange(fetchCartCount);
     }
-  }, [onCartCountChange, fetchCartCount]);
+  }, [onCartCountChange]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function CustomerHeader({ brandName, onLogout, onHome, onCartCoun
     };
   }, [isProfileDropdownOpen]);
 
-  const fetchCartCount = useCallback(async () => {
+  const fetchCartCount = async () => {
     try {
       const response = await fetch('/api/cart', {
         credentials: 'include'
@@ -68,7 +68,7 @@ export default function CustomerHeader({ brandName, onLogout, onHome, onCartCoun
       console.error('Error fetching cart count:', error);
       return 0;
     }
-  }, []);
+  };
 
   const fetchConfig = async () => {
     try {
