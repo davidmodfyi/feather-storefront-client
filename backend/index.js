@@ -7251,39 +7251,6 @@ CRITICAL REQUIREMENTS:
   }
 }
 
-// Serve the frontend in production
-// Add this near the bottom of your index.js file, before app.listen()
-if (process.env.NODE_ENV === 'production') {
-  console.log('Setting up production static file serving...');
-  
-  // Path to your built frontend files (relative to backend/index.js)
-  const frontendBuildPath = path.join(__dirname, '..', 'dist');
-  console.log('Frontend build path:', frontendBuildPath);
-  
-  // Check if the directory exists
- if (!fs.existsSync(frontendBuildPath)) {
-    console.error('Warning: Frontend build directory does not exist:', frontendBuildPath);
-    console.error('Make sure npm run build was executed successfully');
-  } else {
-    console.log('Frontend build directory exists');
-  }
-  
-  // Serve static files
-  app.use(express.static(frontendBuildPath));
-  
-  // For any non-API route, serve the index.html file
-  app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-      console.log('Serving index.html for path:', req.path);
-      res.sendFile(path.join(frontendBuildPath, 'index.html'));
-    } else {
-      // If it's an API endpoint that wasn't matched, return 404
-      console.log('API endpoint not found:', req.path);
-      res.status(404).json({ error: 'API endpoint not found' });
-    }
-  });
-}
-
 // Homepage Configuration API Endpoints
 app.get('/api/homepage-config', (req, res) => {
   console.log('📄 Homepage config request');
@@ -7437,16 +7404,46 @@ app.post('/api/homepage-upload', upload.single('image'), (req, res) => {
   
   try {
     const imageUrl = `/uploads/${req.file.filename}`;
-    res.json({ 
-      success: true, 
-      imageUrl: imageUrl,
-      message: 'Image uploaded successfully' 
-    });
+    console.log('🖼️ Image uploaded successfully:', imageUrl);
+    res.json({ success: true, imageUrl: imageUrl });
   } catch (error) {
-    console.error('Error uploading homepage image:', error);
+    console.error('Error uploading image:', error);
     res.status(500).json({ error: 'Failed to upload image' });
   }
 });
+
+// Serve the frontend in production
+// Add this near the bottom of your index.js file, before app.listen()
+if (process.env.NODE_ENV === 'production') {
+  console.log('Setting up production static file serving...');
+  
+  // Path to your built frontend files (relative to backend/index.js)
+  const frontendBuildPath = path.join(__dirname, '..', 'dist');
+  console.log('Frontend build path:', frontendBuildPath);
+  
+  // Check if the directory exists
+ if (!fs.existsSync(frontendBuildPath)) {
+    console.error('Warning: Frontend build directory does not exist:', frontendBuildPath);
+    console.error('Make sure npm run build was executed successfully');
+  } else {
+    console.log('Frontend build directory exists');
+  }
+  
+  // Serve static files
+  app.use(express.static(frontendBuildPath));
+  
+  // For any non-API route, serve the index.html file
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      console.log('Serving index.html for path:', req.path);
+      res.sendFile(path.join(frontendBuildPath, 'index.html'));
+    } else {
+      // If it's an API endpoint that wasn't matched, return 404
+      console.log('API endpoint not found:', req.path);
+      res.status(404).json({ error: 'API endpoint not found' });
+    }
+  });
+}
 
 // Start the server
 app.listen(PORT, () => {
