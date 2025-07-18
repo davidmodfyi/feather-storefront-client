@@ -594,32 +594,35 @@ const handleSubmitOrder = async () => {
                 </div>
                 
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-3" style={getCustomStyle('cart-item-controls')}>
-                  <div className="flex items-center gap-2" style={getCustomStyle('cart-quantity-controls')}>
+                  <div className="flex items-center gap-3" style={getCustomStyle('cart-quantity-controls')}>
                     <span className="text-sm font-medium" style={getCustomStyle('cart-quantity-label')}>Quantity:</span>
-                    <button 
-                      onClick={() => handleQuantityChange(item.cart_item_id, (quantities[item.cart_item_id] || item.quantity) - 1)}
-                      className="px-2 py-1 bg-gray-200 rounded"
-                      style={getCustomStyle('cart-quantity-button')}
-                    >
-                      -
-                    </button>
-                    
-                    <input
-                      type="number"
-                      min="1"
-                      value={quantities[item.cart_item_id] || item.quantity}
-                      onChange={(e) => handleQuantityChange(item.cart_item_id, parseInt(e.target.value) || 1)}
-                      className="w-12 text-center border rounded"
-                      style={getCustomStyle('cart-quantity-input')}
-                    />
-                    
-                    <button 
-                      onClick={() => handleQuantityChange(item.cart_item_id, (quantities[item.cart_item_id] || item.quantity) + 1)}
-                      className="px-2 py-1 bg-gray-200 rounded"
-                      style={getCustomStyle('cart-quantity-button')}
-                    >
-                      +
-                    </button>
+                    {/* Clean quantity selector for cart */}
+                    <div className="flex items-center border border-gray-300 rounded-md bg-white">
+                      <button 
+                        onClick={() => handleQuantityChange(item.cart_item_id, (quantities[item.cart_item_id] || item.quantity) - 1)}
+                        className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-r border-gray-300"
+                        style={getCustomStyle('cart-quantity-button')}
+                      >
+                        −
+                      </button>
+                      
+                      <input
+                        type="number"
+                        min="1"
+                        value={quantities[item.cart_item_id] || item.quantity}
+                        onChange={(e) => handleQuantityChange(item.cart_item_id, parseInt(e.target.value) || 1)}
+                        className="w-12 h-8 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
+                        style={getCustomStyle('cart-quantity-input')}
+                      />
+                      
+                      <button 
+                        onClick={() => handleQuantityChange(item.cart_item_id, (quantities[item.cart_item_id] || item.quantity) + 1)}
+                        className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-l border-gray-300"
+                        style={getCustomStyle('cart-quantity-button')}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="flex gap-2" style={getCustomStyle('cart-item-actions')}>

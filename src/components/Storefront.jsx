@@ -644,41 +644,45 @@ const getDisplayPrice = (item) => {
                   )}
                 </div>
                 
-                <div className="flex items-center gap-2 mb-3" style={getCustomStyle('quantity-controls')}>
-                  <span className="text-sm font-medium">Quantity:</span>
-                  <button 
-                    onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) - 1)}
-                    className="px-2 py-1 bg-gray-200 rounded"
-                    style={getCustomStyle('quantity-button')}
-                  >
-                    -
-                  </button>
+                {/* Centered quantity selector and Add to Cart button on same line */}
+                <div className="flex items-center justify-center gap-3 mt-3">
+                  {/* Clean quantity selector */}
+                  <div className="flex items-center border border-gray-300 rounded-md bg-white">
+                    <button 
+                      onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) - 1)}
+                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-r border-gray-300"
+                      style={getCustomStyle('quantity-button')}
+                    >
+                      −
+                    </button>
+                    
+                    <input
+                      type="number"
+                      min="1"
+                      value={quantities[item.id] || 1}
+                      onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
+                      className="w-12 h-8 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
+                      style={getCustomStyle('quantity-input')}
+                    />
+                    
+                    <button 
+                      onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) + 1)}
+                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-l border-gray-300"
+                      style={getCustomStyle('quantity-button')}
+                    >
+                      +
+                    </button>
+                  </div>
                   
-                  <input
-                    type="number"
-                    min="1"
-                    value={quantities[item.id] || 1}
-                    onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                    className="w-12 text-center border rounded"
-                    style={getCustomStyle('quantity-input')}
-                  />
-                  
+                  {/* Smaller Add to Cart button */}
                   <button 
-                    onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) + 1)}
-                    className="px-2 py-1 bg-gray-200 rounded"
-                    style={getCustomStyle('quantity-button')}
+                    onClick={() => handleAddToCart(item)}
+                    className={`px-3 py-2 text-sm ${getButtonClass(item.id)} text-white rounded-md`}
+                    style={getCustomStyle('add-to-cart-button')}
                   >
-                    +
+                    {getButtonText(item.id)}
                   </button>
                 </div>
-                
-                <button 
-                  onClick={() => handleAddToCart(item)}
-                  className={`w-full mt-2 px-4 py-2 ${getButtonClass(item.id)} text-white rounded`}
-                  style={getCustomStyle('add-to-cart-button')}
-                >
-                  {getButtonText(item.id)}
-                </button>
               </div>
             );
           })}
@@ -761,29 +765,32 @@ const getDisplayPrice = (item) => {
                     </div>
                   )}
                   
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-3 mb-4">
                     <span className="text-sm font-medium">Quantity:</span>
-                    <button 
-                      onClick={() => handleQuantityChange(selectedItem.id, (quantities[selectedItem.id] || 1) - 1)}
-                      className="px-3 py-1 bg-gray-200 rounded"
-                    >
-                      -
-                    </button>
-                    
-                    <input
-                      type="number"
-                      min="1"
-                      value={quantities[selectedItem.id] || 1}
-                      onChange={(e) => handleQuantityChange(selectedItem.id, parseInt(e.target.value) || 1)}
-                      className="w-16 text-center border rounded px-2 py-1"
-                    />
-                    
-                    <button 
-                      onClick={() => handleQuantityChange(selectedItem.id, (quantities[selectedItem.id] || 1) + 1)}
-                      className="px-3 py-1 bg-gray-200 rounded"
-                    >
-                      +
-                    </button>
+                    {/* Clean quantity selector for modal */}
+                    <div className="flex items-center border border-gray-300 rounded-md bg-white">
+                      <button 
+                        onClick={() => handleQuantityChange(selectedItem.id, (quantities[selectedItem.id] || 1) - 1)}
+                        className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-r border-gray-300"
+                      >
+                        −
+                      </button>
+                      
+                      <input
+                        type="number"
+                        min="1"
+                        value={quantities[selectedItem.id] || 1}
+                        onChange={(e) => handleQuantityChange(selectedItem.id, parseInt(e.target.value) || 1)}
+                        className="w-12 h-8 text-center border-0 bg-transparent focus:outline-none focus:ring-0"
+                      />
+                      
+                      <button 
+                        onClick={() => handleQuantityChange(selectedItem.id, (quantities[selectedItem.id] || 1) + 1)}
+                        className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-l border-gray-300"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                   
                   <button 
