@@ -49,7 +49,7 @@ function Header({ brandName }) {
 }
 
 // Portal selection page component
-function PortalPage({ brandName, onLogout, userType }) {
+function PortalPage({ brandName, onLogout, onHome, userType }) {
   const navigate = useNavigate();
   const [logo, setLogo] = useState(null);
   
@@ -202,7 +202,7 @@ function App({ distributorSlug }) {
       <Routes>
         <Route
           path="/"
-          element={<PortalPage brandName={brandName} onLogout={handleLogout} userType={userType} />}
+          element={<PortalPage brandName={brandName} onLogout={handleLogout} onHome={handleHome} userType={userType} />}
         />
         <Route
           path="/storefront"
