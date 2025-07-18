@@ -7367,32 +7367,29 @@ app.post('/api/homepage-config', (req, res) => {
   try {
     const config = req.body;
     
-    // Prepare the update statement
+    // Use INSERT OR REPLACE for upsert behavior
     const stmt = db.prepare(`
-      UPDATE homepage_config SET
-        banner_message = ?, banner_link_text = ?, banner_bg_color = ?, banner_text_color = ?,
-        countdown_end_date = ?, logo_url = ?, logo_alt_text = ?, hero_title = ?, hero_description = ?,
-        hero_button_text = ?, hero_button_bg_color = ?, hero_button_text_color = ?, hero_images = ?,
-        title_font = ?, title_font_size = ?, title_font_weight = ?, body_font = ?, body_font_size = ?,
-        overlay_bg_color = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE distributor_id = ?
+      INSERT OR REPLACE INTO homepage_config (
+        distributor_id, banner_message, banner_link_text, banner_bg_color, banner_text_color,
+        countdown_end_date, logo_url, logo_alt_text, hero_title, hero_description,
+        hero_button_text, hero_button_bg_color, hero_button_text_color, hero_images,
+        title_font, title_font_size, title_font_weight, body_font, body_font_size, overlay_bg_color,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `);
     
     const result = stmt.run(
+      req.session.distributor_id,
       config.banner_message, config.banner_link_text, config.banner_bg_color, config.banner_text_color,
       config.countdown_end_date, config.logo_url, config.logo_alt_text, config.hero_title,
       config.hero_description, config.hero_button_text, config.hero_button_bg_color,
       config.hero_button_text_color, JSON.stringify(config.hero_images || []),
       config.title_font, config.title_font_size, config.title_font_weight,
-      config.body_font, config.body_font_size, config.overlay_bg_color,
-      req.session.distributor_id
+      config.body_font, config.body_font_size, config.overlay_bg_color
     );
     
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Homepage configuration not found' });
-    }
-    
-    res.json({ success: true, message: 'Homepage configuration updated successfully' });
+    console.log('💾 Homepage config saved, changes:', result.changes);
+    res.json({ success: true, message: 'Homepage configuration saved successfully' });
   } catch (error) {
     console.error('Error saving homepage config:', error);
     res.status(500).json({ error: 'Failed to save homepage configuration' });
