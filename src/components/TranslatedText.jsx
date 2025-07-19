@@ -1,6 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../hooks/useTranslation';
 
+// Clear bad cached translations (where translation equals original)
+const clearBadCache = () => {
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.includes('__')) {
+      const value = localStorage.getItem(key);
+      const originalText = key.split('__')[0];
+      if (value === originalText) {
+        keysToRemove.push(key);
+      }
+    }
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  if (keysToRemove.length > 0) {
+    console.log(`🌍 Cleared ${keysToRemove.length} bad cached translations`);
+  }
+};
+
+// Clear bad cache on first load
+if (typeof window !== 'undefined') {
+  clearBadCache();
+}
+
 const TranslatedText = ({ 
   children, 
   context = 'General B2B eCommerce interface',
@@ -16,13 +40,16 @@ const TranslatedText = ({
     if (userLanguage && userLanguage !== 'en') {
       console.log(`🌍 Will translate "${children}" to ${userLanguage}`);
       
-      // Check cache first
+      // Check cache first (but skip if cached translation equals original text)
       const cacheKey = `${children}__${userLanguage}`;
       const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        console.log(`🌍 Found cached translation for "${children}": "${cached}"`);
+      if (cached && cached !== children) {
+        console.log(`🌍 Found valid cached translation for "${children}": "${cached}"`);
         setTranslatedText(cached);
         return;
+      } else if (cached) {
+        console.log(`🌍 Found bad cached translation for "${children}" (same as original), will retranslate`);
+        localStorage.removeItem(cacheKey); // Clear bad cache
       }
       
       console.log(`🌍 No cache found for "${children}", will translate in 500ms...`);
