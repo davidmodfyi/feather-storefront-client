@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // Simple language detection function
 const detectLanguage = (text) => {
@@ -199,11 +199,11 @@ export const useTranslation = () => {
   };
 
   // Translate a single text
-  const translateText = async (text, context) => {
+  const translateText = useCallback(async (text, context) => {
     if (!text) return text;
     const result = await translateTexts([text], context);
     return result[0] || text;
-  };
+  }, [userLanguage]);
 
   return {
     userLanguage,

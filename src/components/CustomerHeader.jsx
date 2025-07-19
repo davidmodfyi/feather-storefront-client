@@ -11,14 +11,14 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
 
-  // Language configuration - Updated with translation support
+  // Language configuration - Updated with SVG flags
   const languages = [
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'es', name: 'Spanish', flag: '🇪🇸' },
-    { code: 'fr', name: 'French', flag: '🇫🇷' },
-    { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
-    { code: 'ko', name: 'Korean', flag: '🇰🇷' },
-    { code: 'pt', name: 'Portuguese', flag: '🇵🇹' }
+    { code: 'en', name: 'English', flag: '/flags/en.svg' },
+    { code: 'es', name: 'Spanish', flag: '/flags/es.svg' },
+    { code: 'fr', name: 'French', flag: '/flags/fr.svg' },
+    { code: 'zh', name: 'Chinese', flag: '/flags/zh.svg' },
+    { code: 'ko', name: 'Korean', flag: '/flags/ko.svg' },
+    { code: 'pt', name: 'Portuguese', flag: '/flags/pt.svg' }
   ];
 
   useEffect(() => {
@@ -285,10 +285,12 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
                   onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
                   className="flex items-center space-x-1 p-2 rounded-md hover:bg-gray-100"
                 >
-                  <span className="text-xl" style={{ backgroundColor: 'yellow', padding: '4px', border: '2px solid red' }}>
-                    {console.log('🚨 FLAG DEBUG:', languages.find(lang => lang.code === selectedLanguage)?.flag)}
-                    {languages.find(lang => lang.code === selectedLanguage)?.flag || 'FLAG_NOT_FOUND'}
-                  </span>
+                  <img 
+                    src={languages.find(lang => lang.code === selectedLanguage)?.flag || '/flags/en.svg'}
+                    alt={languages.find(lang => lang.code === selectedLanguage)?.name || 'English'}
+                    className="w-6 h-4 rounded-sm"
+                    style={{ border: '1px solid #ccc' }}
+                  />
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -305,7 +307,12 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
                             selectedLanguage === language.code ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
                           }`}
                         >
-                          <span className="text-lg mr-2">{language.flag}</span>
+                          <img 
+                            src={language.flag}
+                            alt={language.name}
+                            className="w-5 h-3 rounded-sm mr-2"
+                            style={{ border: '1px solid #ccc' }}
+                          />
                           <span>{language.name}</span>
                         </button>
                       ))}

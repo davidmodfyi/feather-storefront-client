@@ -10,16 +10,36 @@ const TranslatedText = ({
   const [translatedText, setTranslatedText] = useState(children);
 
   useEffect(() => {
-    // TEMPORARY FIX: Disable translation to stop the infinite loop
     // Only translate if user language is not English
     if (userLanguage && userLanguage !== 'en') {
-      console.log(`🌍 DISABLED: Would translate "${children}" to ${userLanguage}`);
-      // For now, just show original text to stop the API flood
-      setTranslatedText(children);
+      // Check cache first
+      const cacheKey = `${children}__${userLanguage}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        setTranslatedText(cached);
+        return;
+      }
+      
+      // Add delay to prevent API flooding
+      const timeoutId = setTimeout(async () => {
+        if (typeof children === 'string' && children.trim()) {
+          try {
+            const translated = await translateText(children, context);
+            setTranslatedText(translated);
+            // Cache the result
+            localStorage.setItem(cacheKey, translated);
+          } catch (error) {
+            console.error('Translation failed for:', children, error);
+            setTranslatedText(children); // Fallback to original
+          }
+        }
+      }, Math.random() * 500); // Random delay 0-500ms to spread out API calls
+      
+      return () => clearTimeout(timeoutId);
     } else {
       setTranslatedText(children);
     }
-  }, [children, context, userLanguage]);
+  }, [children, userLanguage]); // Removed translateText from dependencies
 
   // Return the translated text or fallback
   return translatedText || fallback || children;
