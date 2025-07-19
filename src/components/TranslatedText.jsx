@@ -6,8 +6,11 @@ const TranslatedText = ({
   context = 'General B2B eCommerce interface',
   fallback = null 
 }) => {
+  console.log('🚨 TESTING: TranslatedText component loaded with text:', children);
   const { translateText, userLanguage, isLoading } = useTranslation();
   const [translatedText, setTranslatedText] = useState(children);
+  
+  console.log('🚨 TESTING: Current user language:', userLanguage);
 
   useEffect(() => {
     const translateContent = async () => {

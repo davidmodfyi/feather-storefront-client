@@ -22,6 +22,10 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
   ];
 
   useEffect(() => {
+    console.log('🚨 TESTING: CustomerHeader component loaded - v1.1.0');
+    console.log('🚨 TESTING: Languages array:', languages);
+    console.log('🚨 TESTING: Selected language:', selectedLanguage);
+    
     fetchConfig();
     fetchCartCount();
     fetchUserLanguage();
@@ -281,7 +285,7 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
                   onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
                   className="flex items-center space-x-1 p-2 rounded-md hover:bg-gray-100"
                 >
-                  <span className="text-xl">
+                  <span className="text-xl" style={{ backgroundColor: 'yellow', padding: '2px' }}>
                     {languages.find(lang => lang.code === selectedLanguage)?.flag || '🇺🇸'}
                   </span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
