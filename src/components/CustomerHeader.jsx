@@ -285,8 +285,9 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
                   onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
                   className="flex items-center space-x-1 p-2 rounded-md hover:bg-gray-100"
                 >
-                  <span className="text-xl" style={{ backgroundColor: 'yellow', padding: '2px' }}>
-                    {languages.find(lang => lang.code === selectedLanguage)?.flag || '🇺🇸'}
+                  <span className="text-xl" style={{ backgroundColor: 'yellow', padding: '4px', border: '2px solid red' }}>
+                    {console.log('🚨 FLAG DEBUG:', languages.find(lang => lang.code === selectedLanguage)?.flag)}
+                    {languages.find(lang => lang.code === selectedLanguage)?.flag || 'FLAG_NOT_FOUND'}
                   </span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
