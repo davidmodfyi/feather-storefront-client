@@ -11,21 +11,17 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
 
-  // Language configuration - Updated with SVG flags
+  // Language configuration - Using flag-icons
   const languages = [
-    { code: 'en', name: 'English', flag: '/flags/en.svg' },
-    { code: 'es', name: 'Spanish', flag: '/flags/es.svg' },
-    { code: 'fr', name: 'French', flag: '/flags/fr.svg' },
-    { code: 'zh', name: 'Chinese', flag: '/flags/zh.svg' },
-    { code: 'ko', name: 'Korean', flag: '/flags/ko.svg' },
-    { code: 'pt', name: 'Portuguese', flag: '/flags/pt.svg' }
+    { code: 'en', name: 'English', flagCode: 'us' },
+    { code: 'es', name: 'Spanish', flagCode: 'es' },
+    { code: 'fr', name: 'French', flagCode: 'fr' },
+    { code: 'zh', name: 'Chinese', flagCode: 'cn' },
+    { code: 'ko', name: 'Korean', flagCode: 'kr' },
+    { code: 'pt', name: 'Portuguese', flagCode: 'pt' }
   ];
 
   useEffect(() => {
-    console.log('🚨 TESTING: CustomerHeader component loaded - v1.1.0');
-    console.log('🚨 TESTING: Languages array:', languages);
-    console.log('🚨 TESTING: Selected language:', selectedLanguage);
-    
     fetchConfig();
     fetchCartCount();
     fetchUserLanguage();
@@ -285,12 +281,10 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
                   onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
                   className="flex items-center space-x-1 p-2 rounded-md hover:bg-gray-100"
                 >
-                  <img 
-                    src={languages.find(lang => lang.code === selectedLanguage)?.flag || '/flags/en.svg'}
-                    alt={languages.find(lang => lang.code === selectedLanguage)?.name || 'English'}
-                    className="w-6 h-4 rounded-sm"
-                    style={{ border: '1px solid #ccc' }}
-                  />
+                  <span 
+                    className={`fi fi-${languages.find(lang => lang.code === selectedLanguage)?.flagCode || 'us'} text-xl`}
+                    style={{ fontSize: '1.2rem' }}
+                  ></span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -307,12 +301,10 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
                             selectedLanguage === language.code ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
                           }`}
                         >
-                          <img 
-                            src={language.flag}
-                            alt={language.name}
-                            className="w-5 h-3 rounded-sm mr-2"
-                            style={{ border: '1px solid #ccc' }}
-                          />
+                          <span 
+                            className={`fi fi-${language.flagCode} mr-2`}
+                            style={{ fontSize: '1rem' }}
+                          ></span>
                           <span>{language.name}</span>
                         </button>
                       ))}
