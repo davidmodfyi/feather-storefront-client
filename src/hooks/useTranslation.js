@@ -98,7 +98,7 @@ export const useTranslation = () => {
   }, []);
 
   // Main translation function
-  const translateTexts = async (texts, context = 'General B2B eCommerce interface') => {
+  const translateTexts = useCallback(async (texts, context = 'General B2B eCommerce interface') => {
     if (!texts || !Array.isArray(texts) || texts.length === 0) {
       return texts;
     }
@@ -196,14 +196,16 @@ export const useTranslation = () => {
       setIsLoading(false);
       return texts; // Return original texts on error
     }
-  };
+  }, [userLanguage]);
 
   // Translate a single text
   const translateText = useCallback(async (text, context) => {
+    console.log(`🌍 translateText called with: "${text}", language: ${userLanguage}`);
     if (!text) return text;
     const result = await translateTexts([text], context);
+    console.log(`🌍 translateText result: "${result[0] || text}"`);
     return result[0] || text;
-  }, [userLanguage]);
+  }, [userLanguage, translateTexts]);
 
   return {
     userLanguage,
