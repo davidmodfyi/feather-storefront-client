@@ -5657,6 +5657,129 @@ app.get('/api/me', (req, res) => {
   });
 });
 
+// Language preference endpoints
+app.get('/api/user/language', (req, res) => {
+  console.log('Get user language request');
+  if (!req.session || !req.session.user_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    const stmt = db.prepare('SELECT preferred_language FROM users WHERE id = ?');
+    const user = stmt.get(req.session.user_id);
+    
+    const language = user?.preferred_language || 'en';
+    res.json({ language });
+  } catch (error) {
+    console.error('Error getting user language:', error);
+    res.status(500).json({ error: 'Failed to get language preference' });
+  }
+});
+
+app.post('/api/user/language', (req, res) => {
+  console.log('Set user language request');
+  if (!req.session || !req.session.user_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const { language } = req.body;
+  
+  // Validate language code
+  const supportedLanguages = ['en', 'es', 'fr', 'de', 'it', 'pt'];
+  if (!language || !supportedLanguages.includes(language)) {
+    return res.status(400).json({ error: 'Invalid language code' });
+  }
+
+  try {
+    const stmt = db.prepare('UPDATE users SET preferred_language = ? WHERE id = ?');
+    stmt.run(language, req.session.user_id);
+    
+    res.json({ success: true, language });
+  } catch (error) {
+    console.error('Error setting user language:', error);
+    res.status(500).json({ error: 'Failed to set language preference' });
+  }
+});
+
+// Translation endpoint using Claude
+app.post('/api/translate', async (req, res) => {
+  console.log('Translation request');
+  if (!req.session || !req.session.user_id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const { texts, targetLanguage, context } = req.body;
+  
+  if (!texts || !Array.isArray(texts) || !targetLanguage) {
+    return res.status(400).json({ error: 'Invalid request format' });
+  }
+
+  try {
+    const languageNames = {
+      'en': 'English',
+      'es': 'Spanish', 
+      'fr': 'French',
+      'de': 'German',
+      'it': 'Italian',
+      'pt': 'Portuguese'
+    };
+
+    const targetLanguageName = languageNames[targetLanguage];
+    if (!targetLanguageName) {
+      return res.status(400).json({ error: 'Unsupported target language' });
+    }
+
+    // Create the translation prompt
+    const translationPrompt = `You are a professional translator for a B2B eCommerce application. 
+
+Context: ${context || 'General B2B eCommerce interface'}
+
+Instructions:
+1. Translate the following texts to ${targetLanguageName}
+2. Maintain professional B2B tone
+3. Keep proper nouns, SKUs, product codes, and numbers unchanged
+4. If text is already in ${targetLanguageName}, return it unchanged
+5. For technical terms, use standard B2B eCommerce terminology
+6. Return ONLY a JSON array of translated texts in the same order
+
+Texts to translate:
+${JSON.stringify(texts)}
+
+Return format: ["translated text 1", "translated text 2", ...]`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-sonnet-20240229',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: translationPrompt
+      }]
+    });
+
+    let translatedTexts;
+    try {
+      translatedTexts = JSON.parse(response.content[0].text);
+    } catch (parseError) {
+      console.error('Failed to parse Claude response:', parseError);
+      // Fallback: return original texts
+      translatedTexts = texts;
+    }
+
+    res.json({ 
+      success: true, 
+      translations: translatedTexts,
+      targetLanguage 
+    });
+
+  } catch (error) {
+    console.error('Translation error:', error);
+    res.status(500).json({ 
+      error: 'Translation failed',
+      translations: texts // Fallback to original texts
+    });
+  }
+});
+
 // Items endpoint
 app.get('/api/items', (req, res) => {
   console.log('Items request');
