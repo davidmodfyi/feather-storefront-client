@@ -7,10 +7,23 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+
+  // Language configuration - Updated with translation support
+  const languages = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+    { code: 'fr', name: 'French', flag: '🇫🇷' },
+    { code: 'de', name: 'German', flag: '🇩🇪' },
+    { code: 'it', name: 'Italian', flag: '🇮🇹' },
+    { code: 'pt', name: 'Portuguese', flag: '🇵🇹' }
+  ];
 
   useEffect(() => {
     fetchConfig();
     fetchCartCount();
+    fetchUserLanguage();
     
     // Listen for custom cart update events
     const handleCartUpdate = () => {
@@ -114,6 +127,62 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
     return () => clearInterval(timer);
   }, [config]);
 
+  const fetchUserLanguage = async () => {
+    try {
+      console.log('🌍 Fetching user language preference...');
+      const response = await fetch('/api/user/language', {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🌍 User language fetched:', data.language || 'en');
+        setSelectedLanguage(data.language || 'en');
+      } else {
+        console.log('🌍 Language API not available, using default');
+      }
+    } catch (error) {
+      console.error('Error fetching user language:', error);
+    }
+  };
+
+  const changeLanguage = async (newLanguage) => {
+    try {
+      const response = await fetch('/api/user/language', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ language: newLanguage })
+      });
+
+      if (response.ok) {
+        setSelectedLanguage(newLanguage);
+        setIsLanguageDropdownOpen(false);
+        // Refresh the page to see translations immediately
+        window.location.reload();
+      } else {
+        console.error('Failed to update language preference');
+      }
+    } catch (error) {
+      console.error('Error updating language preference:', error);
+    }
+  };
+
+  // Close language dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isLanguageDropdownOpen && !event.target.closest('.language-dropdown')) {
+        setIsLanguageDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isLanguageDropdownOpen]);
+
   if (!config) {
     return null; // Don't render anything until config is loaded
   }
@@ -197,11 +266,41 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
               )}
             </div>
 
-            {/* Right: Currency, Profile, Search, Cart */}
+            {/* Right: Language, Profile, Search, Cart */}
             <div className="flex items-center space-x-4">
-              <button className="text-sm font-medium hover:text-gray-700">
-                EUR €
-              </button>
+              {/* Language Dropdown */}
+              <div className="relative language-dropdown">
+                <button 
+                  onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+                  className="flex items-center space-x-1 p-2 rounded-md hover:bg-gray-100"
+                >
+                  <span className="text-lg">
+                    {languages.find(lang => lang.code === selectedLanguage)?.flag || '🇺🇸'}
+                  </span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {isLanguageDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                    <div className="py-1">
+                      {languages.map((language) => (
+                        <button
+                          key={language.code}
+                          onClick={() => changeLanguage(language.code)}
+                          className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center space-x-2 ${
+                            selectedLanguage === language.code ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                          }`}
+                        >
+                          <span className="text-base">{language.flag}</span>
+                          <span>{language.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               
               {/* Profile Dropdown */}
               <div className="relative profile-dropdown">
