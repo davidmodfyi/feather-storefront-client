@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CustomerHeader from './CustomerHeader';
+import TranslatedText from './TranslatedText';
 
 export default function CustomerHomepage({ brandName, onLogout, onHome }) {
   const navigate = useNavigate();
@@ -45,7 +46,9 @@ export default function CustomerHomepage({ brandName, onLogout, onHome }) {
   if (!config) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">
+          <TranslatedText context="Loading state">Loading...</TranslatedText>
+        </div>
       </div>
     );
   }
@@ -160,13 +163,17 @@ export default function CustomerHomepage({ brandName, onLogout, onHome }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Shop Products</h3>
-              <p className="text-gray-600 mb-4">Browse our full catalog of products</p>
+              <h3 className="text-lg font-semibold mb-2">
+                <TranslatedText context="Homepage navigation section">Shop Products</TranslatedText>
+              </h3>
+              <p className="text-gray-600 mb-4">
+                <TranslatedText context="Homepage navigation section">Browse our full catalog of products</TranslatedText>
+              </p>
               <button 
                 onClick={() => navigate('/storefront')}
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
-                View Storefront →
+                <TranslatedText context="Homepage navigation button">View Storefront →</TranslatedText>
               </button>
             </div>
             
@@ -176,13 +183,17 @@ export default function CustomerHomepage({ brandName, onLogout, onHome }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Order History</h3>
-              <p className="text-gray-600 mb-4">View your previous orders and invoices</p>
+              <h3 className="text-lg font-semibold mb-2">
+                <TranslatedText context="Homepage navigation section">Order History</TranslatedText>
+              </h3>
+              <p className="text-gray-600 mb-4">
+                <TranslatedText context="Homepage navigation section">View your previous orders and invoices</TranslatedText>
+              </p>
               <button 
                 onClick={() => navigate('/orders')}
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
-                View Orders →
+                <TranslatedText context="Homepage navigation button">View Orders →</TranslatedText>
               </button>
             </div>
             
@@ -192,13 +203,17 @@ export default function CustomerHomepage({ brandName, onLogout, onHome }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Shopping Cart</h3>
-              <p className="text-gray-600 mb-4">Review and checkout your cart</p>
+              <h3 className="text-lg font-semibold mb-2">
+                <TranslatedText context="Homepage navigation section">Shopping Cart</TranslatedText>
+              </h3>
+              <p className="text-gray-600 mb-4">
+                <TranslatedText context="Homepage navigation section">Review and checkout your cart</TranslatedText>
+              </p>
               <button 
                 onClick={() => navigate('/cart')}
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
-                View Cart →
+                <TranslatedText context="Homepage navigation button">View Cart →</TranslatedText>
               </button>
             </div>
           </div>
@@ -212,7 +227,7 @@ export default function CustomerHomepage({ brandName, onLogout, onHome }) {
             onClick={onLogout}
             className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200"
           >
-            Logout
+            <TranslatedText context="User authentication">Logout</TranslatedText>
           </button>
         </div>
       </section>

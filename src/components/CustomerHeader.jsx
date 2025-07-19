@@ -7,17 +7,18 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [cartItemCount, setCartItemCount] = useState(0);
+  // LANGUAGE TRANSLATION FEATURE - FORCE BUILD UPDATE
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
 
   // Language configuration - Updated with translation support
   const languages = [
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'es', name: 'Spanish', flag: '🇪🇸' },
-    { code: 'fr', name: 'French', flag: '🇫🇷' },
-    { code: 'de', name: 'German', flag: '🇩🇪' },
-    { code: 'it', name: 'Italian', flag: '🇮🇹' },
-    { code: 'pt', name: 'Portuguese', flag: '🇵🇹' }
+    { code: 'en', name: 'English', flag: 'EN' },
+    { code: 'es', name: 'Spanish', flag: 'ES' },
+    { code: 'fr', name: 'French', flag: 'FR' },
+    { code: 'zh', name: 'Chinese', flag: 'ZH' },
+    { code: 'ko', name: 'Korean', flag: 'KO' },
+    { code: 'pt', name: 'Portuguese', flag: 'PT' }
   ];
 
   useEffect(() => {
@@ -274,8 +275,8 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
                   onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
                   className="flex items-center space-x-1 p-2 rounded-md hover:bg-gray-100"
                 >
-                  <span className="text-lg">
-                    {languages.find(lang => lang.code === selectedLanguage)?.flag || '🇺🇸'}
+                  <span className="text-sm font-bold bg-blue-100 px-2 py-1 rounded">
+                    {languages.find(lang => lang.code === selectedLanguage)?.flag || 'EN'}
                   </span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -293,7 +294,7 @@ export default function CustomerHeader({ brandName, onLogout, onHome }) {
                             selectedLanguage === language.code ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
                           }`}
                         >
-                          <span className="text-base">{language.flag}</span>
+                          <span className="text-xs font-bold bg-gray-100 px-2 py-1 rounded mr-2">{language.flag}</span>
                           <span>{language.name}</span>
                         </button>
                       ))}

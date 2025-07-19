@@ -8,6 +8,7 @@ const distributorSlug = window.FEATHER_DISTRIBUTOR || 'default';
 
 console.log(`🔵 LOADING UNIFIED main.jsx - distributorSlug: ${distributorSlug}`);
 console.log('File location: src/main.jsx');
+console.log('🌍 Feather Storefront with Language Translation - v1.1.0');
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

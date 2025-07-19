@@ -17,6 +17,9 @@ import AIPricingEngine from './components/AIPricingEngine';
 import HomepageBranding from './components/HomepageBranding';
 import CustomerHomepage from './components/CustomerHomepage';
 
+// LANGUAGE TRANSLATION FEATURE ENABLED - V1.1.0
+const FEATHER_VERSION = "1.1.0-language-translation";
+
 // Header Component with Logo
 function Header({ brandName }) {
   const [headerLogo, setHeaderLogo] = useState(null);

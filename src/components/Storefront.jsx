@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomerHeader from './CustomerHeader';
+import TranslatedText from './TranslatedText';
+import TranslatedInput from './TranslatedInput';
 
 export default function Storefront({ onLogout, onHome, brandName }) {
   const [items, setItems] = useState([]);
@@ -574,7 +576,7 @@ const getDisplayPrice = (item) => {
           className={`px-4 py-2 ${!categoryFilter ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded`}
           style={getCustomStyle('category-buttons')}
         >
-          All
+          <TranslatedText context="Product category filter">All</TranslatedText>
         </button>
         {categories.map(cat => (
           <button 
@@ -592,9 +594,10 @@ const getDisplayPrice = (item) => {
       {renderDynamicContent('storefront-after-categories')}
 
       <div className="mb-6">
-        <input
+        <TranslatedInput
           type="text"
           placeholder="Search by name, SKU or description"
+          translationContext="Product search interface"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full px-4 py-2 border rounded"
@@ -615,7 +618,9 @@ const getDisplayPrice = (item) => {
         <div className="flex-1">
           {loading ? (
             <div className="text-center py-8">
-              <p>Loading products...</p>
+              <p>
+                <TranslatedText context="Loading state">Loading products...</TranslatedText>
+              </p>
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" style={getCustomStyle('product-grid')}>
