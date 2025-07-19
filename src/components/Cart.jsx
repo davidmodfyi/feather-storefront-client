@@ -134,7 +134,6 @@ export default function Cart({ onLogout, onHome, brandName }) {
   const [dynamicFormValues, setDynamicFormValues] = useState({});
   const [customTableData, setCustomTableData] = useState({});
   const [currentUser, setCurrentUser] = useState({});
-  const [refreshCartCount, setRefreshCartCount] = useState(null);
   const navigate = useNavigate();
 
  
@@ -243,6 +242,9 @@ useEffect(() => {
             return item;
           });
         });
+        
+        // Dispatch custom event to update cart badge
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
       })
       .catch(error => {
         console.error('Error updating cart:', error);
@@ -262,6 +264,9 @@ useEffect(() => {
       .then(() => {
         // Update local state
         setCartItems(prevItems => prevItems.filter(item => item.cart_item_id !== itemId));
+        
+        // Dispatch custom event to update cart badge
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
       })
       .catch(error => {
         console.error('Error removing item from cart:', error);
@@ -285,14 +290,8 @@ useEffect(() => {
       .then(() => {
         setCartItems([]);
         
-        // Refresh cart count in header
-        if (refreshCartCount && typeof refreshCartCount === 'function') {
-          try {
-            refreshCartCount();
-          } catch (error) {
-            console.error('Error refreshing cart count:', error);
-          }
-        }
+        // Dispatch custom event to update cart badge
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
       })
       .catch(error => {
         console.error('Error clearing cart:', error);
@@ -524,7 +523,6 @@ const handleSubmitOrder = async () => {
         brandName={brandName} 
         onLogout={onLogout} 
         onHome={onHome} 
-        onCartCountChange={setRefreshCartCount}
       />
       
       <div className="p-6" style={getCustomStyle('cart-page-background')}>

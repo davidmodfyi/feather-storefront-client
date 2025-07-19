@@ -19,7 +19,6 @@ export default function Storefront({ onLogout, onHome, brandName }) {
   const [customer, setCustomer] = useState({});
   const [dynamicContent, setDynamicContent] = useState({});
   const [realtimePricing, setRealtimePricing] = useState({});
-  const [refreshCartCount, setRefreshCartCount] = useState(null);
 
   // Function to execute logic scripts
   const executeLogicScripts = async (triggerPoint, context = {}) => {
@@ -357,14 +356,8 @@ export default function Storefront({ onLogout, onHome, brandName }) {
         // Refresh cart data
         fetchCart();
         
-        // Refresh cart count in header
-        if (refreshCartCount && typeof refreshCartCount === 'function') {
-          try {
-            refreshCartCount();
-          } catch (error) {
-            console.error('Error refreshing cart count:', error);
-          }
-        }
+        // Dispatch custom event to update cart badge
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
       })
       .catch(error => {
         console.error('Cart error:', error);
@@ -559,7 +552,6 @@ const getDisplayPrice = (item) => {
         brandName={brandName} 
         onLogout={onLogout} 
         onHome={onHome} 
-        onCartCountChange={setRefreshCartCount}
       />
       
       <div className="p-6" style={getCustomStyle('page-background')}>

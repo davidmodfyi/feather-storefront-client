@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function CustomerHeader({ brandName, onLogout, onHome, onCartCountChange }) {
+export default function CustomerHeader({ brandName, onLogout, onHome }) {
   const navigate = useNavigate();
   const [config, setConfig] = useState(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -12,6 +12,12 @@ export default function CustomerHeader({ brandName, onLogout, onHome, onCartCoun
     fetchConfig();
     fetchCartCount();
     
+    // Listen for custom cart update events
+    const handleCartUpdate = () => {
+      console.log('🔄 Cart update event received, refreshing badge...');
+      fetchCartCount();
+    };
+    
     // Refresh cart count when the component mounts or when user returns to page
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -19,19 +25,15 @@ export default function CustomerHeader({ brandName, onLogout, onHome, onCartCoun
       }
     };
     
+    // Add event listeners
+    window.addEventListener('cartUpdated', handleCartUpdate);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []); // Remove fetchCartCount from dependency to avoid circular reference
-
-  // Expose fetchCartCount to parent component in a separate effect
-  useEffect(() => {
-    if (onCartCountChange && typeof onCartCountChange === 'function') {
-      onCartCountChange(fetchCartCount);
-    }
-  }, [onCartCountChange]);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
