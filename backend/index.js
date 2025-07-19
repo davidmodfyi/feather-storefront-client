@@ -6,6 +6,8 @@ const database = require('./database');
 const session = require('express-session');
 const MemoryStore = require('memorystore')(session);
 const multer = require('multer');
+require('dotenv').config(); // Load environment variables FIRST
+
 const Anthropic = require('@anthropic-ai/sdk');
 const { PricingEngine } = require('./pricing-engine');
 const ftp = require('basic-ftp');
@@ -13,11 +15,13 @@ const SftpClient = require('ssh2-sftp-client');
 const { Client: SSH2Client } = require('ssh2');
 const net = require('net');
 
+console.log('🔑 Initializing Anthropic API...');
+console.log('🔑 API Key exists:', !!process.env.ANTHROPIC_API_KEY);
+console.log('🔑 API Key length:', process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.length : 0);
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
 });
-
-require('dotenv').config();
 
 const DISTRIBUTOR_MAPPING = {
   'dist001': 'oceanwave',    // Ocean Wave Foods (string key)
@@ -5780,35 +5784,17 @@ Return format: ["translated text 1", "translated text 2", ...]`;
     });
 
   } catch (error) {
-    console.error('🌍 Translation error:', error.message || error);
+    console.error('🌍 Translation API Error Details:');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error type:', error.constructor.name);
+    console.error('API Key exists:', !!process.env.ANTHROPIC_API_KEY);
+    console.error('API Key length:', process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.length : 0);
     
-    // Provide basic fallback translations for Spanish
-    const basicTranslations = {
-      'es': {
-        'Shop Products': 'Productos de la Tienda',
-        'Browse our full catalog of products': 'Explore nuestro catálogo completo de productos',
-        'View Storefront →': 'Ver Tienda →',
-        'Order History': 'Historial de Pedidos',
-        'View your previous orders and invoices': 'Ver sus pedidos e facturas anteriores',
-        'View Orders →': 'Ver Pedidos →',
-        'Shopping Cart': 'Carrito de Compras',
-        'Review and checkout your cart': 'Revisar y finalizar su carrito',
-        'View Cart →': 'Ver Carrito →',
-        'Logout': 'Cerrar Sesión'
-      }
-    };
-    
-    const fallbackTranslations = texts.map(text => {
-      return basicTranslations[targetLanguage]?.[text] || text;
-    });
-    
-    console.log('🌍 Using fallback translations:', fallbackTranslations);
-    
-    res.json({ 
-      success: true,
-      translations: fallbackTranslations,
-      targetLanguage,
-      fallback: true
+    res.status(500).json({ 
+      error: 'Translation API failed',
+      details: error.message,
+      translations: texts // Return originals so UI doesn't break
     });
   }
 });
