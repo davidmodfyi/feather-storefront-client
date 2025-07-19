@@ -67,19 +67,34 @@ export const useTranslation = () => {
   useEffect(() => {
     const fetchUserLanguage = async () => {
       try {
+        console.log('🌍 useTranslation: Fetching user language...');
         const response = await fetch('/api/user/language', {
           credentials: 'include'
         });
         if (response.ok) {
           const data = await response.json();
+          console.log('🌍 useTranslation: User language received:', data.language || 'en');
           setUserLanguage(data.language || 'en');
+        } else {
+          console.log('🌍 useTranslation: API not available, defaulting to en');
+          setUserLanguage('en');
         }
       } catch (error) {
-        console.error('Error fetching user language:', error);
+        console.error('🌍 useTranslation: Error fetching user language:', error);
+        setUserLanguage('en');
       }
     };
 
     fetchUserLanguage();
+    
+    // Also listen for language changes
+    const handleLanguageChange = () => {
+      console.log('🌍 useTranslation: Language change detected, refetching...');
+      fetchUserLanguage();
+    };
+    
+    window.addEventListener('languageChanged', handleLanguageChange);
+    return () => window.removeEventListener('languageChanged', handleLanguageChange);
   }, []);
 
   // Main translation function
@@ -134,6 +149,13 @@ export const useTranslation = () => {
       }
 
       // Call translation API
+      console.log('🌍 Making translation API call:', {
+        textsCount: textsToTranslate.length,
+        targetLanguage: userLanguage,
+        context,
+        texts: textsToTranslate
+      });
+      
       const response = await fetch('/api/translate', {
         method: 'POST',
         headers: {
