@@ -1,0 +1,6 @@
+<svg width="24" height="16" viewBox="0 0 24 16" xmlns="http://www.w3.org/2000/svg">
+  <!-- Portuguese flag -->
+  <rect width="9.6" height="16" fill="#046A38"/>
+  <rect width="14.4" height="16" x="9.6" fill="#DA020E"/>
+  <text x="12" y="9" fill="#FFFFFF" font-size="3" text-anchor="middle" font-family="Arial" font-weight="bold">PT</text>
+</svg>

@@ -1,0 +1,7 @@
+<svg width="24" height="16" viewBox="0 0 24 16" xmlns="http://www.w3.org/2000/svg">
+  <!-- Spanish flag -->
+  <rect width="24" height="4" fill="#AA151B"/>
+  <rect width="24" height="8" y="4" fill="#F1BF00"/>
+  <rect width="24" height="4" y="12" fill="#AA151B"/>
+  <text x="12" y="9" fill="#AA151B" font-size="3" text-anchor="middle" font-family="Arial" font-weight="bold">ES</text>
+</svg>
