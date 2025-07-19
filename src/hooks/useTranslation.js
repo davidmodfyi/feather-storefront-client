@@ -19,16 +19,14 @@ const detectLanguage = (text) => {
     return 'fr';
   }
   
-  // German indicators
-  if (lowerText.includes('ü') || lowerText.includes('ö') || lowerText.includes('ä') ||
-      lowerText.includes('und') || lowerText.includes('für') || lowerText.includes('produkt')) {
-    return 'de';
+  // Chinese indicators (simplified heuristics)
+  if (/[\u4e00-\u9fff]/.test(text)) {
+    return 'zh';
   }
   
-  // Italian indicators
-  if (lowerText.includes('è') || lowerText.includes('ì') || lowerText.includes('ò') ||
-      lowerText.includes('con') || lowerText.includes('per') || lowerText.includes('prodotto')) {
-    return 'it';
+  // Korean indicators
+  if (/[\uac00-\ud7af]/.test(text)) {
+    return 'ko';
   }
   
   // Portuguese indicators

@@ -6,19 +6,21 @@ const TranslatedText = ({
   context = 'General B2B eCommerce interface',
   fallback = null 
 }) => {
-  const { translateText, userLanguage } = useTranslation();
+  const { translateText, userLanguage, isLoading } = useTranslation();
   const [translatedText, setTranslatedText] = useState(children);
 
   useEffect(() => {
     const translateContent = async () => {
       if (typeof children === 'string' && children.trim()) {
+        console.log(`🌍 Translating "${children}" to ${userLanguage}`);
         const translated = await translateText(children, context);
+        console.log(`🌍 Translation result: "${translated}"`);
         setTranslatedText(translated);
       }
     };
 
     // Only translate if user language is not English
-    if (userLanguage !== 'en') {
+    if (userLanguage && userLanguage !== 'en') {
       translateContent();
     } else {
       setTranslatedText(children);
