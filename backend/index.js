@@ -5685,7 +5685,7 @@ app.post('/api/user/language', (req, res) => {
   const { language } = req.body;
   
   // Validate language code
-  const supportedLanguages = ['en', 'es', 'fr', 'de', 'it', 'pt'];
+  const supportedLanguages = ['en', 'es', 'fr', 'zh', 'ko', 'pt'];
   if (!language || !supportedLanguages.includes(language)) {
     return res.status(400).json({ error: 'Invalid language code' });
   }
@@ -5719,8 +5719,8 @@ app.post('/api/translate', async (req, res) => {
       'en': 'English',
       'es': 'Spanish', 
       'fr': 'French',
-      'de': 'German',
-      'it': 'Italian',
+      'zh': 'Chinese',
+      'ko': 'Korean',
       'pt': 'Portuguese'
     };
 
